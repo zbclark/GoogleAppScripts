@@ -52,37 +52,10 @@ function onEditStatus(e) {
         break;
       case "Qualification":
         editedSheet.getRange(editedRow, 12).setBackground('#FFE699'); // Light yellow
-
-        // Additional actions for "Qualification"
-        // Get the relevant row data from columns A, B, C, D, E, F, G, H and L
-        var qual_rowData = [
-          [
-          editedSheet.getRange(editedRow, 1).getValue(), // Column A (Account Owner)
-          editedSheet.getRange(editedRow, 2).getValue(), // Column B (Client)
-          editedSheet.getRange(editedRow, 3).getValue(), // Column C (Industry)
-          editedSheet.getRange(editedRow, 4).getValue(), // Column D (Proposal #)
-          editedSheet.getRange(editedRow, 6).getValue(), // Column F (Project Name)
-          editedSheet.getRange(editedRow, 12).getValue(), // Column L (Status)
-          editedSheet.getRange(editedRow, 14).getValue() // Column N (Notes)
-          ]
-        ];
-
-        // Find the next available row in the destination sheet
-        var qual_destinationRow = qualSheet.getLastRow() + 1;
-        var qual_destinationRange = qualSheet.getRange(qual_destinationRow, 1, 1, 8);
         
-        // Write the row data to the destination sheet
-        qual_destinationRange
-          .setValues(qual_rowData)
-          .setWrap(true);
-        qualSheet
-          .autoResizeColumns(1, qual_rowData.length)
-          .autoResizeRows(2, qualSheet.getLastRow());
+        // Keep Qualification projects on Project Details tab (no longer move to LPA Prequalifications)
+        // This change ensures all projects remain on the main Project Details tab for better visibility
         
-
-        // Delete the row from the source sheet to avoid row shifting issues
-        editedSheet.deleteRow(editedRow);
-
         break;
       case "Proposal":
         editedSheet.getRange(editedRow, 12).setBackground('#FFE699'); // Light yellow

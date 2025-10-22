@@ -173,8 +173,8 @@ function processProjectData(data) {
   Logger.log('Form data received:', JSON.stringify(data));
 
   try {
-    // Determine the sheet to use based on the status
-    var sheetName = data.status === "Qualification" ? "LPA Prequalifications" : "Project/Proposal Details";
+    // Always use Project/Proposal Details sheet (including Qualification projects)
+    var sheetName = "Project/Proposal Details";
     var sheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName(sheetName);
 
     // Insert a new row at the top (row 3, assuming row 1-2 is headers)
@@ -183,17 +183,8 @@ function processProjectData(data) {
       .setHorizontalAlignment("center")
       .setWrap(true);
 
-    if (data.status === "Qualification") {
-      // Write only the specified fields for Qualification status
-      sheet.getRange(3, 1).setValue(data.accountOwner); // Account Owner
-      sheet.getRange(3, 2).setValue(data.client);
-      sheet.getRange(3, 3).setValue(data.industry);
-      sheet.getRange(3, 4).setValue(data.bidNumber); // Proposal #
-      sheet.getRange(3, 5).setValue(data.projName);
-      sheet.getRange(3, 6).setValue(data.status); // Status
-      sheet.getRange(3, 7).setValue(data.notes); // Notes
-    } else {
-      // Write full set of data for non-Qualification status
+    // Write full set of data for all statuses (including Qualification)
+    // Qualification projects now stay on Project Details with complete information
       sheet.getRange(3, 1).setValue(data.accountOwner); // Account Owner
       sheet.getRange(3, 2).setValue(data.client);
       sheet.getRange(3, 3).setValue(data.industry);
@@ -206,7 +197,6 @@ function processProjectData(data) {
       sheet.getRange(3, 10).setValue(data.estAwardDate ? new Date(data.estAwardDate) : ''); // Est. Award Date; blank if null
       sheet.getRange(3, 12).setValue(data.status); // Status
       sheet.getRange(3, 15).setValue(data.notes); // Notes
-    }
 
     if (data.accountOwner === "Ashley" && 
         (data.status === "In Work" || data.status === "Pending NTP" || data.status === "Proposal")) {
