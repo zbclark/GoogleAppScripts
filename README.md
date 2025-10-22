@@ -1,3 +1,4 @@
+
 # Google Apps Scripts Repo
 
 This repository is a workspace to store Google Apps Script projects locally.
@@ -19,7 +20,7 @@ This repository is designed to work with GitHub Codespaces for a consistent deve
 **Managing Codespace:**
 ```bash
 # Stop the current codespace
-gh codespace stop -c animated-bassoon
+gh codespace stop -c animated-bassoon-pqxxxppx7q5h77xp
 
 # List all codespaces
 gh codespace list
