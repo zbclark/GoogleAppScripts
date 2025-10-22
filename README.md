@@ -12,6 +12,22 @@ I added a helper script that lists your Google Apps Script projects (via `clasp`
 - clasp: install globally with `npm install -g @google/clasp`
 - jq: JSON processor (e.g. `sudo apt install jq` on Debian/Ubuntu)
 
+## Development Environment
+
+This repository is designed to work with GitHub Codespaces for a consistent development environment.
+
+**Managing Codespace:**
+```bash
+# Stop the current codespace
+gh codespace stop -c animated-bassoon
+
+# List all codespaces
+gh codespace list
+
+# Create a new codespace
+gh codespace create
+```
+
 ## Usage
 
 1. Authenticate with Google:
