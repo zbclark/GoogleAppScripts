@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <base target="_top">
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        font-size: 10 pt;
+        background-color: #f4f44;
+        padding: 10px;
+      }
+      .form-container {
+        background-color: #fff;
+        padding: 20px;
+        border-radius: 8px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        max-width: 900px;
+        margin: auto;
+        display: flex;
+        flex-direction: column;
+        height: auto;
+      }
+      .form-row {
+        display: flex;
+        flex-wrap: wrap;
+        margin-bottom: 20px; /* Increased spacing between rows */
+      }
+      .form-group {
+        flex: 1;
+        min-width: 350px; /* Increased width of form groups */
+        margin-right: 30px; /* Increased spacing between form groups */
+      }
+      .form-group label {
+        margin-bottom 5px;
+        font-weight: bold;
+      }
+      .form-group input,
+      .form-group select,
+      .form-group textarea {
+        width: 100%;
+        padding: 8px;
+        font-size: 10pt;
+        border: 1px solid #ccc;
+        border-radius: 8px;
+      }
+      .form-group select {
+        height: 34 px;
+        width: 100%;
+      }
+      .form-group textarea {
+        resize: auto;
+        height: 325 px;
+      }
+      .form-actions {
+        display: flex;
+        justify-content: flex-end;
+        margin-right: 15px;
+        margin-top: 20px; /* Added spacing above the buttons */
+        margin-left: 15px; /* Add spacing between the buttons */
+      }
+      button {
+        background-color: #008CBA;
+        color: white;
+        padding: 15px;
+        border: 1px solid #ccc;
+        border-radius 8px;
+        cursor: pointer;
+        font-size: 10pt;
+      }
+      button:hover {
+        background-color: #005f73;
+      }
+      button.cancel {
+        background-color: #f44336;
+      }
+      button.cancel:hover {
+        background-color: #e53935;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="form-container">
+      <form id="projectForm">
+        <div class="form-row">
+          <div class="form-group">
+            <label for="accountOwner">Account Owner:</label>
+            <input type="text" id="accountOwner" name="accountOwner" value="<?= userName ?>" required>
+          </div>
+          <div class="form-group">
+            <label for="client">Client:</label>
+            <input type="text" id="client" name="client" list="clientList" required>
+            <datalist id="clientList" class="hidden">
+              <? for (var i in clientList) { ?>
+                <option value="<?= clientList[i] ?>"><?= clientList[i] ?></option>
+              <? } ?>
+            </datalist>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="projName">Project Name:</label>
+            <input type="text" id="projName" name="projName">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="industry">Industry:</label>
+            <select id="industry" name="industry" required>
+              <? for (var i in industryOptions) { ?>
+                <option value="<?= industryOptions[i] ?>"><?= industryOptions[i] ?></option>
+              <? } ?>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="projectNumber">Proposal #:</label>
+            <input type="text" id="projectNumber" name="bidNumber" value="<?= projectNumber ?>" required>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="woNumber">WO #:</label>
+            <input type="text" id="woNumber" name="woNumber">
+          </div>
+          <div class="form-group">
+            <label for="proposalAmount">Proposal Amount:</label>
+            <input type="text" id="proposalAmount" name="proposalAmount">
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="estAwardDate">Est. Award Date:</label>
+            <input type="date" id="estAwardDate" name="estAwardDate">
+          </div>
+          <div class="form-group">
+            <label for="status">Status:</label>
+            <select id="status" name="status" required>
+              <? for (var j in statusOptions) { ?>
+                <option value="<?= statusOptions[j] ?>"><?= statusOptions[j] ?></option>
+              <? } ?>
+            </select>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label for="notes">Notes:</label>
+            <textarea id="notes" name="notes"></textarea>
+          </div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <input type="hidden" id="createdDate" name="createdDate" value="<?= createdDate ?>">
+          </div>
+        </div>
+
+        <div class="form-actions">
+          <button type="button" id="submitBtn">Submit</button>
+          <button type="button" class="cancel" onclick="google.script.host.close()">Cancel</button>
+        </div>
+      </form>
+      <div id="successMessage" style="display: none; color: green; margin-top: 10px;">
+        Project information successfully added!
+      </div>
+    </div>
+
+    <script>
+
+      console.log('Client-side Javascript code executed');
+
+      function submitProjectForm() {
+        console.log('submitProjectForm() called')
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.disabled = true;
+
+        const formData = new FormData(document.getElementById('projectForm'));
+        const data = {};
+
+        formData.forEach((value, key) => {
+        // Check if the key is 'AwardDate' and the value is empty
+        if (key === 'estAwardDate' && value === '') {
+          data[key] = null; // Set the value to empty string
+        } else {
+          data[key] = value;
+        }
+      });
+
+        google.script.run
+          .withSuccessHandler(() => {
+          document.getElementById('successMessage').style.display = '';
+          setTimeout(() => google.script.host.close(), 2000);
+          })
+          .withFailureHandler((error) => {
+          console.error("Error " + error.message);
+          submitBtn.disabled = false;
+          })
+          .processProjectData(data);
+      }
+
+      function filterClientList() {
+      console.log('filterClientList() is called');
+      var clientInput = document.getElementById('client');
+      var clientDataList = document.getElementById('clientList');
+
+        if (clientInput.value.trim() !== '') {
+          clientDataList.classList.remove('hidden');
+        } else {
+          clientDataList.classList.add('hidden');
+        }
+       
+        var clientOptions = clientDatalist.options;
+
+        console.log("Filtering client list based on input:", clientInput.value);
+
+        // Filter the options based on user input
+        for (var i = 0; i < clientOptions.length; i++) {
+          var option = clientOptions[i];
+          if (option.value.toLowerCase().includes(clientInput.value.toLowerCase())) {
+            option.style.display = 'block';
+            console.log("Showing option:", option.value);
+          } else {
+            option.style.display = 'none';
+            console.log("Hiding option:", option.value);
+          }
+        }
+      }
+
+      
+      window.onload = function() {
+        console.log('window.onload event handler executed')
+        console.log("Fetching client list...");
+
+           
+        const form = document.getElementById('projectForm');
+        const submitBtn = document.getElementById('submitBtn');
+        submitBtn.addEventListener('click', function(event) {
+          event.preventDefault();
+          submitProjectForm();
+        });
+
+        // Add the event listener for the client input field
+        const clientInput = document.getElementById('client');
+        clientInput.addEventListener('input', filterClientList);
+
+        //Fetch the list of cleints from the "Project/Proposal Details" tab
+        google.script.run
+        .withSuccessHandler(populateClientList)
+        .withFailureHandler(function(error) {
+            console.error("Error fetching the client list.", error);
+        })
+        .getClientList();
+      };
+
+      function populateClientList(clientList) {
+        console.log("Populating client list:", clientList);
+        var clientDataList = document.getElementById('clientList');
+
+        //Clear any existing options
+        clientDataList.innerHTML = '';
+
+        //Add the new options
+        clientList.forEach(function(client) {
+          var option = document.createElement('option');
+          option.value = client;
+          clientDataList.appendChild(option);
+        });
+      }
+    </script>
+  </body>
+</html>
+

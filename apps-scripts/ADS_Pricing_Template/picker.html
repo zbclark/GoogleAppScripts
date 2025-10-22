@@ -1,0 +1,982 @@
+<!DOCTYPE html>  
+<html>  
+<head>  
+    <base target="_top">  
+    <style>  
+        body {  
+            font-family: 'Arial', sans-serif;  
+            margin: 0;  
+            padding: 0;  
+            overflow: hidden;  
+        }   
+  
+        #mainContainer {  
+            display: flex;  
+            width: 1050px;  
+            height: 100vh;  
+            position: relative;  
+            overflow: hidden;  
+        }  
+  
+        #workingArea {  
+            width: 600px;  
+            flex-shrink: 0;  
+            padding: 20px;  
+            box-sizing: border-box;  
+            overflow-y: auto;  
+        }  
+  
+        #warning {  
+            background-color: #fff3cd;  
+            border: 1px solid #ffeeba;  
+            color: #856404;  
+            padding: 10px;  
+            margin-top: 15px;  
+            border-radius: 4px;  
+            font-size: 14px;  
+        }  
+  
+        #tip {  
+            margin-bottom: 15px;  
+            color: #555;  
+        }  
+  
+        #breadcrumbs, #folders, #copyName, .buttons {  
+            margin-bottom: 10px;  
+            margin-top: 10px;  
+            width: 100%;  
+            box-sizing: border-box;  
+        }  
+  
+        .full-width-input {  
+            width: 100%;  
+            padding: 10px;  
+            margin-bottom: 15px;  
+            font-size: 16px;  
+            box-sizing: border-box;  
+        }  
+  
+        #folderSearch {  
+            margin-bottom: 5px;  
+        }  
+  
+        #folders {  
+            margin-bottom: 10px;  
+        }  
+  
+        #folders option {  
+            padding: 5px;  
+        }  
+  
+        input[type="text"], select {  
+            width: 100%;  
+            padding: 10px;  
+            margin-bottom: 10px;  
+            font-size: 16px;  
+            box-sizing: border-box;  
+        }  
+  
+        .buttons {  
+            display: flex;  
+            justify-content: space-between;  
+            gap: 10px;  
+            margin-bottom: 20px;  
+        }  
+  
+        button {  
+            padding: 10px 15px;  
+            background-color: #4CAF50;  
+            color: white;  
+            border: none;  
+            border-radius: 4px;  
+            cursor: pointer;  
+            font-size: 16px;  
+        }  
+  
+        .button-container {  
+            display: flex;  
+            justify-content: center;  
+            gap: 10px; /* Space between buttons */  
+        }  
+  
+        button:hover {  
+            background-color: #45a049;  
+        }  
+  
+        .instructions-panel {  
+            width: 450px;  
+            flex-shrink: 0;  
+            height: 100%;  
+            background-color: #f8f9fa;  
+            border-right: 1.5px solid #333; /* Dark grey line */  
+            padding: 20px;  
+            box-sizing: border-box;  
+            overflow-y: auto;  
+            display: flex;  
+            flex-direction: column;  
+            justify-content: center; /* Centers content vertically */  
+        }  
+  
+        #newFolderContainer {  
+            margin-top: 20px;  
+            padding-top: 20px;  
+            border-top: 1px solid #ccc;  
+            display: none;  
+        }  
+  
+        #newFolderName {  
+            width: calc(100% - 120px);  
+            padding: 10px;  
+            font-size: 16px;  
+            margin-right: 10px;  
+            margin-bottom: 10px;  
+        }  
+  
+        #newFolderContainer button {  
+            width: 110px;  
+        }  
+  
+        #info, #error, #success {  
+            padding: 10px;  
+            margin-top: 15px;  
+            border-radius: 4px;  
+            font-size: 14px;  
+        }  
+  
+        #info {  
+            background-color: #e7f3fe;  
+            border: 1px solid #b6d4fe;  
+            color: #004085;  
+        }  
+  
+        #instructions {  
+            background-color: #f8f9fa;  
+            border: 1px solid #e9ecef;  
+            border-radius: 4px;  
+            padding: 15px;  
+            margin-bottom: 20px;  
+        }  
+  
+        .instructions-panel h3 {  
+            margin-top: 0; /* Removes default top margin from h3 */  
+            margin-bottom: 15px;  
+        }  
+  
+        .instructions-panel ol {  
+            padding-left: 20px;  
+            margin-bottom: 0;  
+        }  
+  
+        .instructions-panel li {  
+            margin-bottom: 10px;  
+        }  
+  
+        .instructions-panel ul {  
+            margin-top: 5px;  
+            margin-bottom: 5px;  
+        }  
+  
+        .instructions-panel p {  
+            margin: 5px 0;  
+        }  
+  
+        #instructions strong {  
+            color: #495057;  
+        }  
+  
+        #error {  
+            background-color: #f8d7da;  
+            border: 1px solid #f5c6cb;  
+            color: #721c24;  
+        }  
+  
+        #success {  
+            background-color: #d4edda;  
+            border: 1px solid #c3e6cb;  
+            color: #155724;  
+            padding: 10px;  
+            margin-top: 15px;  
+            border-radius: 4px;  
+            font-size: 14px;  
+            display: none;  
+        }  
+  
+        #notificationContainer {  
+            position: fixed;  
+            top: 50%;  
+            left: 50%;  
+            transform: translate(-50%, -50%);  
+            background-color: #f0f0f0;  
+            border: 1px solid #ccc;  
+            padding: 20px;  
+            border-radius: 5px;  
+            text-align: center;  
+            z-index: 1000;  
+        }  
+  
+        #notification {  
+            margin-bottom: 15px;  
+        }  
+  
+        #notificationButtons {  
+            margin-top: 20px;  
+        }  
+        #notificationButtons button {  
+            margin: 0 10px;  
+            padding: 10px 20px;  
+        }  
+  
+        #notificationButtons button:last-child {  
+            margin-right: 0;  
+        }  
+  
+    </style>  
+      
+    <script>  
+    // Define all variables and functions in the HEAD section  
+    console.log("Script starting to load in head");  
+  
+    var isCopyInProgress = false;  
+    var isCreatingFolder = false;  
+  
+    // Event handler functions  
+    function handleRefreshClick() {  
+        console.log("Refresh button clicked!");  
+        hideNewFolderContainer();  
+        clearAllNotifications();  
+        refreshCache();  
+    }  
+  
+    function handleCreateFolderClick() {  
+        console.log("Create folder button clicked");  
+        document.getElementById('newFolderContainer').style.display = 'block';  
+        document.getElementById('newFolderName').focus();  
+        clearAllNotifications();  
+    }  
+  
+    function handleCreateCopyClick() {  
+        console.log("Create copy button clicked");  
+        clearAllNotifications();  
+        handleAction(createCopyAndCloseTemplate, 'Creating copy. Please wait.');  
+    }  
+  
+    function handleConfirmNewFolderClick() {  
+        console.log("Confirm new folder button clicked");  
+        clearAllNotifications();  
+        handleAction(confirmCreateFolder, 'Creating folder. Please wait.');  
+    }  
+  
+    function handleFolderChange(selectElement) {  
+        console.log("Folders select changed");  
+        hideNewFolderContainer();  
+        clearAllNotifications();  
+        handleAction(function() {  
+            if (selectElement.value) {  
+                var selectedFolderId = selectElement.value;  
+                var selectedFolderName = selectElement.options[selectElement.selectedIndex].text;  
+                updateCurrentFolder(selectedFolderId, selectedFolderName, true);  
+            }  
+        }, 'Fetching subfolders. Please wait.');  
+    }  
+  
+    function handleFolderSearch(value) {  
+        hideNewFolderContainer();  
+        filterFolders(value);  
+    }  
+  
+    function handleBreadcrumbClick(event) {  
+        hideNewFolderContainer();  
+        if (event.target.className.includes('breadcrumb-item')) {  
+            var folderId = event.target.getAttribute('data-id');  
+            var folderName = event.target.textContent.trim().slice(0, -1);  
+            updateCurrentFolder(folderId, folderName, false);  
+        }  
+    }  
+  
+    function handleNewFolderKeypress(event) {  
+        if (event.key === 'Enter') {  
+            confirmCreateFolder();  
+        }  
+    }  
+  
+    function handleCopyNameKeypress(event) {  
+        if (event.key === 'Enter') {  
+            createCopyAndCloseTemplate();  
+        }  
+    }  
+  
+    function showNewFolderInput() {  
+        document.getElementById('newFolderContainer').style.display = 'block';  
+        document.getElementById('newFolderName').focus();  
+    }  
+          
+    function displayInfo(message) {  
+        var infoElement = document.getElementById('info');  
+        if (!infoElement) {  
+            infoElement = document.createElement('div');  
+            infoElement.id = 'info';  
+            infoElement.style.backgroundColor = '#e7f3fe';  
+            infoElement.style.border = '1px solid #b6d4fe';  
+            infoElement.style.color = '#004085';  
+            infoElement.style.padding = '10px';  
+            infoElement.style.marginTop = '15px';  
+            infoElement.style.borderRadius = '4px';  
+            infoElement.style.fontSize = '14px';  
+            var workingArea = document.getElementById('workingArea');  
+            if (workingArea) workingArea.appendChild(infoElement);  
+        }  
+        infoElement.textContent = message;  
+        infoElement.style.display = 'block';  
+    }  
+  
+    function clearInfo() {  
+        var infoElement = document.getElementById('info');  
+        if (infoElement) {  
+            infoElement.style.display = 'none';  
+        }  
+    }  
+  
+    function displayError(message) {  
+        var errorElement = document.getElementById('error');  
+        if (!errorElement) {  
+            errorElement = document.createElement('div');  
+            errorElement.id = 'error';  
+            errorElement.style.backgroundColor = '#f8d7da';  
+            errorElement.style.border = '1px solid #f5c6cb';  
+            errorElement.style.color = '#721c24';  
+            errorElement.style.padding = '10px';  
+            errorElement.style.marginTop = '15px';  
+            errorElement.style.borderRadius = '4px';  
+            errorElement.style.fontSize = '14px';  
+            var workingArea = document.getElementById('workingArea');  
+            if (workingArea) workingArea.appendChild(errorElement);  
+        }  
+        errorElement.textContent = message;  
+        errorElement.style.display = 'block';  
+    }  
+  
+    function displaySuccess(message) {  
+        var successElement = document.getElementById('success');  
+        if (!successElement) {  
+            successElement = document.createElement('div');  
+            successElement.id = 'success';  
+            successElement.style.backgroundColor = '#d4edda';  
+            successElement.style.border = '1px solid #c3e6cb';  
+            successElement.style.color = '#155724';  
+            successElement.style.padding = '10px';  
+            successElement.style.marginTop = '15px';  
+            successElement.style.borderRadius = '4px';  
+            successElement.style.fontSize = '14px';  
+            successElement.style.display = 'none';  
+            var workingArea = document.getElementById('workingArea');  
+            if (workingArea) workingArea.appendChild(successElement);  
+        }  
+        successElement.textContent = message;  
+        successElement.style.display = 'block';  
+          
+        // Hide the success message after 5 seconds  
+        setTimeout(function() {  
+            successElement.style.display = 'none';  
+        }, 5000);  
+    }  
+  
+    function displayWarning(message) {  
+        var warningElement = document.getElementById('warning');  
+        if (!warningElement) {  
+            warningElement = document.createElement('div');  
+            warningElement.id = 'warning';  
+            warningElement.style.backgroundColor = '#fff3cd';  
+            warningElement.style.border = '1px solid #ffeeba';  
+            warningElement.style.color = '#856404';  
+            warningElement.style.padding = '10px';  
+            warningElement.style.marginTop = '15px';  
+            warningElement.style.borderRadius = '4px';  
+            warningElement.style.fontSize = '14px';  
+            var workingArea = document.getElementById('workingArea');  
+            if (workingArea) workingArea.appendChild(warningElement);  
+        }  
+        warningElement.innerHTML = message;  
+        warningElement.style.display = 'block';  
+    }  
+  
+    function refreshCache() {  
+        console.log("refreshCache function called");  
+        displayInfo("Refreshing cache. Please wait.");  
+        console.time("updateFolderCache");  
+        console.log("Before server call: Refresh cache");  
+  
+        google.script.run  
+            .withSuccessHandler(function() {  
+                console.timeEnd("updateFolderCache");  
+                clearInfo();  
+                var rootFolderId = getRootFolderId();  
+                fetchSubfolders(rootFolderId);  
+                displaySuccess("Cache refreshed successfully!");  
+                console.log("After server call: Refresh cache");  
+            })  
+            .withFailureHandler(function(error) {  
+                var errorMessage = error.message || "Unknown error.";  
+                console.timeEnd("updateFolderCache");  
+                clearInfo();  
+                displayError("Error refreshing cache: " + errorMessage);  
+                var rootFolderId = getRootFolderId();  
+                fetchSubfolders(rootFolderId);  
+                console.log("After server call: Refresh cache");  
+            })  
+            .updateFolderCache();  
+    }  
+  
+    function fetchSubfolders(folderId) {  
+        console.log("fetchSubfolders called", folderId);  
+        displayInfo("Fetching subfolders. Please wait.");  
+        console.time("fetchSubfolders");  
+        console.log("Before server call: Fetching subfolders");  
+  
+        google.script.run  
+            .withSuccessHandler(function(folderData) {  
+                console.timeEnd("fetchSubfolders");  
+                clearInfo();  
+                console.log("After server call: Fetching subfolders");  
+                if (folderData && folderData.subfolders) {  
+                    buildDropdown(folderData.subfolders);  
+                } else {  
+                    displayError("Failed to fetch subfolders. Please try again.");  
+                }  
+            })  
+            .withFailureHandler(function(error) {  
+                console.timeEnd("fetchSubfolders");  
+                clearInfo();  
+                displayError("Error fetching subfolders: " + error.message);  
+                console.log("After server call: Fetching subfolders");  
+            })  
+            .getFoldersList(folderId);  
+    }  
+  
+    function confirmCreateFolder() {  
+        console.log("confirmCreateFolder called");  
+        var folderNameInput = document.getElementById('newFolderName');  
+        var folderName = folderNameInput.value.trim();  
+        var breadcrumbs = document.getElementById('breadcrumbs').children;  
+        var parentFolderId = breadcrumbs[breadcrumbs.length - 1].getAttribute('data-id');  
+  
+        if (isCreatingFolder) {  
+            displayInfo("Folder creation is in progress. Please wait.");  
+            return;  
+        }  
+        isCreatingFolder = true;  
+  
+        if (folderName) {  
+            displayInfo("Creating folder: " + folderName);  
+            console.time("createFolder");  
+            console.log("Before server call: Creating folder");  
+  
+            google.script.run  
+                .withSuccessHandler(function(result) {  
+                    console.timeEnd("createFolder");  
+                    clearInfo();  
+                      
+                    if (result.error) {  
+                        var errorMessage = result.message || "Unknown error.";  
+                        switch(result.error) {  
+                            case "FOLDER_EXISTS":  
+                                displayWarning("A folder with this name already exists.");  
+                            break;  
+                            case "ACCESS_DENIED":  
+                            case "PARENT_NOT_FOUND":  
+                            case "INVALID_NAME":  
+                                displayWarning(errorMessage);  
+                                break;  
+                            default:  
+                                displayError("An unexpected error occurred: " + errorMessage);  
+                        }  
+                    } else {  
+                        displaySuccess("Folder '" + result.name + "' created successfully.");  
+                        hideNewFolderContainer();  
+                        fetchSubfolders(parentFolderId);  
+                    }  
+                      
+                    isCreatingFolder = false;  
+                    console.log("After server call: Creating folder");  
+                })  
+                .withFailureHandler(function(error) {  
+                    var errorMessage = error.message || "Unknown error.";  
+                    console.timeEnd("createFolder");  
+                    clearInfo();  
+                    displayError("Error creating folder: " + errorMessage);  
+                    isCreatingFolder = false;  
+                    console.log("After server call: Creating folder");  
+                })  
+                .createFolder(parentFolderId, folderName);  
+        } else {  
+            displayError("Please enter a folder name.");  
+            isCreatingFolder = false;  
+        }  
+    }  
+  
+    function updateUIForTemplate(isTemplate) {  
+        var createCopyButton = document.querySelector('button[onclick="handleCreateCopyClick()"]');  
+        if (createCopyButton) {  
+            createCopyButton.style.display = isTemplate ? 'inline-block' : 'none';  
+        }  
+    }  
+  
+    function createCopyAndCloseTemplate() {  
+        console.log("createCopyAndCloseTemplate called");  
+        if (isCopyInProgress) {  
+            displayInfo("A copy is already being created. Please wait.");  
+            return;  
+        }  
+        isCopyInProgress = true;  
+        console.log("Copy process started");  
+  
+        var breadcrumbs = document.getElementById('breadcrumbs').children;  
+        var lastBreadcrumb = breadcrumbs[breadcrumbs.length - 1];  
+        var folderId = lastBreadcrumb.getAttribute('data-id');  
+        var folderName = lastBreadcrumb.textContent.trim().slice(0, -1);  
+        var name = document.getElementById('copyName').value;  
+  
+        console.log("Folder ID:", folderId);  
+        console.log("Folder Name:", folderName);  
+        console.log("New File Name:", name);  
+  
+        if (!name) {  
+            displayError("Please enter a name for the new file.");  
+            isCopyInProgress = false;  
+            console.log("Copy process stopped: No name provided");  
+            return;  
+        }  
+  
+        displayInfo("Creating file '" + name + "' in folder '" + folderName + "'... Please wait.");  
+        var createCopyBtn = document.querySelector('button[onclick="handleCreateCopyClick()"]');  
+        if (createCopyBtn) createCopyBtn.disabled = true;  
+        console.log("Calling copySpreadsheet server function");  
+  
+        google.script.run  
+            .withSuccessHandler(function(result) {  
+                console.log("copySpreadsheet result", result);  
+                clearInfo();  
+                if (result.error) {  
+                    var errorMessage = result.message || "Unknown error.";  
+                    switch(result.error) {  
+                        case "FILE_EXISTS":  
+                            displayWarning("A file with this name already exists.  Please give the file a new name.");  
+                            document.getElementById('copyName').focus();  
+                            break;  
+                        case "PARTIAL_SUCCESS":  
+                            displayWarning("File created, but there were some issues: " + errorMessage);  
+                            showFileCreatedNotification(result, folderName);  
+                            break;  
+                        case "COPY_FAILED":  
+                            displayError("Failed to create file: " + errorMessage);  
+                            break;  
+                        default:  
+                            displayError("An unexpected error occurred: " + errorMessage);  
+                    }  
+                } else if (result && result.url) {  
+                    console.log("New file created:", result.url);  
+                    showFileCreatedNotification(result, folderName);  
+                } else {  
+                    var errorMessage = result.message || "Unknown error.";  
+                    console.error("Invalid result from copySpreadsheet", errorMessage);  
+                    displayError("Failed to create file. Please try again.");  
+                }  
+                updateUIForTemplate();  
+                resetCopyButton();  
+            })  
+            .withFailureHandler(function(error) {  
+                var errorMessage = error.message || "Unknown error.";  
+                console.error("copySpreadsheet error", errorMessage);  
+                clearInfo();  
+                displayError("Error creating file: " + errorMessage);  
+                resetCopyButton();  
+            })  
+            .copySpreadsheet(folderId, name);  
+    }  
+  
+    function showFileCreatedNotification(result, folderName) {  
+        console.log("showFileCreatedNotification called");  
+        var message = "File '" + result.name + "' created successfully in folder '" + folderName + "'.<br><br>";  
+          
+        if (result.error === "PARTIAL_SUCCESS") {  
+            message += "<strong>Warning:</strong> The file was created, but there might be issues with the protections. Error details: " + result.message + "<br><br>";  
+        }  
+          
+        message += "Click 'Open File' to open the new file in a new tab and reset this template.<br><br>" +  
+                   "<strong>Note: The template will be reset to its initial state!</strong>";  
+          
+        updateNotification(message, true);  
+  
+        var buttonContainer = document.getElementById('notificationButtons');  
+        if (buttonContainer) {  
+            buttonContainer.innerHTML = '';  
+            buttonContainer.className = 'button-container';  
+              
+            var openFileButton = document.createElement('button');  
+            openFileButton.textContent = 'Open File';  
+            openFileButton.onclick = function() {  
+                console.log("Opening file at 90% zoom");    
+                
+                var fileId = extractFileIdFromUrl(result.url);    
+                console.log("Extracted file ID:", fileId);    
+                  
+                if (fileId) {    
+                    var zoomUrl = "https://docs.google.com/spreadsheets/d/" + fileId + "/edit#zoom=90";    
+                    console.log("Opening URL with zoom:", zoomUrl);    
+                    window.open(zoomUrl, '_blank');    
+                } else {    
+                    console.log("Could not extract file ID, opening original URL");    
+                    window.open(result.url, '_blank');    
+                }    
+                  
+                console.log("New file opened in new tab at 90% zoom");    
+                closeCreateFileUI();    
+                displayCloseReminder();    
+            };    
+              
+            buttonContainer.appendChild(openFileButton);    
+        } else {    
+            console.error("Button container not found");    
+        }    
+    }    
+      
+    function extractFileIdFromUrl(url) {    
+        console.log("Extracting file ID from URL:", url);    
+          
+        var patterns = [    
+            /\/document\/d\/([a-zA-Z0-9-_]+)/,  
+            /\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/,  
+            /\/presentation\/d\/([a-zA-Z0-9-_]+)/,  
+            /id=([a-zA-Z0-9-_]+)/  
+        ];    
+          
+        for (var i = 0; i < patterns.length; i++) {    
+            var match = url.match(patterns[i]);    
+            if (match) {    
+                console.log("File ID extracted successfully:", match[1]);    
+                return match[1];    
+            }    
+        }    
+          
+        console.log("Could not extract file ID from URL");    
+        return null;    
+    }  
+  
+    function closeCreateFileUI() {  
+        var uiElements = document.querySelectorAll('.create-file-ui');  
+        for (var i = 0; i < uiElements.length; i++) {  
+            uiElements[i].style.display = 'none';  
+        }  
+        console.log("Create File UI closed");  
+    }  
+  
+    function displayCloseReminder() {  
+        var message = "<strong>Important Reminder:</strong><br><br>" +  
+                    "Your new file has been opened in a new tab and this template has been reset.<br><br>" +  
+                    "<strong>Please remember to close this template window manually using the browser's close button " +  
+                    "once you've confirmed your new file is open.</strong><br><br>" +  
+                    "If you need to create another cost proposal, you can do so before closing this window using the button below.";  
+          
+        updateNotification(message, true);  
+  
+        var buttonContainer = document.getElementById('notificationButtons');  
+        if (buttonContainer) {  
+            buttonContainer.innerHTML = '';  
+            buttonContainer.className = 'button-container';  
+              
+            var createAnotherButton = document.createElement('button');  
+            createAnotherButton.textContent = 'Create Another Cost Proposal';  
+            createAnotherButton.onclick = function() {  
+                resetCreateFileUI();  
+            };  
+              
+            buttonContainer.appendChild(createAnotherButton);  
+        } else {  
+            console.error("Button container not found");  
+        }  
+        console.log("Close reminder displayed");  
+    }  
+  
+    function resetCreateFileUI() {  
+        var uiElements = document.querySelectorAll('.create-file-ui');  
+        for (var i = 0; i < uiElements.length; i++) {  
+            uiElements[i].style.display = 'block';  
+        }  
+  
+        var copyNameInput = document.getElementById('copyName');  
+        if (copyNameInput) {  
+            copyNameInput.value = '';  
+        }  
+  
+        hideNewFolderContainer();  
+  
+        var notificationContainer = document.getElementById('notificationContainer');  
+        if (notificationContainer) {  
+            notificationContainer.style.display = 'none';  
+        }  
+  
+        initializeBreadcrumbs();  
+        var foldersSelect = document.getElementById('folders');  
+        if (foldersSelect) {  
+            foldersSelect.value = "";  
+        }  
+  
+        loadInitialFolders();  
+        updateUIForTemplate();  
+    }  
+  
+    function resetCopyButton() {  
+        isCopyInProgress = false;  
+        var createCopyBtn = document.querySelector('button[onclick="handleCreateCopyClick()"]');  
+        if (createCopyBtn) createCopyBtn.disabled = false;  
+    }  
+  
+    function initializeBreadcrumbs() {  
+        var breadcrumbs = document.getElementById('breadcrumbs');  
+        if (breadcrumbs) {  
+            breadcrumbs.innerHTML = '';  
+            var rootCrumb = document.createElement('span');  
+            rootCrumb.textContent = "Customers / Clients > ";  
+            rootCrumb.setAttribute('data-id', getRootFolderId());  
+            rootCrumb.className = 'breadcrumb-item';  
+            breadcrumbs.appendChild(rootCrumb);  
+            console.log("Breadcrumbs initialized.");  
+        }  
+    }  
+  
+    function updateCurrentFolder(folderId, folderName, isNewSelection) {  
+        var breadcrumbs = document.getElementById('breadcrumbs');  
+  
+        if (isNewSelection) {  
+            var newCrumb = document.createElement('span');  
+            newCrumb.textContent = folderName + " > ";  
+            newCrumb.setAttribute('data-id', folderId);  
+            newCrumb.className = 'breadcrumb-item';  
+            breadcrumbs.appendChild(newCrumb);  
+        } else {  
+            while (breadcrumbs.lastChild && breadcrumbs.lastChild.getAttribute('data-id') !== folderId) {  
+                breadcrumbs.removeChild(breadcrumbs.lastChild);  
+            }  
+        }  
+  
+        displayInfo("Fetching subfolders. Please wait.");  
+        fetchSubfolders(folderId);  
+    }  
+  
+    function filterFolders(searchTerm) {  
+        var select = document.getElementById('folders');  
+        var options = select.getElementsByTagName('option');  
+  
+        for (var i = 0; i < options.length; i++) {  
+            var option = options[i];  
+            if (option.text.toLowerCase().indexOf(searchTerm.toLowerCase()) !== -1) {  
+                option.style.display = '';  
+            } else {  
+                option.style.display = 'none';  
+            }  
+        }  
+    }  
+  
+    function getRootFolderId() {  
+        return '1Gf8H1xuwiLXqvuEycC0qevRu9mrUzsFF';  
+    }  
+  
+    function loadInitialFolders() {  
+        displayInfo("Loading folders. Please wait.");  
+        google.script.run  
+            .withSuccessHandler(function(result) {  
+                console.log("Received folder result");  
+                if (result && result.subfolders && result.subfolders.length !== undefined) {  
+                    if (result.subfolders.length > 0) {  
+                        buildDropdown(result.subfolders);  
+                        clearInfo();  
+                    } else {  
+                        console.log("No subfolders found");  
+                        displayInfo("No subfolders found in this location.");  
+                    }  
+                } else {  
+                    console.error("Invalid folder data received:", result);  
+                    displayError("Failed to load folders. Please try refreshing.");  
+                }  
+            })  
+            .withFailureHandler(function(error) {  
+                var errorMessage = error.message || "Unknown error.";  
+                console.error("Error loading initial folders:", error);  
+                displayError("Failed to load folders. Please try refreshing.");  
+            })  
+            .getCachedFoldersList(getRootFolderId());  
+    }  
+  
+    function hideNewFolderContainer() {  
+        var newFolderInput = document.getElementById('newFolderName');  
+        var newFolderContainer = document.getElementById('newFolderContainer');  
+        if (newFolderInput && newFolderContainer && document.activeElement !== newFolderInput) {  
+            newFolderContainer.style.display = 'none';  
+            newFolderInput.value = '';  
+        }  
+    }  
+  
+    function buildDropdown(subfolders) {  
+        console.log("Building dropdown with subfolders:", subfolders);  
+        var select = document.getElementById('folders');  
+        select.innerHTML = '<option value="">Select a folder</option>';  
+  
+        if (subfolders && subfolders.length !== undefined) {  
+            var addedFolders = {};  
+            for (var i = 0; i < subfolders.length; i++) {  
+                var folder = subfolders[i];  
+                if (folder && folder.id && folder.name && !addedFolders[folder.id]) {  
+                    var option = document.createElement('option');  
+                    option.value = folder.id;  
+                    option.textContent = folder.name;  
+                    select.appendChild(option);  
+                    addedFolders[folder.id] = true;  
+                }  
+            }  
+        } else {  
+            console.error("Subfolders is not an array:", subfolders);  
+            displayError("Invalid folder data. Please try refreshing.");  
+        }  
+    }  
+  
+    function updateNotification(message, showButtons) {  
+        var notificationContainer = document.getElementById('notificationContainer');  
+        var notification = document.getElementById('notification');  
+        var buttonContainer = document.getElementById('notificationButtons');  
+  
+        notification.innerHTML = message;  
+  
+        if (showButtons) {  
+            buttonContainer.style.display = 'flex';  
+        } else {  
+            buttonContainer.style.display = 'none';  
+        }  
+  
+        notificationContainer.style.display = 'block';  
+    }  
+  
+    function clearAllNotifications() {  
+        clearInfo();  
+        clearError();  
+        clearWarning();  
+        clearSuccess();  
+    }  
+  
+    function clearError() {  
+        var errorElement = document.getElementById('error');  
+        if (errorElement) {  
+            errorElement.style.display = 'none';  
+        }  
+    }  
+  
+    function clearWarning() {  
+        var warningElement = document.getElementById('warning');  
+        if (warningElement) {  
+            warningElement.style.display = 'none';  
+        }  
+    }  
+  
+    function clearSuccess() {  
+        var successElement = document.getElementById('success');  
+        if (successElement) {  
+            successElement.style.display = 'none';  
+        }  
+    }  
+  
+    function handleAction(action, message) {  
+        if (isCopyInProgress) {  
+            displayInfo(message);  
+            return;  
+        }  
+        action();  
+    }  
+  
+    // Initialize when DOM is ready  
+    function initializeApp() {  
+        console.log("Initializing UI");  
+          
+        // Body click handler setup  
+        document.addEventListener('click', function() {  
+            hideNewFolderContainer();  
+        });  
+  
+        initializeBreadcrumbs();  
+        displayInfo("Loading subfolders. Please wait.");  
+        loadInitialFolders();  
+        console.log("Script loading complete");  
+    }  
+  
+    // Wait for DOM to be ready before initializing  
+    if (document.readyState === 'loading') {  
+        document.addEventListener('DOMContentLoaded', initializeApp);  
+    } else {  
+        initializeApp();  
+    }  
+  
+    console.log("All functions defined, script ready");  
+    </script>  
+</head>  
+  
+<body>  
+    <div id="mainContainer">  
+        <div id="instructionsPanel" class="instructions-panel">  
+            <h3>Instructions:</h3>  
+            <div class="instruction-section">  
+                <p><strong>1. Select a Customer</strong></p>  
+                <p>1. Check if customer exists by using the "Search Folder..." input box and then review the dropdown option OR review the dropdown options</p>  
+                <ul>  
+                    <li><strong>Customer does NOT Exist</strong> - Click "Create New Folder". Type the Customer name in the input box that appears below the Create New Folder button and then "Create Folder."</li>  
+                    <li><strong>Customer DOES exist</strong> - select Customer from dropdown.</li>  
+                </ul>  
+            </div>  
+            <div class="instruction-section">  
+                <p><strong>2. Select a Project Folder</strong></p>  
+                <p>Check if Project folder exists by reviewing the dropdown options.</p>  
+                <ul>  
+                    <li><strong>Project Folder does NOT Exist</strong> - Click "Create New Folder". Type the Project Folder name <br><strong>(YY-XXX - Project Name),</strong> in the input box that appears below the Create New Folder button and then "Create Folder."</li>  
+                    <li><strong>Project Folder DOES exist</strong> - select Project Folder from dropdown.</li>  
+                </ul>  
+            </div>  
+            <div class="instruction-section">  
+                <p><strong>3. Name the File</strong></p>  
+                <p>Enter the Name for the file <strong>(YY-XXX - Project Name - Cost Proposal - Date)</strong> and "Create Copy".</p>  
+            </div>  
+        </div>  
+        <div id="workingArea">  
+            <div id="tip">Select a save location and give the file a name.</div>  
+  
+            <div class="buttons">  
+                <button onclick="handleRefreshClick()">Refresh Folder List</button>  
+            </div>  
+  
+            <input type="text" id="folderSearch" class="full-width-input" placeholder="Search folders..." oninput="handleFolderSearch(this.value)">  
+            <div id="breadcrumbs" onclick="handleBreadcrumbClick(event)"></div>  
+            <select id="folders" class="full-width-input" onchange="handleFolderChange(this)"></select>  
+  
+            <input type="text" id="copyName" class="full-width-input" placeholder="File Name: YY-XXX - Project Name - Cost Proposal - MMDDYY" onkeypress="handleCopyNameKeypress(event)" oninput="hideNewFolderContainer()">  
+  
+            <div class="buttons">  
+                <button onclick="handleCreateFolderClick()">Create New Folder</button>  
+                <button onclick="handleCreateCopyClick()">Create Copy</button>  
+            </div>  
+  
+            <div id="newFolderContainer" style="display: none;" onclick="event.stopPropagation()">  
+                <input type="text" id="newFolderName" placeholder="Customer / Client Name OR YY-XXX - Project Name" onkeypress="handleNewFolderKeypress(event)" oninput="event.stopPropagation()">  
+                <button onclick="handleConfirmNewFolderClick()">Create Folder</button>  
+            </div>  
+  
+            <div id="notificationContainer" style="display: none;">  
+                <p id="notification"></p>  
+                <div id="notificationButtons"></div>  
+            </div>  
+  
+            <div id="warning" style="display: none;"></div>  
+            <div id="info" style="display: none;"></div>  
+            <div id="error" style="display: none;"></div>  
+            <div id="success" style="display: none;"></div>  
+        </div>  
+    </div>  
+      
+    <button id="toggleInstructions" data-tooltip="Show Instructions">◀</button>  
+  
+</body>  
+</html>  

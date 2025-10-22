@@ -1,0 +1,21 @@
+# Google Apps Script IDs (one per line)
+# Lines starting with # are ignored
+# You can find script IDs in the URL when viewing a project at script.google.com
+# Format: https://script.google.com/d/[SCRIPT_ID]/edit
+#
+# Format options:
+# SCRIPT_ID                           (will auto-detect name from files)
+# SCRIPT_ID Project Name Here        (will use "Project Name Here")
+
+1swgINehLMKuVdDvfvhAllJSftdY2ANDUeGEWrnHbflyZVNeWiFeIq40J ADS Sales Operations
+1rihqxYHMqzIGr6uXwwQXDImbgI9q58TuM8-yBIO6Pb0f3JLdfzSdy_ag ADS Employee Utilization
+1jhESh7N0Oliz0soOjEd16Ydnf6AYg6b3D-PrbauFsps-RMaA_ujIeUMd ADS Pricing Template
+1e6L-MKYv6qFoXp1ia2yq2aTpRa12D3CB4vsc4ch-8maQV6jPkExgAO18 Golf Algorithm
+
+1rihqxYHMqzIGr6uXwwQXDImbgI9q58TuM8-yBIO6Pb0f3JLdfzSdy_ag ADS Employee Utilization
+1jhESh7N0Oliz0soOjEd16Ydnf6AYg6b3D-PrbauFsps-RMaA_ujIeUMd ADS Pricing Template
+1e6L-MKYv6qFoXp1ia2yq2aTpRa12D3CB4vsc4ch-8maQV6jPkExgAO18 Golf Algorithm
+
+# Add more script IDs below:
+# ANOTHER_SCRIPT_ID_HERE Another Project Name
+# YET_ANOTHER_SCRIPT_ID
