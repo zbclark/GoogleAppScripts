@@ -217,7 +217,7 @@ function processProjectData(data) {
 function generateNextProjectNumber() {
   try {
     var proposalSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("Project/Proposal Details");
-    var qualificationsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LPA Prequalifications");
+    //var qualificationsSheet = SpreadsheetApp.getActiveSpreadsheet().getSheetByName("LPA Prequalifications");
     var currentYear = new Date().getFullYear().toString().substr(-2);
     
     var bidNumbers = [];
@@ -229,10 +229,10 @@ function generateNextProjectNumber() {
     bidNumbers.push(proposalNumbers);
 
     // Get all bid numbers from the column D - LPA Qualifications sheet
-    var lastRow2 = qualificationsSheet.getLastRow();
-    var qualificationsRange = qualificationsSheet.getRange(3, 4, lastRow2 - 1, 1); // Assuming Proposal # is in column D (index 4)
-    var qualificationsNumbers = qualificationsRange.getValues();
-    bidNumbers.push(qualificationsNumbers);
+    //var lastRow2 = qualificationsSheet.getLastRow();
+    //var qualificationsRange = qualificationsSheet.getRange(3, 4, lastRow2 - 1, 1); // Assuming Proposal # is in column D (index 4)
+    //var qualificationsNumbers = qualificationsRange.getValues();
+    //bidNumbers.push(qualificationsNumbers);
     
     Logger.log("Raw proposal numbers in column D: " + JSON.stringify(bidNumbers));
   
