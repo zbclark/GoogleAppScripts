@@ -513,11 +513,43 @@ function copySpreadsheet(folderId, name) {
         newSpreadsheet.setActiveSheet(newSpreadsheet.getSheetByName('Project Estimator') || newSpreadsheet.getSheets()[0]);
 
         // Create an onOpen trigger for the new spreadsheet
-        ScriptApp.newTrigger('onOpen')
-            .forSpreadsheet(newSpreadsheet)
-            .onOpen()
-            .create();
-        console.log("onOpen trigger created for new spreadsheet");
+        // Clean up stale triggers and guard against trigger quota exhaustion
+        (function createOnOpenTriggerForSpreadsheet(spreadsheet) {
+            try {
+                var triggers = ScriptApp.getProjectTriggers();
+
+                // Delete triggers that reference missing files (stale triggers)
+                var removed = 0;
+                triggers.forEach(function(t) {
+                    try {
+                        var srcId = t.getTriggerSourceId ? t.getTriggerSourceId() : null;
+                        if (srcId) {
+                            // This will throw if the file doesn't exist or access is denied
+                            DriveApp.getFileById(srcId);
+                        }
+                    } catch (err) {
+                        // If the trigger references a non-existent file, delete it
+                        try { ScriptApp.deleteTrigger(t); removed++; } catch (e) { /* ignore */ }
+                    }
+                });
+                if (removed) console.log('Removed', removed, 'stale triggers before creating new onOpen trigger');
+
+                // Re-evaluate triggers after cleanup
+                triggers = ScriptApp.getProjectTriggers();
+                var TRIGGER_LIMIT = 20; // safe threshold (Apps Script has limits on project triggers)
+                if (triggers.length >= TRIGGER_LIMIT) {
+                    console.warn('Skipping creation of onOpen trigger: project already has', triggers.length, 'triggers (limit', TRIGGER_LIMIT, ').');
+                } else {
+                    ScriptApp.newTrigger('onOpen')
+                        .forSpreadsheet(spreadsheet)
+                        .onOpen()
+                        .create();
+                    console.log('onOpen trigger created for new spreadsheet');
+                }
+            } catch (err) {
+                console.error('Error while creating onOpen trigger:', err);
+            }
+        })(newSpreadsheet);
 
         /** Set WebAppUrl for the new spreadsheet
         console.log("Setting WebAppUrl for the new spreadsheet");
