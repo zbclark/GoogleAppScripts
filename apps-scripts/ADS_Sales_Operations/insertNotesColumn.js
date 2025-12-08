@@ -1,7 +1,11 @@
 function insertWeeklyColumn() {
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();
   var sheet1 = spreadsheet.getSheetByName("Project/Proposal Details");
-  var sheet2 = spreadsheet.getSheetByName("LPA Prequalifications");
+
+  // Validate sheet exists before proceeding
+  if (!sheet1) {
+    throw new Error("Sheet 'Project/Proposal Details' not found. Please check the sheet name.");
+  }
 
   // Function to insert a column and update headers
   function insertColumnAndUpdateHeader(sheet, columnToInsertBefore) {
@@ -29,8 +33,7 @@ function insertWeeklyColumn() {
     entireColumnRange.setWrap(true);
   }
 
-  // Insert columns in specified locations for both sheets
+  // Insert column in specified location
   insertColumnAndUpdateHeader(sheet1, 15); // Before column N for "Project/Proposal Details"
-  insertColumnAndUpdateHeader(sheet2, 7);  // Before column H for "LPA Prequalifications"
 }
 
