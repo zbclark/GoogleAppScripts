@@ -232,6 +232,7 @@ function getMetricGroups(configSheet) {
     },
     "Scoring": {
       metrics: {
+        "SG T2G": METRIC_INDICES["SG T2G"],
         "Scoring Average": METRIC_INDICES["Scoring Average"],
         "Birdie Chances Created": METRIC_INDICES["Birdie Chances Created"],
         "Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
@@ -242,14 +243,15 @@ function getMetricGroups(configSheet) {
         "Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"]
       },
       weights: {
-        "Scoring Average": configSheet.getRange("G23").getValue(),
-        "Birdies Chances Created": configSheet.getRange("H23").getValue(),
-        "Approach <100 SG": configSheet.getRange("I23").getValue(),
-        "Approach <150 FW SG": configSheet.getRange("J23").getValue(),
-        "Approach <150 Rough SG": configSheet.getRange("K23").getValue(),
-        "Approach <200 FW SG": configSheet.getRange("L23").getValue(),
-        "Approach >200 FW SG": configSheet.getRange("M23").getValue(),
-        "Approach >150 Rough SG": configSheet.getRange("N23").getValue()
+        "SG T2G": configSheet.getRange("G23").getValue(),
+        "Scoring Average": configSheet.getRange("H23").getValue(),
+        "Birdies Chances Created": configSheet.getRange("I23").getValue(),
+        "Approach <100 SG": configSheet.getRange("P17").getValue(),
+        "Approach <150 FW SG": configSheet.getRange("P18").getValue(),
+        "Approach <150 Rough SG": configSheet.getRange("P18").getValue(),
+        "Approach <200 FW SG": configSheet.getRange("P19").getValue(),
+        "Approach >200 FW SG": configSheet.getRange("P20").getValue(),
+        "Approach >150 Rough SG": configSheet.getRange("P20").getValue()
       }
     },
     "Course Management": {
@@ -1020,20 +1022,17 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     .map(id => id.trim())
     .filter(id => id);
   
-  // Filter tournaments to only include similar courses
-  const filteredEvents = Object.values(data.events).filter(event => 
-    similarCourseIds.includes(event.eventId?.toString())
-  );
+  // Get ALL tournament finishes (not just similar courses) for Top 5/Top 10 counting
+  const allTournamentFinishes = Object.values(data.events)
+    .map(event => event.position)
+    .filter(pos => typeof pos === 'number' && !isNaN(pos) && pos !== 100); // Exclude missed cuts (position 100)
   
-  // Calculate finishes only from similar courses
-  const tournamentFinishes = filteredEvents.map(event => event.position);
-  
-  const top5 = tournamentFinishes.filter(pos =>
+  const top5 = allTournamentFinishes.filter(pos =>
     typeof pos === 'number' && pos <= 5
   ).length;
   
-  const top10 = tournamentFinishes.filter(pos =>
-    typeof pos === 'number' && pos > 5 && pos <= 10
+  const top10 = allTournamentFinishes.filter(pos =>
+    typeof pos === 'number' && pos >= 1 && pos <= 10
   ).length;
  
     // Calculate Metrics using all three round types with weights
@@ -1247,45 +1246,141 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     console.log(`Data coverage: ${dataCoverage}, Confidence factor: ${confidenceFactor}`);
     
     // Calculate refined score with validation
-    let refinedWeightedScore = weightedScore * confidenceFactor;
+    // Apply a STRICT coverage threshold: only players with 70%+ data get meaningful scores
+    // EXCEPTION: sparse-data players with recent wins/top-10s get a pass
+    let dataCoverageMultiplier = 1.0;
+    let hasRecentWinOrTop10 = false;
+    
+    // Pre-sort events to check for recent win/top 10 (will reuse in past perf section)
+    const pastPerformances = data.events || {};
+    const sortedEvents = Object.entries(pastPerformances)
+      .sort((a, b) => {
+        const yearA = a[0].split('-').pop();
+        const yearB = b[0].split('-').pop();
+        return parseInt(yearB) - parseInt(yearA);
+      });
+    
+    // Check if sparse-data player has a recent win or top 10 finish
+    if (dataCoverage < 0.70 && sortedEvents.length > 0) {
+      const [mostRecentKey, mostRecentEvent] = sortedEvents[0];
+      if (CURRENT_EVENT_ID && mostRecentEvent.eventId?.toString() === CURRENT_EVENT_ID) {
+        // If most recent is current event, check the second-most recent
+        if (sortedEvents.length > 1) {
+          const [secondKey, secondEvent] = sortedEvents[1];
+          const position = secondEvent.position;
+          hasRecentWinOrTop10 = position === 1 || (position && position <= 10);
+        }
+      } else {
+        // Most recent is a past event
+        const position = mostRecentEvent.position;
+        hasRecentWinOrTop10 = position === 1 || (position && position <= 10);
+      }
+    }
+    
+    if (dataCoverage < 0.70) {
+      if (hasRecentWinOrTop10) {
+        // Recent win/top 10: be lenient, use coverage as multiplier (not squared)
+        // At 37% coverage with recent win: 0.37x (37%) instead of 0.14x
+        dataCoverageMultiplier = dataCoverage;
+      } else {
+        // No recent success: heavily penalized
+        // At 37% (like sparse players): multiplier = 0.37^2 = 0.137 (14%)
+        // At 50%: multiplier = 0.50^2 = 0.25 (25%)
+        // At 60%: multiplier = 0.60^2 = 0.36 (36%)
+        dataCoverageMultiplier = Math.pow(dataCoverage, 2);
+      }
+    } else if (dataCoverage < 0.85) {
+      // 70-85% coverage: scale from 0.49 to 0.95
+      dataCoverageMultiplier = 0.49 + ((dataCoverage - 0.70) / 0.15) * 0.46;
+    } else {
+      // 85%+ coverage: scale from 0.95 to 1.0
+      dataCoverageMultiplier = 0.95 + ((dataCoverage - 0.85) / 0.15) * 0.05;
+    }
+    
+    console.log(`Data coverage multiplier: ${dataCoverageMultiplier} (coverage: ${dataCoverage}, recent win/top10: ${hasRecentWinOrTop10})`);
+    
+    let refinedWeightedScore = weightedScore * confidenceFactor * dataCoverageMultiplier;
     if (isNaN(refinedWeightedScore)) {
       console.error(`Got NaN for refinedWeightedScore for ${data.name}, setting to 0`);
       refinedWeightedScore = 0;
     }
     
-    // Apply past performance multiplier if enabled
+    // Apply past performance multiplier if enabled (with recency weighting for recent wins)
     let pastPerformanceMultiplier = 1.0;
     if (PAST_PERF_ENABLED && PAST_PERF_WEIGHT > 0) {
-      // Get past performances for this player
-      const pastPerformances = data.events || {};
-      
-      // Calculate past performance score
-      let recentPerformanceScore = 0;
-      let recentEventCount = 0;
-      
-      Object.entries(pastPerformances).forEach(([eventId, event]) => {
-        // Skip current event
-        if (CURRENT_EVENT_ID && eventId === CURRENT_EVENT_ID) {
-          return;
-        }
+      // Reuse sortedEvents from above (already sorted by recency)
+      if (sortedEvents.length > 0) {
+        // Calculate recency-weighted past performance score
+        let weightedPerformanceScore = 0;
+        let totalWeight = 0;
+        let eventIndex = 0;
         
-        const positionScore = event.position <= 10 ? (11 - event.position) / 10 : 0;
-        recentPerformanceScore += positionScore;
-        recentEventCount++;
-      });
+        sortedEvents.forEach(([eventKey, event]) => {
+          // Skip current event
+          if (CURRENT_EVENT_ID && event.eventId?.toString() === CURRENT_EVENT_ID) {
+            return;
+          }
+          
+          // Calculate position score with broader range (not just top 10)
+          let positionScore = 0;
+          const position = event.position;
+          
+          if (position === 1) {
+            positionScore = 1.5; // Wins get highest score
+          } else if (position <= 3) {
+            positionScore = 1.2; // Top 3
+          } else if (position <= 5) {
+            positionScore = 1.0; // Top 5
+          } else if (position <= 10) {
+            positionScore = 0.8; // Top 10
+          } else if (position <= 25) {
+            positionScore = 0.4; // Top 25 (still counts!)
+          } else if (position <= 50) {
+            positionScore = 0.1; // Made cut (minor credit)
+          } else {
+            positionScore = -0.2; // Missed cut or very poor finish
+          }
+          
+          // Apply STRONG recency decay - much heavier emphasis on recent events
+          // Event 0 (most recent): weight = 1.0
+          // Event 1: weight = 0.5
+          // Event 2: weight = 0.25
+          // Event 3+: weight = 0.1 (older results matter much less)
+          const recencyWeight = eventIndex === 0 ? 1.0 : Math.pow(0.5, eventIndex);
+          weightedPerformanceScore += positionScore * recencyWeight;
+          totalWeight += recencyWeight;
+          eventIndex++;
+        });
 
-      
-      // Only apply multiplier if player has recent performances
-      if (recentEventCount > 0) {
-        const avgPerformanceScore = recentPerformanceScore / recentEventCount;
-        
-        // Scale: 0.5 (poor performance) to 1.5 (excellent performance)
-        pastPerformanceMultiplier = 1.0 + ((avgPerformanceScore - 0.5) * PAST_PERF_WEIGHT);
-        
-        // Ensure multiplier is between 0.85 and 1.15 (adjusted range)
-        pastPerformanceMultiplier = Math.max(0.85, Math.min(1.15, pastPerformanceMultiplier));
+        // Only apply multiplier if player has recent performances
+        if (totalWeight > 0) {
+          const avgPerformanceScore = weightedPerformanceScore / totalWeight;
+          
+          // Non-linear scale: better recent play gets exponential boost
+          // avgPerformanceScore of:
+          // -0.2 (bad finishes) → 0.6x multiplier
+          // 0.0 (mediocre) → 0.85x multiplier
+          // 0.5 (solid form) → 1.1x multiplier
+          // 1.0 (strong form) → 1.7x multiplier
+          // 1.5 (excellent/winning form) → 2.8x multiplier
+          if (avgPerformanceScore <= 0) {
+            // Below average play gets penalty
+            pastPerformanceMultiplier = 0.85 + (avgPerformanceScore * 1.25);
+          } else {
+            // Above average play gets exponential boost
+            pastPerformanceMultiplier = 1.0 + (Math.pow(avgPerformanceScore, 1.2) * 1.8);
+          }
+          
+          // Apply weight to scale the boost/penalty magnitude
+          pastPerformanceMultiplier = 1.0 + ((pastPerformanceMultiplier - 1.0) * PAST_PERF_WEIGHT);
+          
+          // Ensure multiplier is between 0.3 and 3.0 (wider range for greater impact)
+          pastPerformanceMultiplier = Math.max(0.3, Math.min(3.0, pastPerformanceMultiplier));
+          
+          console.log(`${data.name}: Avg perf score=${avgPerformanceScore.toFixed(2)}, multiplier=${pastPerformanceMultiplier.toFixed(3)}`);
+        }
       }
-    };
+    }
 
     // Extract KPI names and weights from metric groups
     const kpis = groups.flatMap(group =>
@@ -1402,7 +1497,7 @@ function getCoverageConfidence(dataCoverage) {
 
 function calculateMetricTrends(finishes) {
   const TOTAL_ROUNDS = 24;
-  const LAMBDA = 0.2; // Exponential decay factor
+  const LAMBDA = 0.2 // Exponential decay factor
   const TREND_THRESHOLD = 0.005;
   const SMOOTHING_WINDOW = 3; // Size of smoothing window
 
@@ -1625,6 +1720,7 @@ function aggregatePlayerData(metricGroups) {
         if (index === 14) return cell; // Time column (O)
 
          // Special handling for position column (index 10)
+
         if (index === 10) { // Position column
           if (typeof cell === 'string') {
             if (cell.includes('T')) {
@@ -2333,13 +2429,21 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
     }
 
     // Base information
+    const weightedScoreValue = (typeof player.weightedScore === 'number' && !isNaN(player.weightedScore)) 
+      ? player.weightedScore.toFixed(2) 
+      : "0.00"; // Fallback if weightedScore is missing
+    
+    if (!weightedScoreValue || weightedScoreValue === "0.00") {
+      console.warn(`Missing or zero weightedScore for ${player.name}: ${player.weightedScore}`);
+    }
+    
     const base = [
       player.rank,
       player.dgId,
       player.name,
       Number(player.top5 || 0),
       Number(player.top10 || 0),
-      player.weightedScore.toFixed(2),
+      weightedScoreValue,
       (player.pastPerformanceMultiplier || 1.0).toFixed(3) // Display the multiplier, defaulting to 1.0
     ];
 
@@ -2487,7 +2591,7 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
     2: [false, 0.01],   // Approach <100 Prox
     3: [true, 0.02],   // Approach <150 GIR
     4: [true, 0.02],   // Approach <150 SG
-    5: [false, 0.01],   // Approach <150 Prox
+    5: [false, 0.01],   // Approach <150 FW Prox
     6: [true, 0.02],  // Approach <150 Rough GIR
     7: [true, 0.02],  // Approach <150 Rough SG
     8: [false, 0.01],   // Approach <150 Rough Prox

@@ -253,6 +253,14 @@ function fetchTournamentFinalResults() {
         // Add success message
         resultsSheet.getRange("F2").setValue("Last updated: " + new Date().toLocaleString());
         resultsSheet.getRange("F3").setValue(`Found ${sortedRows.length} players from API`);
+        
+        // NEW: Validate predictions against actual results
+        try {
+          validateTournamentPredictions(resultsSheet, playerRows);
+        } catch (validationError) {
+          console.error("Validation error (non-blocking):", validationError);
+          // Don't throw - validation should not break results display
+        }
       } else {
         resultsSheet.getRange("F3").setValue("No player data found in API response");
       }
@@ -1276,5 +1284,91 @@ function getCategoryForMetric(metricName) {
   
   return "";
 }
+
+/**
+ * ============================================================================
+ * VALIDATION INTEGRATION
+ * ============================================================================
+ * Automatically validates predictions vs actual tournament results
+ */
+
+/**
+ * Validates model predictions against actual tournament results
+ * Called automatically when tournament results are fetched
+ * @param {Sheet} resultsSheet - Tournament Results sheet
+ * @param {Array} playerRows - Array of {data, rank, position, ...} objects
+ */
+function validateTournamentPredictions(resultsSheet, playerRows) {
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  const configSheet = ss.getSheetByName("Configuration Sheet");
+  const modelSheet = ss.getSheetByName("Player Ranking Model");
+  
+  if (!configSheet || !modelSheet) {
+    console.log("Validation skipped: Required sheets not found");
+    return;
+  }
+  
+  try {
+    // Get current event ID
+    const currentEventId = configSheet.getRange("G9").getValue();
+    if (!currentEventId) {
+      console.log("Validation skipped: No event ID found");
+      return;
+    }
+    
+    // Extract model predictions from Player Ranking Model sheet
+    const modelData = modelSheet.getRange("B6:C" + modelSheet.getLastRow()).getValues();
+    const predictions = modelData
+      .map((row, idx) => ({
+        rank: idx + 1,
+        name: row[1],
+        dgId: row[0],
+        predictedRank: idx + 1
+      }))
+      .filter(p => p.dgId);
+    
+    // Extract actual results from playerRows
+    const actuals = playerRows
+      .filter(pr => pr.dgId)
+      .map(pr => ({
+        dgId: pr.dgId,
+        actualPosition: pr.position
+      }));
+    
+    if (predictions.length === 0 || actuals.length === 0) {
+      console.log(`Validation skipped: Insufficient data (predictions: ${predictions.length}, actuals: ${actuals.length})`);
+      return;
+    }
+    
+    // Call validation function from algorithmValidation.js
+    const metrics = validatePredictions(currentEventId, predictions);
+    
+    if (metrics.error) {
+      console.log("Validation error: " + metrics.error);
+      return;
+    }
+    
+    // Store results
+    storeValidationResults(metrics);
+    
+    // Update results sheet with validation summary
+    resultsSheet.getRange("F5").setValue("PREDICTION VALIDATION");
+    resultsSheet.getRange("F5").setFontWeight("bold");
+    resultsSheet.getRange("F6").setValue(`Correlation: ${metrics.correlation}`);
+    resultsSheet.getRange("F7").setValue(`RMSE: ${metrics.rmse}`);
+    resultsSheet.getRange("F8").setValue(`Top-10 Accuracy: ${metrics.topTenAccuracy}%`);
+    resultsSheet.getRange("F10").setValue(metrics.summary);
+    resultsSheet.getRange("F10:I10").merge();
+    resultsSheet.getRange("F10").setWrap(true);
+    
+    console.log(`✅ Validation complete for event ${currentEventId}`);
+    console.log(`   Correlation: ${metrics.correlation}, RMSE: ${metrics.rmse}, Top-10: ${metrics.topTenAccuracy}%`);
+    
+  } catch (e) {
+    console.error("Tournament validation error:", e);
+    // Don't throw - validation failure should not crash results display
+  }
+}
+
 
 

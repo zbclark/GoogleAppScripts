@@ -4,8 +4,13 @@ function onOpen() {
     .addItem('Clear Config Settings', 'clearConfig')
     .addItem('Setup Sheet Permissions', 'setupSheet')
     .addItem('Update Tournaments and Dropdowns', 'updateTournamentsAndDropdowns')
+    .addSeparator()
+    .addItem('⚙️ Load Weight Template', 'loadWeightTemplate')
+    .addItem('📋 Show Templates', 'showTemplateInfo')
+    .addSeparator()
+    .addItem('Run Model', 'generatePlayerRankings')
     .addToUi();
-  
+ 
   console.log("Added Model Tools menu");
 
   // First check if everything is already configured
@@ -405,5 +410,100 @@ function authorizeScript() {
     'The script has been authorized to manage triggers.',
     ui.ButtonSet.OK
   );
+}
+
+/**
+ * Menu item: Validate Last Tournament
+ * Gets current event ID from config and validates predictions
+ */
+function validateLastTournament() {
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
+    const currentEventId = configSheet.getRange("G9").getValue();
+    
+    if (!currentEventId) {
+      ui.alert("No event ID found in Configuration Sheet (G9)");
+      return;
+    }
+    
+    ui.showModelessDialog(
+      HtmlService.createHtmlOutput("<p>⏳ Validating predictions for event " + currentEventId + "...</p>"),
+      "Validation in Progress"
+    );
+    
+    // Get latest predictions from Player Ranking Model sheet
+    const rankingSheet = SpreadsheetApp.getActive().getSheetByName("Player Ranking Model");
+    if (!rankingSheet) {
+      ui.alert("Player Ranking Model sheet not found. Run rankings first.");
+      return;
+    }
+    
+    const predictions = rankingSheet.getRange("B6:C" + rankingSheet.getLastRow()).getValues()
+      .map(row => ({
+        rank: row[0],
+        name: row[1],
+        dgId: row[2],
+        predictedRank: row[0],
+        finalScore: row[3]
+      }));
+    
+    const metrics = validatePredictions(currentEventId, predictions);
+    
+    if (metrics.error) {
+      ui.alert("Validation failed: " + metrics.error);
+      return;
+    }
+    
+    storeValidationResults(metrics);
+    
+    // Show results
+    const resultHtml = HtmlService.createHtmlOutput(
+      generateValidationReportHTML(metrics)
+    );
+    
+    ui.showModelessDialog(resultHtml, "Validation Results");
+    
+  } catch (e) {
+    ui.alert("Error: " + e.message);
+    console.error("validateLastTournament error:", e);
+  }
+}
+
+/**
+ * Menu item: Check Player Data Quality
+ * Analyzes current tournament field's data quality
+ */
+function checkPlayerDataQuality() {
+  const ui = SpreadsheetApp.getUi();
+  
+  try {
+    const tournamentsSheet = SpreadsheetApp.getActive().getSheetByName("Tournament Field");
+    if (!tournamentsSheet) {
+      ui.alert("Tournament Field sheet not found");
+      return;
+    }
+    
+    const players = tournamentsSheet.getRange("B6:C" + tournamentsSheet.getLastRow()).getValues()
+      .filter(row => row[0] && row[1])
+      .map(row => ({
+        dgId: row[0],
+        name: row[1]
+      }));
+    
+    if (players.length === 0) {
+      ui.alert("No players found in Tournament Field");
+      return;
+    }
+    
+    // This would need integration with actual player data
+    // For now, show confirmation
+    ui.alert(`Found ${players.length} players in field.\n\nNote: Full data quality check requires integration with player metrics.\n\nSee algorithmValidation.js::validatePlayerDataQuality() for implementation.`);
+    
+  } catch (e) {
+    ui.alert("Error: " + e.message);
+    console.error("checkPlayerDataQuality error:", e);
+  }
 }
 

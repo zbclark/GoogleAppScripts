@@ -6,7 +6,12 @@ const DEBUG = true;
 const DEBUG_VERBOSE = true;
 const BATCH_SIZE = 100; // Adjust the batch size as needed
 const TOURNAMENTS_BATCH_SIZE = 50;
-const MAX_RUNTIME = 300000;
+const MAX_RUNTIME = 300000; // 5 minutes max runtime
+
+// API call settings - CRITICAL for preventing timeouts
+const API_CALL_DELAY_MS = 3000; // 3 seconds between API calls (increased from 1 second for stability)
+const API_TIMEOUT_MS = 30000; // 30 second timeout per API call
+const SHEET_WRITE_DELAY_MS = 500; // Delay between batch writes
 
 const PERIOD_MAPPING= {
   'last 3 months': 'l12',
@@ -819,6 +824,7 @@ async function writeDataInBatchesWithSheetHeaders(sheet, startCell, formattedDat
     const startRow = startCell.getRow();
     const startCol = startCell.getColumn();
     const totalBatches = Math.ceil(formattedData.length / BATCH_SIZE);
+    const runtimeStart = new Date().getTime();
 
     // Fixed number formats with proper date format
     const numberFormats = MAIN_HEADERS.map(header => {
@@ -836,15 +842,25 @@ async function writeDataInBatchesWithSheetHeaders(sheet, startCell, formattedDat
       }
     });
 
+    logDebug(`Starting batch write: ${formattedData.length} rows in ${totalBatches} batches of ${BATCH_SIZE}`);
+
     for (let batchIndex = 0; batchIndex < totalBatches; batchIndex++) {
+      // Check runtime - if we're getting close to timeout, save progress and exit gracefully
+      const elapsedMs = new Date().getTime() - runtimeStart;
+      if (elapsedMs > MAX_RUNTIME * 0.8) { // 80% of max runtime
+        logDebug(`⚠️ Approaching timeout (${(elapsedMs/1000).toFixed(1)}s elapsed). Completing batch ${batchIndex + 1}/${totalBatches} and stopping.`);
+        updateCentralStatus(sheetName, `Partial update: ${batchIndex}/${totalBatches} batches written`);
+        break;
+      }
+
       const start = batchIndex * BATCH_SIZE;
       const end = Math.min(start + BATCH_SIZE, formattedData.length);
       const batchData = formattedData.slice(start, end);
       const progress = ((batchIndex / totalBatches) * 100).toFixed(1);
-      updateCentralStatus(sheetName, `Writing batch ${batchIndex + 1} of ${totalBatches} to sheet: (${progress}%)`);
+      updateCentralStatus(sheetName, `Writing batch ${batchIndex + 1} of ${totalBatches} (${progress}%)`);
 
       if (batchData.length === 0) {
-        logDebug(`Skipping empty batch ${batch + 1}`);
+        logDebug(`Skipping empty batch ${batchIndex + 1}`);
         continue;
       }
 
@@ -872,17 +888,105 @@ async function writeDataInBatchesWithSheetHeaders(sheet, startCell, formattedDat
              }
           } catch (formatError) {
             Logger.log(`Batch ${batchIndex + 1} format error: ${formatError.message}`);
-            Logger.log(`Formats: ${JSON.stringify(formatsArray[0])}`);
           }
         }
 
-        await delay(500);
+        // Flush to ensure data is written before moving to next batch
+        SpreadsheetApp.flush();
+        
+        // Delay between writes to prevent sheet service overload
+        if (batchIndex < totalBatches - 1) {
+          await delay(SHEET_WRITE_DELAY_MS);
+        }
+
+        logDebug(`Batch ${batchIndex + 1} complete: ${batchData.length} rows written`);
       } catch (error) {
         Logger.log(`Batch ${batchIndex + 1} failed: ${error.message}`);
+        throw error;
       }
     }
+
+    logDebug(`Batch writing complete`);
+    SpreadsheetApp.flush();
   } catch (error) {
     Logger.log("Error in writeDataInBatchesWithSheetHeaders: " + error.message);
+    throw error;
+  }
+}
+
+/**
+ * Writes historical data incrementally (appends to existing data)
+ * Used after each tournament to avoid losing progress if execution times out
+ * @param {Sheet} sheet - The Historical Data sheet
+ * @param {Array} dataToWrite - Array of [headers, ...rows]
+ * @return {Promise<void>}
+ */
+async function writeHistoricalDataIncremental(sheet, dataToWrite) {
+  try {
+    if (!dataToWrite || dataToWrite.length < 2) {
+      logDebug(`No data to write incrementally`);
+      return;
+    }
+
+    const headers = dataToWrite[0];
+    const newRows = dataToWrite.slice(1);
+    
+    // Find the last row with data
+    const lastRow = sheet.getLastRow();
+    const startCell = sheet.getRange("B5");
+    const startRow = startCell.getRow();
+    const startCol = startCell.getColumn();
+    
+    // Determine where to write new data
+    let writeRow = startRow;
+    if (lastRow >= startRow) {
+      writeRow = lastRow + 1;
+    }
+
+    // Filter and validate rows
+    const validRows = newRows.filter(row => {
+      return row.length === headers.length && row.some(cell => cell !== '');
+    });
+
+    if (validRows.length === 0) {
+      logDebug(`No valid rows to write incrementally`);
+      return;
+    }
+
+    // Write new rows
+    const targetRange = sheet.getRange(
+      writeRow,
+      startCol,
+      validRows.length,
+      headers.length
+    );
+
+    targetRange.setValues(validRows);
+
+    // Apply number formats
+    const numberFormats = headers.map(header => {
+      switch(header) {
+        case 'season': case 'year': case 'course_num': 
+        case 'round_num': case 'score': 
+          return "0";
+        case 'driving_dist': 
+          return "0.0";
+        case 'event_completed': 
+          return "yyyy-MM-dd";
+        case 'fin_text' : 
+          return "@"
+        default: return header.startsWith('sg_') ? "0.000" : "@";
+      }
+    });
+
+    const formatsArray = validRows.map(row => numberFormats);
+    targetRange.setNumberFormats(formatsArray);
+
+    SpreadsheetApp.flush();
+    logDebug(`Incremental write: ${validRows.length} rows appended to row ${writeRow}`);
+
+  } catch (error) {
+    logDebug(`Incremental write error: ${error.message}`);
     throw error;
   }
 }
@@ -975,7 +1079,21 @@ async function updateHistoricalDataFromButton() {
     const tournamentData = tournamentSheet.getRange("B6:H" + tournamentSheet.getLastRow()).getValues();
     logDebug(`Loaded ${tournamentData.length} tournament records`);
 
-    // 5. Filter events by tour and date range, including special events
+    // 5. Get already-processed events from Historical Data sheet to avoid re-fetching
+    const historicalSheet = SpreadsheetApp.getActive().getSheetByName("Historical Data");
+    const processedEventKeys = new Set();
+    
+    if (historicalSheet && historicalSheet.getLastRow() > 1) {
+      const historicalData = historicalSheet.getRange("F2:F" + historicalSheet.getLastRow()).getValues();
+      historicalData.forEach(row => {
+        if (row[0]) {
+          processedEventKeys.add(row[0].toString().trim());
+        }
+      });
+      logDebug(`Found ${processedEventKeys.size} already-processed events: skipping these`);
+    }
+
+    // 6. Filter events by tour and date range, including special events
     const filteredEvents = [];
     const existingEvents = new Set();
 
@@ -991,6 +1109,12 @@ async function updateHistoricalDataFromButton() {
 
       const year = eventDate.getFullYear();
       const eventKey = `${eventId}-${year}`;
+
+      // Skip if already processed
+      if (processedEventKeys.has(eventKey)) {
+        logDebug(`Skipping already-processed event: ${eventKey}`);
+        return;
+      }
 
       // Skip duplicates regardless of event type
       if (existingEvents.has(eventKey)) {
@@ -1023,108 +1147,75 @@ async function updateHistoricalDataFromButton() {
         logDebug(`Skipping event ${eventKey}: ${!eventIds.includes(eventId) ? 'Not in date range' : 'Tour mismatch'}`);
       }
     });
-    // For existingEvents Set
-    logDebug(`Final existingEvents: ${Array.from(existingEvents).join(', ')}`);
-
-    // For filteredEvents array of objects
-    logDebug(`Final filtered events: ${
+    
+    logDebug(`Final filtered events (after skipping processed): ${
       filteredEvents.map(e => `${e.eventId}-${e.year}`).join(', ')
-    }`);
+    }`);;
 
     // 6. Prepare data structures
     const headers = MAIN_HEADERS;
     let allData = [headers];
     const apiKey = getApiKey();
 
-    // 7. Process events in batches
-    const BATCH_SIZE = 5;
-    const totalBatches = Math.ceil(filteredEvents.length / BATCH_SIZE);
+    // 7. Process events SERIALLY and WRITE AFTER EACH EVENT (checkpoint)
+    // Important: Parallel Promise.all can overwhelm the API and sheet service
+    logDebug(`Processing ${filteredEvents.length} events serially with incremental writes`);
+    const runtimeStart = new Date().getTime();
 
-    for (let i = 0; i < filteredEvents.length; i += BATCH_SIZE) {
-      const batch = filteredEvents.slice(i, i + BATCH_SIZE);
-      const progress = ((i / filteredEvents.length) * 100).toFixed(1);
-      updateCentralStatus(sheetName, `Processing batch ${i/BATCH_SIZE+1}/${totalBatches} (${progress}%)`);
+    for (let i = 0; i < filteredEvents.length; i++) {
+      // Runtime check - stop if we're running low on time
+      const elapsedMs = new Date().getTime() - runtimeStart;
+      const remainingMs = MAX_RUNTIME - elapsedMs;
+      const estimatedTimePerEvent = elapsedMs / (i + 1);
+      
+      if (remainingMs < estimatedTimePerEvent * 2) {
+        logDebug(`⚠️ Approaching timeout. Processed ${i}/${filteredEvents.length} events. Stopping gracefully.`);
+        updateCentralStatus(sheetName, `Partial update: ${i}/${filteredEvents.length} events completed`);
+        break;
+      }
+
+      const event = filteredEvents[i];
+      const progress = (((i + 1) / filteredEvents.length) * 100).toFixed(1);
+      updateCentralStatus(sheetName, `Processing event ${i + 1}/${filteredEvents.length}: ${event.eventId} (${progress}%)`);
       SpreadsheetApp.flush();
-      logDebug(`Processing batch ${(i/BATCH_SIZE)+1} (Events: ${batch.map(e => e.eventId).join(", ")})`);
+      
+      logDebug(`[${i + 1}/${filteredEvents.length}] Processing event ${event.eventId} (${event.tour})`);
 
-      const batchPromises = batch.map(event => {
-        return fetchHistoricalDataBatch(
+      try {
+        const eventData = await fetchHistoricalDataBatch(
           [event.tour], 
           event.eventId, 
           event.year, 
           apiKey, 
           headers
-        ).catch(error => {
-          logDebug(`Error processing event ${event.eventId}: ${error.message}`);
-          return [];
-        });
-      });
-
-      const batchResults = await Promise.all(batchPromises);
-      batchResults.forEach(result => {
-        if (result?.length > 1) allData.push(...result.slice(1));
-      });
-
-      await delay(2000);
-    }
-
-    // 8. Process and write data
-    if (allData.length > 1) {
-      let validRows = 0;
-      let invalidRows = 0;
-      
-      var dataRows = allData.slice(1)
-        .filter(row => {
-          const isValid = row.length === headers.length && row.some(cell => cell !== '');
-          isValid ? validRows++ : invalidRows++;
-          return isValid;
-        })
-       
-        dataRows = allData.slice(1).sort((a, b) => {
-          // 1. Primary sort: event_completed date
-          const dateCompare = b[7].localeCompare(a[7]);
-          if (dateCompare !== 0) return dateCompare;
+        );
+        
+        if (eventData && eventData.length > 1) {
+          allData.push(...eventData.slice(1));
+          logDebug(`Event ${event.eventId}: Added ${eventData.length - 1} rows`);
           
-          // 2. Secondary sort: event_id
-          const eventCompare = a[5] - b[5]; // event_id at index 5
-          if (eventCompare !== 0) return eventCompare;
+          // WRITE TO SHEET AFTER EACH EVENT (checkpoint)
+          // This ensures progress is saved even if execution times out
+          await writeHistoricalDataIncremental(historicalSheet, allData);
+          logDebug(`Event ${event.eventId}: Written to sheet`);
+          
+          // Clear accumulated data to save memory, keep only headers
+          allData = [headers];
+        }
 
-          // 3. Tertiary sort - fin_text
-          const positionCompare = a[10] - b[10];
-          if (positionCompare !== 0 ) return positionCompare;
-
-          // 4. Quatrinary sort: dg_id
-          const playerCompare = a[0] - b[0]; // dg_id at index 0
-          if (playerCompare !== 0) return playerCompare;
-
-          // 5. Tertiary sort: Round number ascending
-          return a[12] - b[12]; // round_num at index 11
-        });
-
-      allData = [headers, ...dataRows];
-
-      // Write to sheet
-      const sheet = SpreadsheetApp.getActive().getSheetByName('Historical Data');
-      const startCell = sheet.getRange("B5");
-      const numColumns = headers.length;
-
-      // Clear existing data safely
-      const lastRow = sheet.getLastRow();
-      const startRow = startCell.getRow();
-      if (lastRow >= startRow) {
-        sheet.getRange(startRow, startCell.getColumn(), lastRow - startRow + 1, numColumns)
-          .clearContent();
+      } catch (error) {
+        logDebug(`Error processing event ${event.eventId}: ${error.message}`);
       }
 
-      // Write in batches
-      await writeDataInBatchesWithSheetHeaders(sheet, startCell, allData, numColumns, sheetName);
-      updateCentralStatus(sheetName, true);
-      logDebug(`Update complete: ${validRows} valid rows, ${invalidRows} errors`);
-      
-      return `Historical data updated for ${period} period (${validRows} rows)`;
+      // Delay between events to prevent API rate limiting
+      if (i < filteredEvents.length - 1) {
+        await delay(API_CALL_DELAY_MS * 2); // Extra delay between events
+      }
     }
 
-    return "No data found for selected period";
+    updateCentralStatus(sheetName, true);
+    logDebug(`Update complete: All events processed and written`);
+    return `Historical data updated for ${period} period`;
   } catch (error) {
     const errorMessage = `Line ${error.stack.split('\n')[1].match(/:(\d+):/)[1]}: ${error.message}`;
     updateCentralStatus(sheetName, `Failed: ${errorMessage.slice(0,50)}`);
@@ -1324,19 +1415,34 @@ async function updateApproachSkillDataFromButton() {
 async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers) {
   let successCount = 0;
   let errorCount = 0;
+  const runtimeStart = new Date().getTime();
+  
   try {
     let allData = [];
     const seenRows = new Set(); // For duplicate detection
 
     for (const tour of tours) {
+      // Runtime check - if running low on time, skip remaining tours
+      const elapsedMs = new Date().getTime() - runtimeStart;
+      if (elapsedMs > MAX_RUNTIME * 0.9) {
+        logDebug(`⚠️ Runtime exceeded 90%. Stopping API calls for event ${eventId}.`);
+        break;
+      }
+
       const endpoint = `https://feeds.datagolf.com/historical-raw-data/rounds?tour=${tour}&event_id=${eventId}&year=${year}&file_format=json&key=${apiKey}`;
       
       try {
-        const response = await UrlFetchApp.fetch(endpoint, { muteHttpExceptions: true });
+        logDebug(`Fetching: ${tour} event ${eventId} year ${year}...`);
+        const response = UrlFetchApp.fetch(endpoint, { 
+          muteHttpExceptions: true,
+          timeout: API_TIMEOUT_MS
+        });
+        
         const responseData = processApiResponse(response);
 
         if (responseData.error) {
           logDebug(`API Error: ${responseData.error}`);
+          errorCount++;
           continue;
         }
 
@@ -1348,24 +1454,31 @@ async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers) {
         processedData.forEach(row => {
           const rowHash = row.join('|');
           if (!seenRows.has(rowHash) && validateRow(row, headers)) {
-            if (row) {
-              successCount++;
-            } else {
-              errorCount++;
-            }
+            successCount++;
             allData.push(row);
             seenRows.add(rowHash);
+          } else {
+            errorCount++;
           }
         });
         
-        logDebug(`Batch result: ${successCount} valid rows, ${errorCount} errors.`);
+        logDebug(`Tour ${tour}: ${successCount} valid rows, ${errorCount} errors.`);
+        
+        // CRITICAL: Delay between API calls to avoid rate limiting
+        if (tours.indexOf(tour) < tours.length - 1) {
+          await delay(API_CALL_DELAY_MS);
+        }
 
       } catch (error) {
         logDebug(`Tour ${tour} failed: ${error.message}`);
+        errorCount++;
+        
+        // Still delay on error to avoid hammering API
+        await delay(API_CALL_DELAY_MS);
       }
     }
 
-    logDebug(`Valid mapped rows: ${allData.length}`);
+    logDebug(`Batch complete: ${successCount} total valid rows`);
     return allData.length > 0 ? [MAIN_HEADERS, ...allData] : [];
 
   } catch (error) {

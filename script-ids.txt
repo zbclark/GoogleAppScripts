@@ -10,11 +10,8 @@
 1swgINehLMKuVdDvfvhAllJSftdY2ANDUeGEWrnHbflyZVNeWiFeIq40J ADS Sales Operations
 1rihqxYHMqzIGr6uXwwQXDImbgI9q58TuM8-yBIO6Pb0f3JLdfzSdy_ag ADS Employee Utilization
 1jhESh7N0Oliz0soOjEd16Ydnf6AYg6b3D-PrbauFsps-RMaA_ujIeUMd ADS Pricing Template
-1e6L-MKYv6qFoXp1ia2yq2aTpRa12D3CB4vsc4ch-8maQV6jPkExgAO18 Golf Algorithm
-
-1rihqxYHMqzIGr6uXwwQXDImbgI9q58TuM8-yBIO6Pb0f3JLdfzSdy_ag ADS Employee Utilization
-1jhESh7N0Oliz0soOjEd16Ydnf6AYg6b3D-PrbauFsps-RMaA_ujIeUMd ADS Pricing Template
-1e6L-MKYv6qFoXp1ia2yq2aTpRa12D3CB4vsc4ch-8maQV6jPkExgAO18 Golf Algorithm
+1PXdo_jjopMXd3Jv1stRPMSsaPjNUudSSoo_YZx9n1EuTxuNZB86TJ8uG Golf Algorithm
+1vIbXWCAIHIGHyqBg1v70Mf2b05HgA0mAvMp_UlzQxcacf3LgZ-IlKm-U Golf Algo Validation
 
 # Add more script IDs below:
 # ANOTHER_SCRIPT_ID_HERE Another Project Name
