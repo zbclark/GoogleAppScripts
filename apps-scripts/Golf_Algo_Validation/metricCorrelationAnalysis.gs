@@ -132,11 +132,27 @@ function analyzeMetricCorrelations() {
         const dgId = row[dgIdIdx];
         const position = row[positionIdx];
         
-        // Skip if no DG ID or invalid position
-        if (!dgId || position === undefined || position === '' || typeof position === 'string') continue;
+        // Skip if no DG ID
+        if (!dgId) continue;
         
-        const pos = parseInt(position);
-        if (isNaN(pos) || pos <= 0) continue;
+        // Parse position - handle ties (T1, T3) and regular numbers
+        let pos = null;
+        if (typeof position === 'number') {
+          pos = position;
+        } else if (typeof position === 'string') {
+          // Handle "T1", "T3", "1", etc.
+          const posStr = position.toString().trim().toUpperCase();
+          if (posStr.startsWith('T')) {
+            pos = parseInt(posStr.substring(1));
+          } else if (posStr === 'CUT' || posStr === 'WD' || posStr === '') {
+            continue;  // Skip cuts and withdrawals
+          } else {
+            pos = parseInt(posStr);
+          }
+        }
+        
+        // Only include valid positions
+        if (pos === null || isNaN(pos) || pos <= 0) continue;
         
         tournamentFinishers.push({
           dgId: dgId,
