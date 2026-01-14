@@ -17,6 +17,9 @@ function analyzeMetricCorrelations() {
     const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
     const masterSs = SpreadsheetApp.getActiveSpreadsheet();
     
+    let filesProcessed = 0;
+    let filesWithData = 0;
+    
     // Define all 35 metrics
     const allMetrics = [
       // Historical Metrics (17)
@@ -93,6 +96,12 @@ function analyzeMetricCorrelations() {
       const resultsData = resultsSheet.getDataRange().getValues();
       console.log(`Tournament Results sheet has ${resultsData.length} rows`);
       
+      // Validate we have enough rows (header at row 5 + at least some data)
+      if (resultsData.length <= 5) {
+        console.log(`⚠️ ${fileName}: Not enough rows (need at least 6)`);
+        continue;
+      }
+      
       // Find header row (row 5 = index 4)
       const headerRow = resultsData[4];
       const headerMap = {};
@@ -100,11 +109,16 @@ function analyzeMetricCorrelations() {
         if (header) headerMap[header.toString().trim()] = idx;
       });
       
-      console.log(`Headers found:`, Object.keys(headerMap));
+      console.log(`Headers found:`, Object.keys(headerMap).slice(0, 10));
       
-      // Extract DG ID and finishing position from results
+      // Validate required columns exist
       const dgIdIdx = headerMap['DG ID'];
       const positionIdx = headerMap['Finish Position'];
+      
+      if (dgIdIdx === undefined || positionIdx === undefined) {
+        console.log(`⚠️ ${fileName}: Missing required columns (DG ID or Finish Position)`);
+        continue;
+      }
       
       console.log(`DG ID column index: ${dgIdIdx}, Finish Position column index: ${positionIdx}`);
       
@@ -113,6 +127,8 @@ function analyzeMetricCorrelations() {
       
       for (let i = 5; i < Math.min(resultsData.length, 500); i++) {
         const row = resultsData[i];
+        if (!row || row.length === 0) continue;
+        
         const dgId = row[dgIdIdx];
         const position = row[positionIdx];
         
@@ -120,7 +136,7 @@ function analyzeMetricCorrelations() {
         if (!dgId || position === undefined || position === '' || typeof position === 'string') continue;
         
         const pos = parseInt(position);
-        if (isNaN(pos)) continue;
+        if (isNaN(pos) || pos <= 0) continue;
         
         tournamentFinishers.push({
           dgId: dgId,
@@ -129,7 +145,14 @@ function analyzeMetricCorrelations() {
         });
       }
       
+      // Validate we have finishers
+      if (tournamentFinishers.length < 5) {
+        console.log(`⚠️ ${fileName}: Only ${tournamentFinishers.length} valid finishers (need at least 5)`);
+        continue;
+      }
+      
       console.log(`Found ${tournamentFinishers.length} finishers with valid positions`);
+      filesProcessed++;
       
       // Now get player stats from the same workbook
       const playerStatsSheet = ss.getSheetByName("Player Ranking Model");
@@ -141,12 +164,24 @@ function analyzeMetricCorrelations() {
       const playerData = playerStatsSheet.getDataRange().getValues();
       console.log(`Player Ranking Model has ${playerData.length} rows, ${playerData[0] ? playerData[0].length : 0} columns`);
       
+      // Validate player data has rows
+      if (playerData.length <= 5) {
+        console.log(`⚠️ ${fileName}: Player data too short (${playerData.length} rows)`);
+        continue;
+      }
+      
       // Headers are on row 5 (index 4)
       const playerHeaderRow = playerData[4];
       const playerHeaderMap = {};
       playerHeaderRow.forEach((header, idx) => {
         if (header) playerHeaderMap[header.toString().trim()] = idx;
       });
+      
+      // Validate DG ID column exists in player data
+      if (playerHeaderMap['DG ID'] === undefined) {
+        console.log(`⚠️ ${fileName}: DG ID column not found in Player Ranking Model`);
+        continue;
+      }
       
       console.log(`Player metric columns found:`, Object.keys(playerHeaderMap).filter(h => allMetrics.includes(h)).slice(0, 10));
       
@@ -156,6 +191,8 @@ function analyzeMetricCorrelations() {
       // Data starts at row 6 (index 5)
       for (let i = 5; i < playerData.length; i++) {
         const row = playerData[i];
+        if (!row || row.length === 0) continue;
+        
         const dgId = row[playerHeaderMap['DG ID']];
         
         if (!dgId) continue;
@@ -174,11 +211,19 @@ function analyzeMetricCorrelations() {
       
       console.log(`Found ${playerMetricsMap.size} players with metric data`);
       
+      // Validate we have player data
+      if (playerMetricsMap.size === 0) {
+        console.log(`⚠️ ${fileName}: No player metric data found`);
+        continue;
+      }
+      
       // Match finishers with their metrics
+      let matchedCount = 0;
       tournamentFinishers.forEach(finisher => {
         const metrics = playerMetricsMap.get(finisher.dgId.toString());
         if (metrics) {
           finisher.metrics = metrics;
+          matchedCount++;
           correlationData.finisherMetrics.push({
             tournament: fileName,
             dgId: finisher.dgId,
@@ -190,7 +235,7 @@ function analyzeMetricCorrelations() {
           // Add to both aggregate and per-tournament correlation data
           allMetrics.forEach(metric => {
             const value = metrics[metric];
-            if (value !== undefined && !isNaN(value)) {
+            if (value !== undefined && !isNaN(value) && value !== 0) {
               const isTop10 = finisher.position <= 10;
               
               // Aggregate data
@@ -211,7 +256,13 @@ function analyzeMetricCorrelations() {
         }
       });
       
-      console.log(`Matched ${tournamentFinishers.filter(f => f.metrics && Object.keys(f.metrics).length > 0).length} finishers with metrics`);
+      console.log(`Matched ${matchedCount} of ${tournamentFinishers.length} finishers with metrics`);
+      
+      // Validate we have meaningful data
+      if (matchedCount < 3) {
+        console.log(`⚠️ ${fileName}: Insufficient matched finishers (${matchedCount})`);
+        continue;
+      }
       
       // Calculate per-tournament metric correlations
       allMetrics.forEach(metric => {
@@ -278,6 +329,22 @@ function analyzeMetricCorrelations() {
         finisherCount: tournamentFinishers.length,
         top10Count: top10Finishers.length
       });
+      filesWithData++;
+    }
+    
+    // Validate we have at least some tournaments with valid data
+    if (correlationData.tournaments.length === 0) {
+      SpreadsheetApp.getUi().alert(
+        `❌ No valid tournament data found.\n\n` +
+        `Processed ${filesProcessed} files, but none had sufficient valid data.\n\n` +
+        `Requirements:\n` +
+        `• Headers on row 5\n` +
+        `• DG ID and Finish Position columns\n` +
+        `• At least 5 finishers with valid positions\n` +
+        `• Player Ranking Model sheet with metrics\n` +
+        `• At least 3 finishers matched with metric data`
+      );
+      return;
     }
     
     // Calculate correlations across all tournaments
@@ -314,82 +381,108 @@ function analyzeMetricCorrelations() {
     
     // Sort metrics by delta (top 10 vs field) to find which metrics separate winners
     const sortedMetrics = Object.values(correlationData.metricCorrelations)
+      .filter(m => m.values.length > 0 && !isNaN(m.deltaTop10VsField))
       .sort((a, b) => Math.abs(b.deltaTop10VsField) - Math.abs(a.deltaTop10VsField));
+    
+    // Validate we have meaningful metrics
+    if (sortedMetrics.length === 0) {
+      SpreadsheetApp.getUi().alert(
+        `⚠️ No meaningful metric correlations found.\n\n` +
+        `${correlationData.tournaments.length} tournaments processed, ` +
+        `but metrics had insufficient variation.`
+      );
+      return;
+    }
     
     // ========== CREATE SHEETS ==========
     
-    // 1. INDIVIDUAL TOURNAMENT ANALYSIS SHEET
-    createIndividualTournamentSheets(masterSs, correlationData);
+    // 1. INDIVIDUAL TOURNAMENT ANALYSIS SHEET (only for tournaments with valid data)
+    const validTournaments = correlationData.tournaments.filter(t => 
+      correlationData.tournamentBreakdown[t.name] && 
+      correlationData.tournamentBreakdown[t.name].top10Count > 0
+    );
     
-    // 2. COURSE TYPE CLASSIFICATION SHEET
-    createCourseTypeSheet(masterSs, courseTypeGroups, correlationData);
+    if (validTournaments.length > 0) {
+      createIndividualTournamentSheets(masterSs, correlationData);
+    }
     
-    // 3. MAIN AGGREGATE REPORT
-    const reportSheet = masterSs.insertSheet("01_Aggregate_Metric_Report");
+    // 2. COURSE TYPE CLASSIFICATION SHEET (only if we have types)
+    if (Object.keys(courseTypeGroups).length > 0) {
+      createCourseTypeSheet(masterSs, courseTypeGroups, correlationData);
+    }
     
-    reportSheet.appendRow([
-      "AGGREGATE METRIC EFFECTIVENESS - TOP 10 FINISHERS vs FIELD AVERAGE"
-    ]);
-    reportSheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
-    
-    reportSheet.appendRow([" "]);
-    reportSheet.appendRow([
-      "Metric",
-      "Top 10 Avg",
-      "Field Avg",
-      "Delta (Difference)",
-      "% Above Field",
-      "Correlation",
-      "# Observations"
-    ]);
-    
-    // Format header
-    const headerRange = reportSheet.getRange(3, 1, 1, 7);
-    headerRange.setBackground("#4472C4").setFontColor("white").setFontWeight("bold");
-    
-    // Add metric data
-    sortedMetrics.forEach((metric, idx) => {
-      const pctAboveField = metric.avgForField !== 0 ? 
-        ((metric.deltaTop10VsField / metric.avgForField) * 100).toFixed(1) : "N/A";
+    // 3. MAIN AGGREGATE REPORT (only if we have sorted metrics)
+    if (sortedMetrics.length > 0) {
+      const reportSheet = masterSs.insertSheet("01_Aggregate_Metric_Report");
       
       reportSheet.appendRow([
-        metric.metric,
-        metric.avgForTop10.toFixed(3),
-        metric.avgForField.toFixed(3),
-        metric.deltaTop10VsField.toFixed(3),
-        pctAboveField + "%",
-        metric.correlation.toFixed(4),
-        metric.countTop10
+        "AGGREGATE METRIC EFFECTIVENESS - TOP 10 FINISHERS vs FIELD AVERAGE"
+      ]);
+      reportSheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
+      
+      reportSheet.appendRow([" "]);
+      reportSheet.appendRow([
+        "Metric",
+        "Top 10 Avg",
+        "Field Avg",
+        "Delta (Difference)",
+        "% Above Field",
+        "Correlation",
+        "# Observations"
       ]);
       
-      // Color code by delta magnitude
-      const rowIdx = idx + 4;
-      const absDelta = Math.abs(metric.deltaTop10VsField);
-      if (absDelta > 0.5) {
-        reportSheet.getRange(rowIdx, 4).setBackground("#90EE90");  // Green
-      } else if (absDelta > 0.2) {
-        reportSheet.getRange(rowIdx, 4).setBackground("#FFFFE0");  // Yellow
-      } else {
-        reportSheet.getRange(rowIdx, 4).setBackground("#FFB6C1");  // Light red
-      }
-    });
-    
-    reportSheet.autoResizeColumns(1, 7);
+      // Format header
+      const headerRange = reportSheet.getRange(3, 1, 1, 7);
+      headerRange.setBackground("#4472C4").setFontColor("white").setFontWeight("bold");
+      
+      // Add metric data
+      sortedMetrics.forEach((metric, idx) => {
+        if (isNaN(metric.avgForField) || isNaN(metric.deltaTop10VsField)) return;
+        
+        const pctAboveField = metric.avgForField !== 0 ? 
+          ((metric.deltaTop10VsField / metric.avgForField) * 100).toFixed(1) : "N/A";
+        
+        reportSheet.appendRow([
+          metric.metric,
+          metric.avgForTop10.toFixed(3),
+          metric.avgForField.toFixed(3),
+          metric.deltaTop10VsField.toFixed(3),
+          pctAboveField + "%",
+          metric.correlation.toFixed(4),
+          metric.countTop10
+        ]);
+        
+        // Color code by delta magnitude
+        const rowIdx = idx + 4;
+        const absDelta = Math.abs(metric.deltaTop10VsField);
+        if (absDelta > 0.5) {
+          reportSheet.getRange(rowIdx, 4).setBackground("#90EE90");  // Green
+        } else if (absDelta > 0.2) {
+          reportSheet.getRange(rowIdx, 4).setBackground("#FFFFE0");  // Yellow
+        } else {
+          reportSheet.getRange(rowIdx, 4).setBackground("#FFB6C1");  // Light red
+        }
+      });
+      
+      reportSheet.autoResizeColumns(1, 7);
+    }
     
     SpreadsheetApp.getUi().alert(
-      `Metric Correlation Analysis Complete!\n\n` +
-      `Analyzed ${correlationData.tournaments.length} tournaments\n` +
-      `Classified into ${Object.keys(courseTypeGroups).length} course types\n` +
-      `${correlationData.finisherMetrics.length} total player observations\n\n` +
-      `Check sheets:\n` +
-      `• 00_Course_Type_Classification: Course groupings\n` +
-      `• 01_Aggregate_Metric_Report: Overall metrics\n` +
-      `• 02_Tournament_[Name]: Individual tournament analysis`
+      `✅ Metric Correlation Analysis Complete!\n\n` +
+      `Files processed: ${filesProcessed}\n` +
+      `Tournaments analyzed: ${correlationData.tournaments.length}\n` +
+      `Valid tournaments: ${validTournaments.length}\n` +
+      `Course types: ${Object.keys(courseTypeGroups).length}\n` +
+      `Total observations: ${correlationData.finisherMetrics.length}\n\n` +
+      `Sheets created:\n` +
+      (Object.keys(courseTypeGroups).length > 0 ? `• 00_Course_Type_Classification\n` : ``) +
+      (sortedMetrics.length > 0 ? `• 01_Aggregate_Metric_Report\n` : ``) +
+      (validTournaments.length > 0 ? `• 02_Tournament_[Name] sheets` : ``)
     );
     
   } catch (e) {
     console.error("Error in analyzeMetricCorrelations:", e);
-    SpreadsheetApp.getUi().alert(`Error: ${e.message}`);
+    SpreadsheetApp.getUi().alert(`❌ Error: ${e.message}\n\nCheck Apps Script console for details.`);
   }
 }
 
