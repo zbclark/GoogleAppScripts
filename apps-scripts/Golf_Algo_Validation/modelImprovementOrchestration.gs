@@ -334,40 +334,47 @@ function analyzeAndGenerateRecommendations(calibrationResults, metricResults, co
 function createComprehensiveSummarySheet(masterSs, recommendations) {
   const sheet = masterSs.insertSheet("Comprehensive Analysis Summary", 0);
   
+  // Set column widths first
+  sheet.setColumnWidth(1, 600);
+  sheet.setColumnWidth(2, 400);
+  sheet.setColumnWidth(3, 150);
+  sheet.setColumnWidth(4, 150);
+  
   let row = 1;
   
   // ===== HEADER =====
-  sheet.getRange(row, 1, 1, 4).setBackground("#1f2937").setFontColor("white").setFontWeight("bold");
+  sheet.getRange(row, 1, 1, 4).setBackground("#1f2937").setFontColor("white").setFontWeight("bold").setFontSize(14);
   sheet.appendRow(["🎯 COMPREHENSIVE MODEL ANALYSIS SUMMARY", "", "", ""]);
   row++;
   
+  sheet.getRange(row, 1).setFontSize(11);
   sheet.appendRow([`Generated: ${new Date().toLocaleString()}`, "", "", ""]);
-  row++;
+  row += 2;
   
   // ===== PHASES COMPLETED =====
-  sheet.appendRow([""]);
-  row++;
-  
   sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#3b82f6").setFontColor("white");
-  sheet.appendRow(["✅ PHASES COMPLETED"]);
+  sheet.appendRow(["✅ PHASES COMPLETED", "", "", ""]);
   row++;
   
-  sheet.appendRow(["1. ✓ Model Accuracy Diagnostics - vs pre-tournament predictions"]);
-  sheet.appendRow(["2. ✓ Post-Tournament Calibration - actual results vs model"]);
-  sheet.appendRow(["3. ✓ Winner Prediction Analysis - top finisher accuracy"]);
-  sheet.appendRow(["4. ✓ Weight Effectiveness - which weights drive predictions"]);
-  sheet.appendRow(["5. ✓ Metric Correlation - what metrics actually predict winners"]);
-  sheet.appendRow(["6. ✓ Course Type Classification - tournament groupings"]);
-  sheet.appendRow(["7. ✓ Weight Template Generation - derived optimal weights by type"]);
-  sheet.appendRow(["8. ✓ Consolidated Recommendations - actionable improvement steps"]);
-  row += 9;
+  const phases = [
+    "1. ✓ Model Accuracy Diagnostics - vs pre-tournament predictions",
+    "2. ✓ Post-Tournament Calibration - actual results vs model",
+    "3. ✓ Winner Prediction Analysis - top finisher accuracy",
+    "4. ✓ Weight Effectiveness - which weights drive predictions",
+    "5. ✓ Metric Correlation - what metrics actually predict winners",
+    "6. ✓ Course Type Classification - tournament groupings",
+    "7. ✓ Weight Template Generation - derived optimal weights by type",
+    "8. ✓ Consolidated Recommendations - actionable improvement steps"
+  ];
+  
+  phases.forEach(phase => {
+    sheet.appendRow([phase, "", "", ""]);
+  });
+  row += phases.length + 1;
   
   // ===== KEY SHEETS TO REVIEW =====
-  sheet.appendRow([""]);
-  row++;
-  
   sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#10b981").setFontColor("white");
-  sheet.appendRow(["📋 KEY SHEETS TO REVIEW (In Order)"]);
+  sheet.appendRow(["📋 KEY SHEETS TO REVIEW (In Order)", "", "", ""]);
   row++;
   
   const sheets = [
@@ -382,59 +389,60 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
   ];
   
   sheets.forEach((s, idx) => {
-    sheet.appendRow([`${idx + 1}. ${s.name}`, s.desc]);
+    sheet.appendRow([`${idx + 1}. ${s.name}`, s.desc, "", ""]);
   });
   row += sheets.length + 1;
   
   // ===== DIAGNOSTIC WORKFLOW =====
-  sheet.appendRow([""]);
-  row++;
-  
   sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#f59e0b").setFontColor("white");
-  sheet.appendRow(["🔍 DIAGNOSTIC WORKFLOW"]);
+  sheet.appendRow(["🔍 DIAGNOSTIC WORKFLOW", "", "", ""]);
   row++;
   
-  sheet.appendRow(["STEP 1: Identify Problem Tournaments"]);
-  sheet.appendRow(["  • Open 'Season Accuracy Summary' - find tournaments with highest miss scores"]);
-  sheet.appendRow(["  • Note which course types struggle (power/technical/balanced)"]);
-  row += 2;
+  const steps = [
+    { title: "STEP 1: Identify Problem Tournaments", items: [
+      "• Open 'Season Accuracy Summary' - find tournaments with highest miss scores",
+      "• Note which course types struggle (power/technical/balanced)"
+    ]},
+    { title: "STEP 2: Find What Metrics Mattered", items: [
+      "• Open that tournament's '02_Tournament_[Name]' sheet",
+      "• Top 5 metrics show what actually separated winners at that course",
+      "• If you weighted them low = that's your problem"
+    ]},
+    { title: "STEP 3: Check Course Type Patterns", items: [
+      "• Open '00_Course_Type_Classification' - what type is this course?",
+      "• Are OTHER courses of this type also underperforming?",
+      "• If yes = systemic issue with your course-type weights"
+    ]},
+    { title: "STEP 4: Compare to Templates", items: [
+      "• Open 'Template Metrics by Type' - what did actual data show?",
+      "• Compare template weights to your current weights",
+      "• Gaps indicate where you need to adjust"
+    ]},
+    { title: "STEP 5: Make Targeted Adjustments", items: [
+      "• For underweighted metrics at problem courses: increase 15-30%",
+      "• For overweighted metrics: decrease 10-20%",
+      "• Focus on metrics with delta > 0.5 (strong predictors)"
+    ]},
+    { title: "STEP 6: Test & Measure", items: [
+      "• Run predictions on past similar tournaments with new weights",
+      "• Compare accuracy before vs after",
+      "• Target: 5-10% improvement per cycle"
+    ]}
+  ];
   
-  sheet.appendRow(["STEP 2: Find What Metrics Mattered"]);
-  sheet.appendRow(["  • Open that tournament's '02_Tournament_[Name]' sheet"]);
-  sheet.appendRow(["  • Top 5 metrics show what actually separated winners at that course"]);
-  sheet.appendRow(["  • If you weighted them low = that's your problem"]);
-  row += 3;
-  
-  sheet.appendRow(["STEP 3: Check Course Type Patterns"]);
-  sheet.appendRow(["  • Open '00_Course_Type_Classification' - what type is this course?"]);
-  sheet.appendRow(["  • Are OTHER courses of this type also underperforming?"]);
-  sheet.appendRow(["  • If yes = systemic issue with your course-type weights"]);
-  row += 3;
-  
-  sheet.appendRow(["STEP 4: Compare to Templates"]);
-  sheet.appendRow(["  • Open 'Template Metrics by Type' - what did actual data show?"]);
-  sheet.appendRow(["  • Compare template weights to your current weights"]);
-  sheet.appendRow(["  • Gaps indicate where you need to adjust"]);
-  row += 3;
-  
-  sheet.appendRow(["STEP 5: Make Targeted Adjustments"]);
-  sheet.appendRow(["  • For underweighted metrics at problem courses: increase 15-30%"]);
-  sheet.appendRow(["  • For overweighted metrics: decrease 10-20%"]);
-  sheet.appendRow(["  • Focus on metrics with delta > 0.5 (strong predictors)"]);
-  row += 3;
-  
-  sheet.appendRow(["STEP 6: Test & Measure"]);
-  sheet.appendRow(["  • Run predictions on past similar tournaments with new weights"]);
-  sheet.appendRow(["  • Compare accuracy before vs after"]);
-  sheet.appendRow(["  • Target: 5-10% improvement per cycle"]);
-  row += 4;
+  steps.forEach(step => {
+    sheet.appendRow([step.title, "", "", ""]);
+    row++;
+    step.items.forEach(item => {
+      sheet.appendRow([item, "", "", ""]);
+      row++;
+    });
+    row++;
+  });
   
   // ===== COMMON ISSUES & FIXES =====
-  sheet.appendRow([""]);
-  row++;
-  
   sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#ef4444").setFontColor("white");
-  sheet.appendRow(["⚠️  COMMON ISSUES & QUICK FIXES"]);
+  sheet.appendRow(["⚠️  COMMON ISSUES & QUICK FIXES", "", "", ""]);
   row++;
   
   const issues = [
@@ -446,52 +454,21 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
   ];
   
   issues.forEach(item => {
-    sheet.appendRow([`Issue: ${item.issue}`, ""]);
-    sheet.appendRow([`→ Fix: ${item.fix}`, ""]);
-    sheet.appendRow([""]);
+    sheet.appendRow([`Issue: ${item.issue}`, `→ Fix: ${item.fix}`, "", ""]);
+    row++;
   });
-  row += (issues.length * 3) + 1;
   
-  // ===== METRICS TO TRACK =====
-  sheet.appendRow([""]);
   row++;
-  
-  sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#8b5cf6").setFontColor("white");
-  sheet.appendRow(["📊 METRICS TO TRACK OVER TIME"]);
-  row++;
-  
-  sheet.appendRow(["Metric", "Current", "Target", "How to Improve"]);
-  sheet.getRange(row, 1, 1, 4).setBackground("#e5e7eb").setFontWeight("bold");
-  row++;
-  
-  const metrics = [
-    { metric: "Top 5 Accuracy", current: "?", target: ">70%", how: "Increase weights on top differentiating metrics" },
-    { metric: "Top 10 Accuracy", current: "?", target: ">75%", how: "Reduce weight on weak metrics, focus on deltas >0.3" },
-    { metric: "Avg Miss Score", current: "?", target: "<15 places", how: "Better calibration = closer rank predictions" },
-    { metric: "POWER Course Accuracy", current: "?", target: ">70%", how: "Increase distance/power metric weights" },
-    { metric: "TECHNICAL Accuracy", current: "?", target: ">70%", how: "Increase SG approach/putting weights" },
-  ];
-  
-  metrics.forEach(m => {
-    sheet.appendRow([m.metric, m.current, m.target, m.how]);
-  });
-  row += metrics.length + 1;
   
   // ===== NEXT STEPS =====
-  sheet.appendRow([""]);
-  row++;
-  
   sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#06b6d4").setFontColor("white");
-  sheet.appendRow(["✅ NEXT STEPS"]);
+  sheet.appendRow(["✅ NEXT STEPS", "", "", ""]);
   row++;
   
   recommendations.nextSteps.forEach((step, idx) => {
-    sheet.appendRow([step]);
+    sheet.appendRow([step, "", "", ""]);
+    row++;
   });
-  
-  sheet.setColumnWidth(1, 500);
-  sheet.setColumnWidth(2, 400);
-  sheet.setColumnWidth(3, 150);
 }
 
 /**
