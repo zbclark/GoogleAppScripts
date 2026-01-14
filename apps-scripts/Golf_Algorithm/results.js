@@ -1059,6 +1059,14 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
  
     // Get approach metrics
     const approachMetrics = getApproachMetrics(data.approachMetrics);
+    
+    // Calculate which metrics have actual data (for data coverage purposes)
+    const metricsWithData = calculateMetricsWithData(
+      data.historicalRounds,
+      data.similarRounds,
+      data.puttingRounds,
+      data.approachMetrics
+    );
  
     // Create safe metrics array with exactly 34 elements
     const safeMetrics = [
@@ -1155,7 +1163,8 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         }
         
         totalMetricsCount++;
-        if (value !== 0) {
+        // Check if this metric has actual data (not just default/zero value)
+        if (metricsWithData.has(metric.index)) {
           nonZeroMetricsCount++;
         }
         
@@ -2267,16 +2276,105 @@ function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 2
   return baseWeight * scaleFactor;
 }
 
+/**
+ * Calculates which metrics have actual tournament/approach data (vs. defaults)
+ * Returns a Set of metric indices that have real data
+ * If a player has any tournament rounds, they have data for all metrics
+ */
+function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds, approachMetrics) {
+  const metricsWithData = new Set();
+  
+  // Map of metric indices to their corresponding metric keys in round.metrics
+  const historicalMetricKeys = {
+    0: 'strokesGainedTotal',
+    1: 'drivingDistance',
+    2: 'drivingAccuracy',
+    3: 'strokesGainedT2G',
+    4: 'strokesGainedApp',
+    5: 'strokesGainedArg',
+    6: 'strokesGainedOTT',
+    7: 'strokesGainedPutt',
+    8: 'greensInReg',
+    9: 'scrambling',
+    10: 'greatShots',
+    11: 'poorShots',
+    12: 'scoringAverage',
+    13: 'birdiesOrBetter',
+    14: 'fairwayProx',
+    15: 'roughProx'
+  };
+  
+  // Check historical metrics (0-15) across all round types
+  const allHistoricalRounds = [...(historicalRounds || []), ...(similarRounds || []), ...(puttingRounds || [])];
+  
+  for (let i = 0; i <= 15; i++) {
+    const metricKey = historicalMetricKeys[i];
+    
+    // Check if ANY round has a non-zero value for this metric
+    const hasData = allHistoricalRounds.some(round => {
+      const value = round?.metrics?.[metricKey];
+      return typeof value === 'number' && value !== 0;
+    });
+    
+    if (hasData) {
+      metricsWithData.add(i);
+    }
+  }
+  
+  // Check approach metrics (16-33)
+  // Approach metrics are stored as an array index in the order defined by getApproachMetrics
+  if (approachMetrics && typeof approachMetrics === 'object') {
+    const approachMetricMapping = {
+      16: '<100.fwGIR',
+      17: '<100.strokesGained',
+      18: '<100.shotProx',
+      19: '<150.fwGIR',
+      20: '<150.fwStrokesGained',
+      21: '<150.fwShotProx',
+      22: '<150.roughGIR',
+      23: '<150.roughStrokesGained',
+      24: '<150.roughShotProx',
+      25: '>150 - Rough.roughGIR',
+      26: '>150 - Rough.roughStrokesGained',
+      27: '>150 - Rough.roughShotProx',
+      28: '<200.fwGIR',
+      29: '<200.fwStrokesGained',
+      30: '<200.fwShotProx',
+      31: '>200.fwGIR',
+      32: '>200.fwStrokesGained',
+      33: '>200.fwShotProx'
+    };
+    
+    for (let i = 16; i <= 33; i++) {
+      const keyPath = approachMetricMapping[i];
+      if (!keyPath) continue;
+      
+      const [category, metric] = keyPath.split('.');
+      const value = approachMetrics[category]?.[metric];
+      
+      // If approach metric has non-zero value, mark as having data
+      if (typeof value === 'number' && value !== 0) {
+        metricsWithData.add(i);
+      }
+    }
+  }
+  
+  return metricsWithData;
+}
+
 function calculateHistoricalAverages(historicalRounds, similarRounds = [], puttingRounds = [], options = {}) {
   // Default options
   const {
     lambda = 0.2, // Exponential decay factor for recency
-    minHistoricalPoints = 10, // Min points needed for historical data
-    minSimilarPoints = 5, // Min points needed for similar course data
-    minPuttingPoints = 5, // Min points needed for putting-specific data
+    minHistoricalPoints = 2, // Min points needed for historical data (lowered from 10)
+    minSimilarPoints = 2, // Min points needed for similar course data (lowered from 5)
+    minPuttingPoints = 2, // Min points needed for putting-specific data (lowered from 5)
     similarWeight = 0.6, // Weight for similar course data (0.0-1.0)
     puttingWeight = 0.7 // Weight for putting-specific data (0.0-1.0)
   } = options;
+  
+  // Track metrics with insufficient data for notes
+  const lowDataMetrics = [];
  
   const indexToMetricKey = {
     0: 'strokesGainedTotal',
@@ -2491,6 +2589,11 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
         const combinedAvg = calculateMetricAverage(allRounds, metricKey, isVirtualMetric, minHistoricalPoints);
         if (combinedAvg !== null) {
           finalValue = combinedAvg;
+          // Check if this is below standard minimum and add note
+          const stdMinHistorical = 8; // Standard minimum for historical
+          if (allRounds.length < stdMinHistorical) {
+            lowDataMetrics.push(`${metricKey} (${allRounds.length} rounds)`);
+          }
           console.log(`${playerName} - ${metricKey}: Using combined data (${allRounds.length} rounds): ${finalValue.toFixed(3)}`);
         } else {
           console.log(`${playerName} - ${metricKey}: No data available`);
@@ -2952,7 +3055,8 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
     const [positiveIsGood] = APPROACH_DIRECTIONS[approachIndex] || [true];
     
     const rawValues = range.getValues();
-    const values = rawValues.map(row => parseFloat(row[0])).filter(v => !isNaN(v));
+    // Filter to non-NaN and non-zero values only (0 means no data)
+    const values = rawValues.map(row => parseFloat(row[0])).filter(v => !isNaN(v) && v !== 0);
     
     if (values.length >= 5) {
       const mean = values.reduce((a, b) => a + b) / values.length;
@@ -2963,7 +3067,7 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
           const value = parseFloat(row[0]);
           if (isNaN(value)) return ['#FFFFFF'];
           
-          // Zero values get gray background
+          // Zero values get gray background (no data)
           if (value === 0) return ['#D3D3D3'];
           
           const z = (value - mean) / stdDev;
@@ -3228,6 +3332,12 @@ function generatePlayerNotes(player, groups, groupStats) {
   // 6. Data confidence warning
   if (player.dataCoverage < 0.75) {
     notes.push(`⚠️ Limited data (${Math.round(player.dataCoverage*100)}%)`);
+  }
+  
+  // 7. Insufficient rounds note
+  // Check if player has fewer rounds than standard thresholds (10 for historical, 5 for similar/putting)
+  if (player.roundsCount && player.roundsCount < 10) {
+    notes.push(`📊 Only ${player.roundsCount} rounds`);
   }
   
   // Return formatted notes
