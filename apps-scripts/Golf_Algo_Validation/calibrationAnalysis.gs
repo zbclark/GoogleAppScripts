@@ -383,10 +383,9 @@ function getTopMetricsForTournament(tournamentName) {
         }
       }
       
-      // Sort by delta and return top 4
+      // Sort by delta and return all metrics
       return metrics
-        .sort((a, b) => b.delta - a.delta)
-        .slice(0, 4);
+        .sort((a, b) => b.delta - a.delta);
     }
     
     return [];

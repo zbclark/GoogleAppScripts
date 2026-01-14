@@ -685,7 +685,7 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
     const headerRange = sheet.getRange(4, 1, 1, 6);
     headerRange.setBackground("#70AD47").setFontColor("white").setFontWeight("bold");
     
-    // Add all metrics sorted by % above field
+    // Add all metrics sorted by % above field (descending by absolute percentage)
     const sortedMetrics = Object.values(breakdown.metricAverages)
       .map((data, idx) => ({
         metric: Object.keys(breakdown.metricAverages)[idx],
@@ -693,20 +693,21 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       }))
       .filter(m => m.delta !== undefined && m.fieldAvg !== 0)
       .sort((a, b) => {
-        const pctA = Math.abs(a.delta / a.fieldAvg);
-        const pctB = Math.abs(b.delta / b.fieldAvg);
-        return pctB - pctA;
+        const pctA = a.fieldAvg !== 0 ? Math.abs(a.delta / a.fieldAvg) : 0;
+        const pctB = b.fieldAvg !== 0 ? Math.abs(b.delta / b.fieldAvg) : 0;
+        return pctB - pctA;  // Descending
       });
     
     sortedMetrics.forEach((m, idx) => {
       const pct = m.fieldAvg !== 0 ? ((m.delta / m.fieldAvg) * 100).toFixed(1) : "N/A";
+      const correlation = m.correlation !== undefined ? m.correlation : 0;
       sheet.appendRow([
         m.metric,
         m.top10Avg.toFixed(3),
         m.fieldAvg.toFixed(3),
         m.delta.toFixed(3),
         pct + "%",
-        m.correlation.toFixed(4)
+        correlation.toFixed(4)
       ]);
       
       const rowIdx = idx + 5;
