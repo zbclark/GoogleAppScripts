@@ -93,6 +93,9 @@ function generatePlayerRankings() {
   // 5. Write to Sheet
   writeRankingOutput(outputSheet, sortedData, metricLabels, metricGroups, groupStats);
 
+  // 6. Create Debug Sheet with calculation breakdown - USE SORTED DATA WITH RANKS
+  createDebugCalculationSheet(ss, sortedData, metricGroups, groupStats);
+
   return "Rankings generated successfully!";
 }
 
@@ -940,7 +943,8 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
           console.log(`  ${player.name}: value=${value}, type=${typeof value}, isNaN=${isNaN(value)}`);
         }
         
-        if (typeof value === 'number' && !isNaN(value)) {
+        // Exclude zero values for clean statistics - they're missing data not actual performance
+        if (typeof value === 'number' && !isNaN(value) && value !== 0) {
           metricValues.push(value);
         }
       });
@@ -1245,11 +1249,113 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     
     console.log(`Data coverage: ${dataCoverage}, Confidence factor: ${confidenceFactor}`);
     
+    // Capture group scores BEFORE dampening for debug
+    const groupScoresBeforeDampening = {...groupScores};
+    let groupScoresAfterDampening = null;
+    
+    // APPLY Z-SCORE DAMPENING FOR SPARSE DATA PLAYERS
+    // Now that we have dataCoverage, recalculate group scores with dampening
+    // This prevents their few good metrics from being inflated by zero-filtering
+    // Players with <70% data coverage get z-scores reduced exponentially
+    // At 63% coverage: dampening = 0.63^0.35 = 0.78 (22% reduction)
+    // At 50% coverage: dampening = 0.50^0.35 = 0.60 (40% reduction)
+    // At 37% coverage: dampening = 0.37^0.35 = 0.51 (49% reduction)
+    if (dataCoverage < 0.70) {
+      const dampingFactor = Math.pow(dataCoverage, 0.35);
+      console.log(`${data.name}: Applying z-score dampening factor of ${dampingFactor.toFixed(3)} (coverage: ${dataCoverage.toFixed(3)})`);
+      
+      // Recalculate all group scores with dampened z-scores
+      for (const group of groups) {
+        let groupScore = 0;
+        let totalWeight = 0;
+        
+        for (const metric of group.metrics) {
+          let value = adjustedMetrics[metric.index];
+          
+          // Apply same transformations as before
+          if (metric.name === 'Poor Shots') {
+            const maxPoorShots = METRIC_MAX_VALUES['Poor Shots'] || 12;
+            value = maxPoorShots - value;
+          } else if (metric.name.includes('Prox') ||
+                    metric.name === 'Fairway Proximity' ||
+                    metric.name === 'Rough Proximity') {
+            const maxProxValue = METRIC_MAX_VALUES[metric.name] ||
+                                 (metric.name === 'Fairway Proximity' ? 60 :
+                                 metric.name === 'Rough Proximity' ? 80 : 60);
+            value = maxProxValue - value;
+            value = Math.max(0, value);
+          } else if (metric.name === 'Scoring Average') {
+            const maxScore = METRIC_MAX_VALUES['Scoring Average'] || 74;
+            value = maxScore - value;
+          }
+          
+          const metricStats = groupStats[group.name]?.[metric.name];
+          if (!metricStats) continue;
+          
+          let zScore = (value - metricStats.mean) / (metricStats.stdDev || 0.001);
+          
+          // Apply dampening
+          zScore *= dampingFactor;
+          
+          // Apply scoring differential penalties
+          if (metric.name.includes('Score') || 
+              metric.name.includes('Birdie') || 
+              metric.name.includes('Par')) {
+            const absZScore = Math.abs(zScore);
+            if (absZScore > 2.0) {
+              zScore *= Math.pow(absZScore / 2.0, 0.75);
+            }
+          }
+          
+          if (metric.weight && typeof value === 'number' && !isNaN(value)) {
+            groupScore += zScore * metric.weight;
+            totalWeight += metric.weight;
+          }
+        }
+        
+        if (totalWeight > 0) {
+          groupScore = groupScore / totalWeight;
+        }
+        
+        // Update the group score with dampened value
+        groupScores[group.name] = groupScore;
+        console.log(`  Recalculated group ${group.name}: ${groupScore.toFixed(3)} (dampened)`);
+      }
+      
+      // Capture group scores AFTER dampening for debug
+      groupScoresAfterDampening = {...groupScores};
+      
+      // Recalculate weighted score with dampened group scores
+      weightedScore = 0;
+      let totalWeightUsed = 0;
+      
+      for (const group of groups) {
+        const groupScore = groupScores[group.name];
+        const groupWeight = group.weight || 0;
+        
+        if (typeof groupWeight === 'number' && groupWeight > 0 && 
+            typeof groupScore === 'number' && !isNaN(groupScore)) {
+          weightedScore += groupScore * groupWeight;
+          totalWeightUsed += groupWeight;
+        }
+      }
+      
+      if (totalWeightUsed > 0) {
+        weightedScore = weightedScore / totalWeightUsed;
+      } else {
+        weightedScore = 0;
+      }
+      
+      console.log(`${data.name}: Recalculated weighted score with dampening: ${weightedScore.toFixed(3)}`);
+    }
+    
     // Calculate refined score with validation
     // Apply a STRICT coverage threshold: only players with 70%+ data get meaningful scores
     // EXCEPTION: sparse-data players with recent wins/top-10s get a pass
     let dataCoverageMultiplier = 1.0;
     let hasRecentWinOrTop10 = false;
+    let isLowConfidencePlayer = false;
+    let baselineScore = null;
     
     // Pre-sort events to check for recent win/top 10 (will reuse in past perf section)
     const pastPerformances = data.events || {};
@@ -1277,39 +1383,214 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       }
     }
     
-    if (dataCoverage < 0.70) {
-      if (hasRecentWinOrTop10) {
-        // Recent win/top 10: be lenient, use coverage as multiplier (not squared)
-        // At 37% coverage with recent win: 0.37x (37%) instead of 0.14x
-        dataCoverageMultiplier = dataCoverage;
-      } else {
-        // No recent success: heavily penalized
-        // At 37% (like sparse players): multiplier = 0.37^2 = 0.137 (14%)
-        // At 50%: multiplier = 0.50^2 = 0.25 (25%)
-        // At 60%: multiplier = 0.60^2 = 0.36 (36%)
-        dataCoverageMultiplier = Math.pow(dataCoverage, 2);
+    // FOR VERY SPARSE PLAYERS (<50% coverage): Assign baseline score based on recent form (REPLACEMENT, not floor)
+    if (dataCoverage < 0.50) {
+      isLowConfidencePlayer = true;
+      
+      // Check recent finishes and assign baseline score
+      let recentTop20Count = 0;
+      let recentTop10Count = 0;
+      let totalRecentEvents = 0;
+      
+      for (const [eventKey, event] of sortedEvents) {
+        // Skip current event
+        if (CURRENT_EVENT_ID && event.eventId?.toString() === CURRENT_EVENT_ID) {
+          continue;
+        }
+        // Look at last 10 events or until we've gone back 2 years
+        if (totalRecentEvents >= 10) break;
+        
+        if (event.position && typeof event.position === 'number' && event.position < 100) {
+          totalRecentEvents++;
+          if (event.position <= 20) recentTop20Count++;
+          if (event.position <= 10) recentTop10Count++;
+        }
       }
-    } else if (dataCoverage < 0.85) {
-      // 70-85% coverage: scale from 0.49 to 0.95
-      dataCoverageMultiplier = 0.49 + ((dataCoverage - 0.70) / 0.15) * 0.46;
-    } else {
-      // 85%+ coverage: scale from 0.95 to 1.0
-      dataCoverageMultiplier = 0.95 + ((dataCoverage - 0.85) / 0.15) * 0.05;
+      
+      // Assign baseline score based on recent form - this REPLACES the calculated score for <50% coverage
+      if (recentTop20Count === 0 && totalRecentEvents > 0) {
+        // No recent top 20s → very low baseline (similar to missing cuts)
+        baselineScore = 0.30;
+        console.log(`${data.name}: Very sparse (${dataCoverage.toFixed(2)}), no recent top 20s → baseline score: ${baselineScore} (REPLACES calculated)`);
+      } else if (recentTop20Count > 0 && recentTop10Count === 0) {
+        // Recent top 20s but no top 10s → moderate baseline
+        baselineScore = 0.75;
+        console.log(`${data.name}: Very sparse (${dataCoverage.toFixed(2)}), recent top 20s → baseline score: ${baselineScore} (REPLACES calculated)`);
+      } else if (recentTop10Count > 0) {
+        // Recent top 10s → good baseline
+        baselineScore = 1.20;
+        console.log(`${data.name}: Very sparse (${dataCoverage.toFixed(2)}), recent top 10s → baseline score: ${baselineScore} (REPLACES calculated)`);
+      } else if (totalRecentEvents === 0) {
+        // No recent events at all → very low
+        baselineScore = 0.20;
+        console.log(`${data.name}: Very sparse (${dataCoverage.toFixed(2)}), no recent events → baseline score: ${baselineScore} (REPLACES calculated)`);
+      }
     }
     
-    console.log(`Data coverage multiplier: ${dataCoverageMultiplier} (coverage: ${dataCoverage}, recent win/top10: ${hasRecentWinOrTop10})`);
+    // FOR MODERATELY SPARSE PLAYERS (50-70% coverage) WITHOUT RECENT SUCCESS: Assign baseline score based on recent form
+    if (dataCoverage >= 0.50 && dataCoverage < 0.70 && !hasRecentWinOrTop10) {
+      isLowConfidencePlayer = true;
+      
+      // Check recent finishes and assign baseline score
+      let recentTop20Count = 0;
+      let recentTop10Count = 0;
+      let totalRecentEvents = 0;
+      
+      for (const [eventKey, event] of sortedEvents) {
+        // Skip current event
+        if (CURRENT_EVENT_ID && event.eventId?.toString() === CURRENT_EVENT_ID) {
+          continue;
+        }
+        // Look at last 10 events or until we've gone back 2 years
+        if (totalRecentEvents >= 10) break;
+        
+        if (event.position && typeof event.position === 'number' && event.position < 100) {
+          totalRecentEvents++;
+          if (event.position <= 20) recentTop20Count++;
+          if (event.position <= 10) recentTop10Count++;
+        }
+      }
+      
+      // Assign baseline score based on recent form
+      if (recentTop20Count === 0 && totalRecentEvents > 0) {
+        // No recent top 20s → very low baseline (similar to missing cuts)
+        baselineScore = 0.30;
+        console.log(`${data.name}: Sparse (${dataCoverage.toFixed(2)}), no recent top 20s → baseline score: ${baselineScore}`);
+      } else if (recentTop20Count > 0 && recentTop10Count === 0) {
+        // Recent top 20s but no top 10s → moderate baseline
+        baselineScore = 0.75;
+        console.log(`${data.name}: Sparse (${dataCoverage.toFixed(2)}), recent top 20s → baseline score: ${baselineScore}`);
+      } else if (recentTop10Count > 0) {
+        // Recent top 10s → good baseline
+        baselineScore = 1.20;
+        console.log(`${data.name}: Sparse (${dataCoverage.toFixed(2)}), recent top 10s → baseline score: ${baselineScore}`);
+      } else if (totalRecentEvents === 0) {
+        // No recent events at all → very low
+        baselineScore = 0.20;
+        console.log(`${data.name}: Sparse (${dataCoverage.toFixed(2)}), no recent events → baseline score: ${baselineScore}`);
+      }
+    }
     
-    let refinedWeightedScore = weightedScore * confidenceFactor * dataCoverageMultiplier;
+    // Use baseline score for low-confidence players, otherwise calculate normally
+    let refinedWeightedScore;
+    
+    // TIER 1: Very sparse players (<50% coverage) - USE BASELINE REPLACEMENT
+    if (dataCoverage < 0.50 && isLowConfidencePlayer && baselineScore !== null) {
+      refinedWeightedScore = baselineScore;
+      console.log(`${data.name}: Very sparse (<50%) - Using baseline score (${baselineScore}) to REPLACE calculated score (${(weightedScore * confidenceFactor * dataCoverageMultiplier).toFixed(3)})`);
+    }
+    // TIER 2: Moderately sparse players (50-70% coverage) without recent success - APPLY HARD FLOOR & CEILING
+    else if (dataCoverage >= 0.50 && dataCoverage < 0.70 && isLowConfidencePlayer && baselineScore !== null) {
+      // Strong floor prevents ranking too low, but also cap at reasonable ceiling
+      const calculatedScore = weightedScore * confidenceFactor * dataCoverage;
+      
+      // Hard ceiling to prevent even dampened scores from being too high
+      let hardCeiling = 1.15;
+      if (dataCoverage < 0.60) {
+        hardCeiling = 1.05;
+      }
+      if (dataCoverage < 0.55) {
+        hardCeiling = 0.95;
+      }
+      
+      refinedWeightedScore = Math.max(Math.min(calculatedScore, hardCeiling), baselineScore);
+      
+      console.log(`${data.name}: Sparse (50-70%) - calculated: ${calculatedScore.toFixed(3)}, baseline floor: ${baselineScore}, ceiling: ${hardCeiling}, result: ${refinedWeightedScore.toFixed(3)}`);
+    }
+    // TIER 3: Moderately sparse with recent success (50-70% coverage + recent win/top 10) - APPLY HARD CEILING
+    else if (dataCoverage >= 0.50 && dataCoverage < 0.70 && hasRecentWinOrTop10) {
+      // For players with <70% coverage, cap score even with recent success
+      // This prevents them from dominating the rankings
+      
+      let recentTop20Count = 0;
+      let recentTop10Count = 0;
+      let totalRecentEvents = 0;
+      
+      for (const [eventKey, event] of sortedEvents) {
+        if (CURRENT_EVENT_ID && event.eventId?.toString() === CURRENT_EVENT_ID) {
+          continue;
+        }
+        if (totalRecentEvents >= 10) break;
+        
+        if (event.position && typeof event.position === 'number' && event.position < 100) {
+          totalRecentEvents++;
+          if (event.position <= 20) recentTop20Count++;
+          if (event.position <= 10) recentTop10Count++;
+        }
+      }
+      
+      // Apply hard ceiling based on coverage and recent form
+      // This ensures sparse-data players never rank above 70%+ coverage players
+      let hardCeiling = 1.20; // Default ceiling for 50-70% players
+      
+      if (dataCoverage < 0.60) {
+        hardCeiling = 1.10; // Very strict for <60% coverage
+      }
+      if (dataCoverage < 0.55) {
+        hardCeiling = 1.00; // Even stricter for <55% coverage
+      }
+      
+      const calculatedScore = weightedScore * confidenceFactor * dataCoverage;
+      refinedWeightedScore = Math.min(calculatedScore, hardCeiling); // Use CEILING, not floor
+      
+      console.log(`${data.name}: Sparse (50-70%) with recent success - capping at ceiling ${hardCeiling} (calculated: ${calculatedScore.toFixed(3)}, coverage: ${dataCoverage.toFixed(2)})`);
+    }
+    // TIER 4: Adequate coverage (70%+) - NORMAL CALCULATION
+    else if (dataCoverage >= 0.70) {
+      if (dataCoverage < 0.85) {
+        // 70-85% coverage: scale from 0.49 to 0.95
+        dataCoverageMultiplier = 0.49 + ((dataCoverage - 0.70) / 0.15) * 0.46;
+        refinedWeightedScore = weightedScore * confidenceFactor * dataCoverageMultiplier;
+      } else {
+        // 85%+ coverage: scale from 0.95 to 1.0
+        dataCoverageMultiplier = 0.95 + ((dataCoverage - 0.85) / 0.15) * 0.05;
+        refinedWeightedScore = weightedScore * confidenceFactor * dataCoverageMultiplier;
+      }
+    }
+    // Fallback (shouldn't reach here)
+    else {
+      refinedWeightedScore = weightedScore * confidenceFactor * dataCoverageMultiplier;
+    }
+    
+    // Check for recent top 10 to determine if low confidence caps should apply
+    let hasRecentTop10 = false;
+    if (sortedEvents.length > 0) {
+      // Check first non-current event in sortedEvents
+      for (const [eventKey, event] of sortedEvents) {
+        if (CURRENT_EVENT_ID && event.eventId?.toString() === CURRENT_EVENT_ID) {
+          continue; // Skip current event
+        }
+        if (event.position && event.position <= 10) {
+          hasRecentTop10 = true;
+          break;
+        }
+      }
+    }
+    
+    // Determine if we should apply strict capping based on confidence
+    // If confidence is below 0.85 AND player has no recent top 10, apply caps
+    // Exception: Players with recent top 10 (even from other tours) don't get capped for low confidence
+    // Also exception: Low-confidence players already got baseline scores
+    const shouldCapForLowConfidence = confidenceFactor < 0.85 && !hasRecentTop10 && !isLowConfidencePlayer;
+    
+    if (shouldCapForLowConfidence) {
+      refinedWeightedScore = Math.min(refinedWeightedScore, 0.15);
+      console.log(`${data.name}: Low confidence (${confidenceFactor.toFixed(3)}) and no recent top 10 - capping weighted score at 0.15`);
+    }
+    
     if (isNaN(refinedWeightedScore)) {
       console.error(`Got NaN for refinedWeightedScore for ${data.name}, setting to 0`);
       refinedWeightedScore = 0;
     }
     
-    // Apply past performance multiplier if enabled (with recency weighting for recent wins)
     let pastPerformanceMultiplier = 1.0;
     if (PAST_PERF_ENABLED && PAST_PERF_WEIGHT > 0) {
-      // Reuse sortedEvents from above (already sorted by recency)
-      if (sortedEvents.length > 0) {
+      // If confidence is low AND no recent top 10, cap the past performance multiplier
+      if (shouldCapForLowConfidence) {
+        pastPerformanceMultiplier = 0.3;
+        console.log(`${data.name}: Low confidence and no recent top 10 - capping past perf multiplier at 0.3x`);
+      } else if (sortedEvents.length > 0) {
+        // Player has data - calculate full multiplier based on their performance
         // Calculate recency-weighted past performance score
         let weightedPerformanceScore = 0;
         let totalWeight = 0;
@@ -1371,14 +1652,25 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
             pastPerformanceMultiplier = 1.0 + (Math.pow(avgPerformanceScore, 1.2) * 1.8);
           }
           
-          // Apply weight to scale the boost/penalty magnitude
-          pastPerformanceMultiplier = 1.0 + ((pastPerformanceMultiplier - 1.0) * PAST_PERF_WEIGHT);
+          const rawMultiplier = pastPerformanceMultiplier;
           
+          // Cap the raw multiplier before applying weight to prevent exceeding bounds
           // Ensure multiplier is between 0.3 and 3.0 (wider range for greater impact)
           pastPerformanceMultiplier = Math.max(0.3, Math.min(3.0, pastPerformanceMultiplier));
           
-          console.log(`${data.name}: Avg perf score=${avgPerformanceScore.toFixed(2)}, multiplier=${pastPerformanceMultiplier.toFixed(3)}`);
+          const cappedMultiplier = pastPerformanceMultiplier;
+          const capApplied = (rawMultiplier !== cappedMultiplier);
+          
+          // Apply weight to scale the boost/penalty magnitude
+          pastPerformanceMultiplier = 1.0 + ((pastPerformanceMultiplier - 1.0) * PAST_PERF_WEIGHT);
+          
+          const capIndicator = capApplied ? " [CAP APPLIED]" : "";
+          console.log(`${data.name}: Avg perf score=${avgPerformanceScore.toFixed(2)}, raw=${rawMultiplier.toFixed(3)}, final=${pastPerformanceMultiplier.toFixed(3)}${capIndicator}`);
+        } else {
+          console.log(`${data.name}: No usable performance data (staying at 1.0x)`);
         }
+      } else {
+        console.log(`${data.name}: No sortedEvents (staying at 1.0x)`);
       }
     }
 
@@ -1436,7 +1728,14 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       war: war,
       dataCoverage: dataCoverage,
       dataCoverageConfidence: getCoverageConfidence(dataCoverage) || 1.0,
-      trends
+      trends,
+      // Debug fields for calculation sheet
+      isLowConfidencePlayer: isLowConfidencePlayer,
+      baselineScore: baselineScore,
+      hasRecentTop10: hasRecentTop10,
+      confidenceFactor: confidenceFactor,
+      groupScoresBeforeDampening: groupScoresBeforeDampening,
+      groupScoresAfterDampening: groupScoresAfterDampening
     };
   });
 
@@ -2237,21 +2536,37 @@ function prepareRankingOutput(processedData) {
     };
   });
   
-  // Sort primarily by weighted score
+  console.log(`DEBUG: Before sorting - Sample player:`, {
+    name: dataWithConfidenceIntervals[0]?.name,
+    weightedScore: dataWithConfidenceIntervals[0]?.weightedScore,
+    refinedWeightedScore: dataWithConfidenceIntervals[0]?.refinedWeightedScore,
+    hasRefined: typeof dataWithConfidenceIntervals[0]?.refinedWeightedScore === 'number'
+  });
+  
+  // Sort primarily by refined weighted score (which includes confidence and data coverage multipliers)
   const sortedData = dataWithConfidenceIntervals.sort((a, b) => {
+    // Use refinedWeightedScore if available, fallback to weightedScore
+    const scoreA = typeof a.refinedWeightedScore === 'number' ? a.refinedWeightedScore : a.weightedScore;
+    const scoreB = typeof b.refinedWeightedScore === 'number' ? b.refinedWeightedScore : b.weightedScore;
+    
+    // Log first few comparisons
+    if (a.name === "Spaun, J.J." || a.name === "Brennan, Michael") {
+      console.log(`SORT: ${a.name} (refined: ${scoreA?.toFixed(3)}) vs ${b.name} (refined: ${scoreB?.toFixed(3)})`);
+    }
+    
     // For exact ties, use WAR directly
-    if (a.weightedScore === b.weightedScore) {
+    if (scoreA === scoreB) {
       return b.war - a.war;
     }
     
     // For very close scores, use the composite score
-    const scoresDifference = Math.abs(a.weightedScore - b.weightedScore);
+    const scoresDifference = Math.abs(scoreA - scoreB);
     if (scoresDifference <= CLOSE_SCORE_THRESHOLD) {
       return b.compositeScore - a.compositeScore;
     }
     
-    // Otherwise, sort by weighted score
-    return b.weightedScore - a.weightedScore;
+    // Otherwise, sort by refined weighted score (which has confidence applied)
+    return scoreB - scoreA;
   });
   
   // Add rank to each player
@@ -2260,12 +2575,16 @@ function prepareRankingOutput(processedData) {
   let lastCompositeScore = null;
   
   sortedData.forEach((player, index) => {
+    // Use refinedWeightedScore if available, fallback to weightedScore
+    const playerScore = typeof player.refinedWeightedScore === 'number' ? player.refinedWeightedScore : player.weightedScore;
+    
     // Check if this player should share a rank with the previous player
     if (index > 0) {
       const prevPlayer = sortedData[index - 1];
+      const prevScore = typeof prevPlayer.refinedWeightedScore === 'number' ? prevPlayer.refinedWeightedScore : prevPlayer.weightedScore;
       
-      // If weighted scores are identical, check if WAR is also identical
-      if (player.weightedScore === prevPlayer.weightedScore && 
+      // If refined weighted scores are identical, check if WAR is also identical
+      if (playerScore === prevScore && 
           Math.abs(player.war - prevPlayer.war) < 0.01) {
         player.rank = prevPlayer.rank; // Same rank for true ties
       } else {
@@ -2276,12 +2595,12 @@ function prepareRankingOutput(processedData) {
     }
     
     // Update tracking variables
-    lastWeightedScore = player.weightedScore;
+    lastWeightedScore = playerScore;
     lastCompositeScore = player.compositeScore;
     currentRank++;
     
     // Log the ranking details
-    console.log(`Rank ${player.rank}: ${player.name} - Score: ${player.weightedScore.toFixed(3)}, ` +
+    console.log(`Rank ${player.rank}: ${player.name} - Score: ${player.weightedScore.toFixed(3)}, Refined: ${playerScore.toFixed(3)}, ` +
                 `WAR: ${player.war.toFixed(2)}, Composite: ${player.compositeScore.toFixed(3)}`);
     
     // Log when WAR affected ranking
@@ -2563,6 +2882,9 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
           const value = parseFloat(row[0]);
           if (isNaN(value)) return ['#FFFFFF'];
           
+          // Zero values get gray background
+          if (value === 0) return ['#D3D3D3'];
+          
           const z = (value - mean) / stdDev;
           const directionalZ = positiveIsGood ? z : -z;
           
@@ -2624,6 +2946,9 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
         const backgrounds = rawValues.map(row => {
           const value = parseFloat(row[0]);
           if (isNaN(value)) return ['#FFFFFF'];
+          
+          // Zero values get gray background
+          if (value === 0) return ['#D3D3D3'];
           
           const z = (value - mean) / stdDev;
           const directionalZ = positiveIsGood ? z : -z;
