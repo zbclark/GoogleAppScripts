@@ -318,7 +318,7 @@ function analyzeMetricCorrelations() {
         topMetrics: sortedTournamentMetrics.slice(0, 10)  // Top 10 differentiating metrics for this tournament
       };
       
-      // Calculate per-tournament metric averages
+      // Calculate per-tournament metric averages and correlations
       allMetrics.forEach(metric => {
         const top10Values = top10Finishers
           .map(f => f.metrics[metric])
@@ -334,10 +334,25 @@ function analyzeMetricCorrelations() {
         const fieldAvg = allValues.length > 0 ? 
           allValues.reduce((a, b) => a + b, 0) / allValues.length : 0;
         
+        // Calculate correlation for this metric at this tournament
+        let correlation = 0;
+        if (allValues.length > 2) {
+          const positions = tournamentFinishers
+            .filter(f => f.metrics[metric] !== undefined && !isNaN(f.metrics[metric]))
+            .map(f => f.position);
+          const values = tournamentFinishers
+            .filter(f => f.metrics[metric] !== undefined && !isNaN(f.metrics[metric]))
+            .map(f => f.metrics[metric]);
+          if (positions.length > 2) {
+            correlation = calculatePearsonCorrelation(positions, values);
+          }
+        }
+        
         correlationData.tournamentBreakdown[fileName].metricAverages[metric] = {
           top10Avg: top10Avg,
           fieldAvg: fieldAvg,
-          delta: top10Avg - fieldAvg
+          delta: top10Avg - fieldAvg,
+          correlation: correlation
         };
       });
       
@@ -396,10 +411,14 @@ function analyzeMetricCorrelations() {
     const courseTypeGroups = classifyCoursesIntoTypes(correlationData.tournamentCorrelations, correlationData.tournaments);
     correlationData.courseTypes = courseTypeGroups;
     
-    // Sort metrics by delta (top 10 vs field) to find which metrics separate winners
+    // Sort metrics by % above field (top 10 vs field) to find which metrics separate winners
     const sortedMetrics = Object.values(correlationData.metricCorrelations)
-      .filter(m => m.values.length > 0 && !isNaN(m.deltaTop10VsField))
-      .sort((a, b) => Math.abs(b.deltaTop10VsField) - Math.abs(a.deltaTop10VsField));
+      .filter(m => m.values.length > 0 && !isNaN(m.deltaTop10VsField) && m.avgForField !== 0)
+      .sort((a, b) => {
+        const pctA = Math.abs(a.deltaTop10VsField / a.avgForField);
+        const pctB = Math.abs(b.deltaTop10VsField / b.avgForField);
+        return pctB - pctA;
+      });
     
     // Validate we have meaningful metrics
     if (sortedMetrics.length === 0) {
@@ -421,6 +440,11 @@ function analyzeMetricCorrelations() {
     
     if (validTournaments.length > 0) {
       createIndividualTournamentSheets(masterSs, correlationData);
+    }
+    
+    // 1.5. TYPE-SPECIFIC SUMMARY SHEETS (aggregates tournaments by classification)
+    if (Object.keys(courseTypeGroups).length > 0) {
+      createTypeSpecificSummaries(masterSs, courseTypeGroups, correlationData);
     }
     
     // 2. COURSE TYPE CLASSIFICATION SHEET (only if we have types)
@@ -563,11 +587,15 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
     });
     
     const typeName = `Type ${typeNumber}`;
+    const commonMetrics = getCommonMetrics(typeGroup, tournamentProfiles);
+    const allOtherTournaments = tournamentNames.filter(t => !typeGroup.includes(t));
+    const distinctiveMetrics = getDistinctiveMetrics(typeGroup, allOtherTournaments, tournamentProfiles);
+    
     courseTypes[typeName] = {
       name: typeName,
       tournaments: typeGroup,
-      commonMetrics: getCommonMetrics(typeGroup, tournamentProfiles),
-      distinctiveMetrics: getDistinctiveMetrics(typeGroup, tournamentProfiles)
+      commonMetrics: commonMetrics,
+      distinctiveMetrics: distinctiveMetrics
     };
     
     typeNumber++;
@@ -592,10 +620,11 @@ function getCommonMetrics(tournaments, profiles) {
 }
 
 /**
- * Get metrics distinctive to this type (frequent in this type, rare in others)
+ * Get metrics distinctive to this type (frequent here, rare in other types)
  */
-function getDistinctiveMetrics(typeTournaments, profiles) {
+function getDistinctiveMetrics(typeTournaments, otherTournaments, profiles) {
   const typeMetrics = {};
+  const otherMetrics = {};
   
   // Count metric frequency in this type
   typeTournaments.forEach(t => {
@@ -604,11 +633,26 @@ function getDistinctiveMetrics(typeTournaments, profiles) {
     });
   });
   
-  // Get metrics that appear in most tournaments of this type
-  const threshold = Math.ceil(typeTournaments.length * 0.6);
-  return Object.keys(typeMetrics)
-    .filter(metric => typeMetrics[metric] >= threshold)
+  // Count metric frequency in other types
+  otherTournaments.forEach(t => {
+    profiles[t].forEach(metric => {
+      otherMetrics[metric] = (otherMetrics[metric] || 0) + 1;
+    });
+  });
+  
+  // Distinctive = metrics common in this type but NOT in others
+  const typeThreshold = Math.ceil(typeTournaments.length * 0.6);
+  const otherThreshold = otherTournaments.length > 0 ? Math.ceil(otherTournaments.length * 0.5) : 0;
+  
+  const distinctive = Object.keys(typeMetrics)
+    .filter(metric => {
+      const inType = typeMetrics[metric] >= typeThreshold;
+      const inOther = (otherMetrics[metric] || 0) >= otherThreshold;
+      return inType && !inOther; // High in this type, low/absent in others
+    })
     .sort((a, b) => typeMetrics[b] - typeMetrics[a]);
+  
+  return distinctive;
 }
 
 /**
@@ -634,20 +678,25 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       "Top 10 Avg",
       "Field Avg",
       "Delta",
-      "% Above Field"
+      "% Above Field",
+      "Correlation"
     ]);
     
-    const headerRange = sheet.getRange(4, 1, 1, 5);
+    const headerRange = sheet.getRange(4, 1, 1, 6);
     headerRange.setBackground("#70AD47").setFontColor("white").setFontWeight("bold");
     
-    // Add all metrics sorted by delta
+    // Add all metrics sorted by % above field
     const sortedMetrics = Object.values(breakdown.metricAverages)
       .map((data, idx) => ({
         metric: Object.keys(breakdown.metricAverages)[idx],
         ...data
       }))
-      .filter(m => m.delta !== undefined)
-      .sort((a, b) => Math.abs(b.delta) - Math.abs(a.delta));
+      .filter(m => m.delta !== undefined && m.fieldAvg !== 0)
+      .sort((a, b) => {
+        const pctA = Math.abs(a.delta / a.fieldAvg);
+        const pctB = Math.abs(b.delta / b.fieldAvg);
+        return pctB - pctA;
+      });
     
     sortedMetrics.forEach((m, idx) => {
       const pct = m.fieldAvg !== 0 ? ((m.delta / m.fieldAvg) * 100).toFixed(1) : "N/A";
@@ -656,7 +705,8 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
         m.top10Avg.toFixed(3),
         m.fieldAvg.toFixed(3),
         m.delta.toFixed(3),
-        pct + "%"
+        pct + "%",
+        m.correlation.toFixed(4)
       ]);
       
       const rowIdx = idx + 5;
@@ -668,7 +718,103 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       }
     });
     
-    sheet.autoResizeColumns(1, 5);
+    sheet.autoResizeColumns(1, 6);
+  });
+}
+
+/**
+ * Create type-specific summary sheets (aggregates tournament data by course type)
+ */
+function createTypeSpecificSummaries(masterSs, courseTypes, correlationData) {
+  let typeIndex = 3;  // Start numbering at 03_
+  
+  Object.keys(courseTypes).forEach(typeName => {
+    const courseType = courseTypes[typeName];
+    const tournaments = courseType.tournaments;
+    
+    // Get all metrics from breakdowns
+    const allMetrics = new Set();
+    tournaments.forEach(tName => {
+      const breakdown = correlationData.tournamentBreakdown[tName];
+      if (breakdown && breakdown.metricAverages) {
+        Object.keys(breakdown.metricAverages).forEach(m => allMetrics.add(m));
+      }
+    });
+    
+    // Calculate averages across tournaments in this type
+    const typeMetricAverages = {};
+    allMetrics.forEach(metric => {
+      const values = [];
+      const correlations = [];
+      
+      tournaments.forEach(tName => {
+        const breakdown = correlationData.tournamentBreakdown[tName];
+        if (breakdown && breakdown.metricAverages[metric]) {
+          const data = breakdown.metricAverages[metric];
+          values.push(data.delta);
+          correlations.push(data.correlation);
+        }
+      });
+      
+      if (values.length > 0) {
+        typeMetricAverages[metric] = {
+          avgDelta: values.reduce((a, b) => a + b, 0) / values.length,
+          avgCorrelation: correlations.reduce((a, b) => a + b, 0) / correlations.length,
+          count: values.length
+        };
+      }
+    });
+    
+    // Create sheet
+    const sheetName = `03_${courseType.name}_Summary`.substring(0, 49);
+    const sheet = masterSs.insertSheet(sheetName, typeIndex);
+    typeIndex++;
+    
+    // Header
+    sheet.appendRow([`${courseType.name} - Aggregated Metric Analysis`]);
+    sheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
+    
+    sheet.appendRow([`Tournaments: ${tournaments.join(", ")}`]);
+    sheet.appendRow([" "]);
+    sheet.appendRow([
+      "Metric",
+      "Avg Delta (Top 10 vs Field)",
+      "Avg Correlation",
+      "Tournament Count"
+    ]);
+    
+    const headerRange = sheet.getRange(4, 1, 1, 4);
+    headerRange.setBackground("#4472C4").setFontColor("white").setFontWeight("bold");
+    
+    // Add metrics sorted by absolute delta
+    const sortedMetrics = Object.entries(typeMetricAverages)
+      .map(([metric, data]) => ({
+        metric,
+        ...data
+      }))
+      .sort((a, b) => Math.abs(b.avgDelta) - Math.abs(a.avgDelta));
+    
+    sortedMetrics.forEach((m, idx) => {
+      sheet.appendRow([
+        m.metric,
+        m.avgDelta.toFixed(3),
+        m.avgCorrelation.toFixed(4),
+        m.count
+      ]);
+      
+      // Color by correlation strength
+      const rowIdx = idx + 5;
+      if (Math.abs(m.avgCorrelation) > 0.5) {
+        sheet.getRange(rowIdx, 3).setBackground("#90EE90");  // Green
+      } else if (Math.abs(m.avgCorrelation) > 0.2) {
+        sheet.getRange(rowIdx, 3).setBackground("#FFFFE0");  // Yellow
+      }
+    });
+    
+    sheet.appendRow([" "]);
+    sheet.appendRow(["Note: Metrics show average delta and correlation across all tournaments of this type"]);
+    
+    sheet.autoResizeColumns(1, 4);
   });
 }
 
@@ -764,7 +910,11 @@ function calculatePearsonCorrelation(positions, values) {
   const n = positions.length;
   if (n < 2) return 0;
   
-  const meanPos = positions.reduce((a, b) => a + b, 0) / n;
+  // In golf, lower position number = better (1 is winner, 150 is worst)
+  // To get proper correlation, negate positions so higher value = better
+  const invertedPositions = positions.map(p => -p);
+  
+  const meanPos = invertedPositions.reduce((a, b) => a + b, 0) / n;
   const meanVal = values.reduce((a, b) => a + b, 0) / n;
   
   let numerator = 0;
@@ -772,7 +922,7 @@ function calculatePearsonCorrelation(positions, values) {
   let sumSquaredVal = 0;
   
   for (let i = 0; i < n; i++) {
-    const posDiff = positions[i] - meanPos;
+    const posDiff = invertedPositions[i] - meanPos;
     const valDiff = values[i] - meanVal;
     
     numerator += posDiff * valDiff;

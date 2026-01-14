@@ -264,35 +264,52 @@ function createCalibrationReport(masterSs, calibrationData) {
     rowNum++;
   }
   
-  // Top finishers detail
+  // Top finishers detail - with dynamic metrics pulled from each tournament's analysis
   sheet.appendRow([" "]);
   sheet.appendRow(["TOP FINISHERS ANALYSIS (All Tournaments)"]);
   const analysisRow = rowNum + 3;
   sheet.getRange(analysisRow, 1).setFontWeight("bold").setFontSize(12);
   
-  sheet.appendRow(["Tournament", "Finisher", "Finish", "Predicted Rank", "Miss", "Accuracy", "SG Total", "Driving Dist", "Driving Acc", "SG Approach"]);
-  sheet.getRange(analysisRow + 1, 1, 1, 10).setFontWeight("bold").setBackground("#e5e7eb");
+  // Build header with tournament-specific top metrics
+  let headers = ["Tournament", "Finisher", "Finish", "Predicted Rank", "Miss", "Accuracy"];
+  let metricsByTournament = {};
+  
+  // For each tournament, find its top 4 metrics by delta
+  for (const t of calibrationData.tournaments) {
+    const topMetrics = getTopMetricsForTournament(t.name);
+    metricsByTournament[t.name] = topMetrics;
+    headers.push(...topMetrics.map(m => m.name));
+  }
+  
+  sheet.appendRow(headers);
+  sheet.getRange(analysisRow + 1, 1, 1, headers.length).setFontWeight("bold").setBackground("#e5e7eb");
   
   let detailRow = analysisRow + 2;
   for (const t of calibrationData.tournaments) {
+    const topMetrics = metricsByTournament[t.name] || [];
+    
     for (const finisher of t.topFinishers.sort((a, b) => a.actualFinish - b.actualFinish)) {
-      sheet.appendRow([
+      let row = [
         t.name,
         finisher.name,
         finisher.actualFinish,
         finisher.predictedRank,
         finisher.missScore,
-        finisher.inTopXPredicted,
-        finisher.stats.sgTotal.toFixed(2),
-        finisher.stats.drivDist.toFixed(0),
-        finisher.stats.drivAcc.toFixed(2),
-        finisher.stats.sgApproach.toFixed(2)
-      ]);
+        finisher.inTopXPredicted
+      ];
+      
+      // Add values for the tournament's top metrics
+      topMetrics.forEach(metric => {
+        const value = finisher.stats[metric.key];
+        row.push(value !== undefined ? (typeof value === 'number' ? value.toFixed(2) : value) : "N/A");
+      });
+      
+      sheet.appendRow(row);
       detailRow++;
     }
   }
   
-  sheet.autoResizeColumns(1, 10);
+  sheet.autoResizeColumns(1, headers.length);
   
   // Weight recommendations
   sheet.appendRow([" "]);
@@ -302,8 +319,79 @@ function createCalibrationReport(masterSs, calibrationData) {
   
   sheet.appendRow(["Based on actual finisher analysis:"]);
   sheet.appendRow(["• Review top finishers with high Miss Scores (> 15)"]);
-  sheet.appendRow(["• Check their SG metrics vs predictions"]);
-  sheet.appendRow(["• If actual SG Total much higher than predicted: reduce weights on weak metrics"]);
-  sheet.appendRow(["• If actual driving distance doesn't match prediction: adjust Driving weight"]);
+  sheet.appendRow(["• Check their Top Metrics vs predictions"]);
+  sheet.appendRow(["• Top Metrics are the ones that actually separated winners at each course"]);
+  sheet.appendRow(["• If finishers exceed expected values in those metrics: increase their weights"]);
+  sheet.appendRow(["• If finishers underperform on top metrics: check if you're measuring them correctly"]);
   sheet.appendRow(["• Save calibrated weights for similar course types"]);
+}
+
+/**
+ * Get top 4 metrics (by delta) for a specific tournament from its metric analysis sheet
+ */
+function getTopMetricsForTournament(tournamentName) {
+  try {
+    const folders = DriveApp.getFoldersByName("Golf 2025");
+    if (!folders.hasNext()) return [];
+    
+    const golfFolder = folders.next();
+    const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    
+    while (workbookFiles.hasNext()) {
+      const file = workbookFiles.next();
+      if (file.getName() !== tournamentName) continue;
+      
+      const ss = SpreadsheetApp.open(file);
+      
+      // Look for metric analysis sheet (02_Tournament_*)
+      const sheets = ss.getSheets();
+      let metricSheet = null;
+      for (const s of sheets) {
+        if (s.getName().includes("Metric Analysis") || s.getName().startsWith("02_")) {
+          metricSheet = s;
+          break;
+        }
+      }
+      
+      if (!metricSheet) return [];
+      
+      // Read metric data: headers on row 1, metrics start row 3
+      const data = metricSheet.getRange("A1:E100").getValues();
+      
+      // Find column indices
+      let metricCol = -1, deltaCol = -1;
+      for (let i = 0; i < data[0].length; i++) {
+        const header = (data[0][i] || "").toString().toLowerCase();
+        if (header.includes("metric")) metricCol = i;
+        if (header.includes("delta")) deltaCol = i;
+      }
+      
+      if (metricCol === -1 || deltaCol === -1) return [];
+      
+      // Extract metrics with delta values
+      let metrics = [];
+      for (let i = 2; i < data.length; i++) {
+        const metricName = data[i][metricCol];
+        const deltaValue = parseFloat(data[i][deltaCol]);
+        
+        if (metricName && !isNaN(deltaValue) && Math.abs(deltaValue) > 0.1) {
+          metrics.push({
+            name: metricName.toString().trim(),
+            delta: Math.abs(deltaValue),
+            key: metricName.toString().trim().toLowerCase().replace(/\s+/g, '')
+          });
+        }
+      }
+      
+      // Sort by delta and return top 4
+      return metrics
+        .sort((a, b) => b.delta - a.delta)
+        .slice(0, 4);
+    }
+    
+    return [];
+  } catch (e) {
+    console.log(`Error getting top metrics for ${tournamentName}: ${e.message}`);
+    return [];
+  }
 }
