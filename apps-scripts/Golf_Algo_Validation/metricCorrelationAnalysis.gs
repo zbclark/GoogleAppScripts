@@ -235,7 +235,8 @@ function analyzeMetricCorrelations() {
           // Add to both aggregate and per-tournament correlation data
           allMetrics.forEach(metric => {
             const value = metrics[metric];
-            if (value !== undefined && !isNaN(value) && value !== 0) {
+            // Include all numeric values (including 0) - 0 is a valid metric value
+            if (value !== undefined && !isNaN(value)) {
               const isTop10 = finisher.position <= 10;
               
               // Aggregate data
