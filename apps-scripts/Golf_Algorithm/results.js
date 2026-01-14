@@ -1972,11 +1972,17 @@ function aggregatePlayerData(metricGroups) {
     });
 
     // Modified historical data processing
+    console.log("=== STARTING HISTORICAL DATA PROCESSING ===");
     const historicalSheet = ss.getSheetByName("Historical Data");
     if (!historicalSheet) throw new Error("Historical Data sheet not found");
+    
+    console.log("Historical Data sheet found, getting last row...");
+    const lastRow = historicalSheet.getLastRow();
+    console.log(`Historical Data sheet has ${lastRow} rows`);
 
     // First pass: Gather all event metadata to identify event types
     const eventMetadata = {};
+    console.log("Starting first pass to gather event metadata...");
     historicalSheet.getRange("B6:AL" + historicalSheet.getLastRow())
       .getValues()
       .forEach(row => {
@@ -2004,6 +2010,9 @@ function aggregatePlayerData(metricGroups) {
       console.log(`Found ${Object.values(eventMetadata).filter(e => e.isSimilar).length} similar events`);
       console.log(`Found ${Object.values(eventMetadata).filter(e => e.isPuttingSpecific && e.isSimilar).length} events in both categories`);
 
+    console.log("Starting second pass to process player data...");
+    let roundsProcessed = 0;
+
 
     // Second pass: Process all data with event type awareness
     historicalSheet.getRange("B6:AL" + historicalSheet.getLastRow())
@@ -2011,6 +2020,11 @@ function aggregatePlayerData(metricGroups) {
     .forEach(row => {
       const dgId = row[0];
       if (!players[dgId]) return;
+      
+      roundsProcessed++;
+      if (roundsProcessed <= 5 || roundsProcessed % 100 === 0) {
+        console.log(`Processing round ${roundsProcessed} for player ${players[dgId].name} (ID: ${dgId})`);
+      }
 
       // Convert all values to numbers and handle errors
       const safeRow = row.map((cell, index) => {
@@ -2110,6 +2124,8 @@ function aggregatePlayerData(metricGroups) {
       }
       });
 
+      console.log(`COMPLETED: Processed ${roundsProcessed} total rounds from Historical Data`);
+      
       // Post-processing for historical averages
       Object.values(players).forEach(player => {
           // Sort all rounds by date (most recent first)
