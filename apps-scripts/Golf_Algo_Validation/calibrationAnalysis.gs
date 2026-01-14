@@ -327,70 +327,58 @@ function createCalibrationReport(masterSs, calibrationData) {
 }
 
 /**
- * Get top 4 metrics (by delta) for a specific tournament from its metric analysis sheet
+ * Get metrics (by delta) for a specific tournament from the master workbook's metric analysis sheets
  */
 function getTopMetricsForTournament(tournamentName) {
   try {
-    const folders = DriveApp.getFoldersByName("Golf 2025");
-    if (!folders.hasNext()) return [];
+    const masterSs = SpreadsheetApp.getActiveSpreadsheet();
+    const sheets = masterSs.getSheets();
     
-    const golfFolder = folders.next();
-    const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
-    
-    while (workbookFiles.hasNext()) {
-      const file = workbookFiles.next();
-      if (file.getName() !== tournamentName) continue;
-      
-      const ss = SpreadsheetApp.open(file);
-      
-      // Look for metric analysis sheet (02_Tournament_*)
-      const sheets = ss.getSheets();
-      let metricSheet = null;
-      for (const s of sheets) {
-        if (s.getName().includes("Metric Analysis") || s.getName().startsWith("02_")) {
-          metricSheet = s;
-          break;
-        }
+    // Look for metric analysis sheet in master workbook (02_Tournament_Name)
+    let metricSheet = null;
+    for (const s of sheets) {
+      if (s.getName().includes(tournamentName) && s.getName().startsWith("02_")) {
+        metricSheet = s;
+        break;
       }
-      
-      if (!metricSheet) return [];
-      
-      // Read metric data: headers on row 1, metrics start row 3
-      const data = metricSheet.getRange("A1:E100").getValues();
-      
-      // Find column indices
-      let metricCol = -1, deltaCol = -1;
-      for (let i = 0; i < data[0].length; i++) {
-        const header = (data[0][i] || "").toString().toLowerCase();
-        if (header.includes("metric")) metricCol = i;
-        if (header.includes("delta")) deltaCol = i;
-      }
-      
-      if (metricCol === -1 || deltaCol === -1) return [];
-      
-      // Extract metrics with delta values
-      let metrics = [];
-      for (let i = 2; i < data.length; i++) {
-        const metricName = data[i][metricCol];
-        const deltaValue = parseFloat(data[i][deltaCol]);
-        
-        if (metricName && !isNaN(deltaValue) && Math.abs(deltaValue) > 0.1) {
-          metrics.push({
-            name: metricName.toString().trim(),
-            delta: Math.abs(deltaValue),
-            key: metricName.toString().trim().toLowerCase().replace(/\s+/g, '')
-          });
-        }
-      }
-      
-      // Sort by delta and return all metrics
-      return metrics
-        .sort((a, b) => b.delta - a.delta);
     }
     
-    return [];
+    if (!metricSheet) return [];
+    
+    // Read metric data: headers on row 4, metrics start row 5
+    const data = metricSheet.getRange("A1:F100").getValues();
+    
+    // Find column indices
+    let metricCol = -1, deltaCol = -1;
+    for (let i = 0; i < data[3].length; i++) {
+      const header = (data[3][i] || "").toString().toLowerCase();
+      if (header.includes("metric")) metricCol = i;
+      if (header.includes("delta")) deltaCol = i;
+    }
+    
+    if (metricCol === -1 || deltaCol === -1) return [];
+    
+    // Extract metrics with delta values (data starts at row 5, index 4)
+    let metrics = [];
+    for (let i = 4; i < data.length; i++) {
+      const metricName = data[i][metricCol];
+      const deltaValue = parseFloat(data[i][deltaCol]);
+      
+      if (metricName && !isNaN(deltaValue) && Math.abs(deltaValue) > 0.1) {
+        metrics.push({
+          name: metricName.toString().trim(),
+          delta: Math.abs(deltaValue),
+          key: metricName.toString().trim().toLowerCase().replace(/\s+/g, '')
+        });
+      }
+    }
+    
+    // Sort by delta and return all metrics
+    return metrics
+      .sort((a, b) => b.delta - a.delta);
+    
   } catch (e) {
-    console.log(`Error getting top metrics for ${tournamentName}: ${e.message}`);
+    console.log(`Error getting metrics for ${tournamentName}: ${e.message}`);
     return [];
   }
 }

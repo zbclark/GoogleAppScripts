@@ -348,6 +348,14 @@ function analyzeMetricCorrelations() {
           }
         }
         
+        // Invert correlation for metrics where lower is better
+        const metricLower = metric.toLowerCase();
+        const inverseMetrics = ['poor shots', 'scoring average', 'proximity', 'fairway', 'rough', 'approach'];
+        const shouldInvert = inverseMetrics.some(inv => metricLower.includes(inv));
+        if (shouldInvert) {
+          correlation = -correlation;
+        }
+        
         correlationData.tournamentBreakdown[fileName].metricAverages[metric] = {
           top10Avg: top10Avg,
           fieldAvg: fieldAvg,
@@ -452,6 +460,11 @@ function analyzeMetricCorrelations() {
       createCourseTypeSheet(masterSs, courseTypeGroups, correlationData);
     }
     
+    // 2.5. WEIGHT CALIBRATION SHEET (shows current vs recommended weights by type)
+    if (Object.keys(courseTypeGroups).length > 0) {
+      createWeightCalibrationSheet(masterSs, courseTypeGroups, correlationData);
+    }
+    
     // 3. MAIN AGGREGATE REPORT (only if we have sorted metrics)
     if (sortedMetrics.length > 0) {
       const reportSheet = masterSs.insertSheet("01_Aggregate_Metric_Report");
@@ -528,77 +541,59 @@ function analyzeMetricCorrelations() {
 }
 
 /**
- * Classify courses into types based on metric correlation patterns
- * Uses hierarchical clustering to find similar metric profiles
+ * Classify courses into types based on correlation patterns
+ * POWER: Driving Distance, OTT metrics have high correlation
+ * TECHNICAL: SG Approach, short game metrics have high correlation  
+ * BALANCED: More even distribution across metric types
  */
 function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
-  const courseTypes = {};
+  const courseTypes = {
+    'POWER': { name: 'POWER', tournaments: [] },
+    'TECHNICAL': { name: 'TECHNICAL', tournaments: [] },
+    'BALANCED': { name: 'BALANCED', tournaments: [] }
+  };
   
-  // Create fingerprint for each tournament (top 10 metrics that differentiate winners)
-  const tournamentProfiles = {};
+  // Analyze each tournament's correlation profile
   tournaments.forEach(tournament => {
     const metrics = tournamentCorrelations[tournament.name];
-    if (metrics) {
-      // Top 10 metrics that separate top 10 from field
-      const topMetrics = metrics.slice(0, 10).map(m => m.metric);
-      tournamentProfiles[tournament.name] = topMetrics;
+    if (!metrics || metrics.length === 0) return;
+    
+    // Calculate strength of different metric categories
+    let powerMetrics = ['driving distance', 'sg ott'];
+    let technicalMetrics = ['sg approach', 'sg around green', 'sg putting', 'approach <', 'approach >'];
+    let proximityMetrics = ['proximity', 'fairway', 'rough'];
+    
+    let powerScore = 0, technicalScore = 0, proximityScore = 0;
+    
+    metrics.forEach(metric => {
+      const metricLower = metric.metric.toLowerCase();
+      const absCorr = Math.abs(metric.correlation);
+      
+      if (powerMetrics.some(p => metricLower.includes(p))) {
+        powerScore += absCorr;
+      } else if (technicalMetrics.some(t => metricLower.includes(t))) {
+        technicalScore += absCorr;
+      } else if (proximityMetrics.some(p => metricLower.includes(p))) {
+        proximityScore += absCorr;
+      }
+    });
+    
+    // Classify based on dominant correlation pattern
+    const scores = [
+      { type: 'POWER', score: powerScore },
+      { type: 'TECHNICAL', score: technicalScore },
+      { type: 'BALANCED', score: (proximityScore + (powerScore + technicalScore) * 0.5) / 2 }
+    ];
+    
+    scores.sort((a, b) => b.score - a.score);
+    const dominantType = scores[0].type;
+    
+    // Check if it's truly balanced (scores are similar)
+    if (scores[0].score > 0 && scores[1].score / scores[0].score > 0.7) {
+      courseTypes['BALANCED'].tournaments.push(tournament.name);
+    } else {
+      courseTypes[dominantType].tournaments.push(tournament.name);
     }
-  });
-  
-  // Calculate similarity between tournament profiles (Jaccard similarity on metric overlap)
-  const similarityMatrix = {};
-  const tournamentNames = Object.keys(tournamentProfiles);
-  
-  tournamentNames.forEach((t1, i) => {
-    similarityMatrix[t1] = {};
-    tournamentNames.forEach((t2) => {
-      if (t1 === t2) {
-        similarityMatrix[t1][t2] = 1.0;
-      } else if (!similarityMatrix[t2] || !similarityMatrix[t2][t1]) {
-        // Jaccard similarity: intersection / union
-        const set1 = new Set(tournamentProfiles[t1]);
-        const set2 = new Set(tournamentProfiles[t2]);
-        const intersection = [...set1].filter(x => set2.has(x)).length;
-        const union = new Set([...set1, ...set2]).size;
-        const similarity = union > 0 ? intersection / union : 0;
-        similarityMatrix[t1][t2] = similarity;
-      } else {
-        similarityMatrix[t1][t2] = similarityMatrix[t2][t1];
-      }
-    });
-  });
-  
-  // Simple clustering: group tournaments with high similarity (>0.5)
-  const clustered = new Set();
-  let typeNumber = 1;
-  
-  tournamentNames.forEach(tournament => {
-    if (clustered.has(tournament)) return;
-    
-    const typeGroup = [tournament];
-    clustered.add(tournament);
-    
-    // Find similar tournaments
-    tournamentNames.forEach(other => {
-      if (!clustered.has(other) && similarityMatrix[tournament][other] > 0.5) {
-        typeGroup.push(other);
-        clustered.add(other);
-      }
-    });
-    
-    const typeName = `Type ${typeNumber}`;
-    const commonMetrics = getCommonMetrics(typeGroup, tournamentProfiles);
-    const allOtherTournaments = tournamentNames.filter(t => !typeGroup.includes(t));
-    const distinctiveMetrics = getDistinctiveMetrics(typeGroup, allOtherTournaments, tournamentProfiles);
-    
-    courseTypes[typeName] = {
-      name: typeName,
-      tournaments: typeGroup,
-      commonMetrics: commonMetrics,
-      distinctiveMetrics: distinctiveMetrics
-    };
-    
-    typeNumber++;
   });
   
   return courseTypes;
@@ -607,53 +602,6 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
 /**
  * Get metrics common across all tournaments in a type
  */
-function getCommonMetrics(tournaments, profiles) {
-  if (tournaments.length === 0) return [];
-  
-  let commonMetrics = new Set(profiles[tournaments[0]]);
-  tournaments.forEach(t => {
-    const tSet = new Set(profiles[t]);
-    commonMetrics = new Set([...commonMetrics].filter(x => tSet.has(x)));
-  });
-  
-  return [...commonMetrics];
-}
-
-/**
- * Get metrics distinctive to this type (frequent here, rare in other types)
- */
-function getDistinctiveMetrics(typeTournaments, otherTournaments, profiles) {
-  const typeMetrics = {};
-  const otherMetrics = {};
-  
-  // Count metric frequency in this type
-  typeTournaments.forEach(t => {
-    profiles[t].forEach(metric => {
-      typeMetrics[metric] = (typeMetrics[metric] || 0) + 1;
-    });
-  });
-  
-  // Count metric frequency in other types
-  otherTournaments.forEach(t => {
-    profiles[t].forEach(metric => {
-      otherMetrics[metric] = (otherMetrics[metric] || 0) + 1;
-    });
-  });
-  
-  // Distinctive = metrics common in this type but NOT in others
-  const typeThreshold = Math.ceil(typeTournaments.length * 0.6);
-  const otherThreshold = otherTournaments.length > 0 ? Math.ceil(otherTournaments.length * 0.5) : 0;
-  
-  const distinctive = Object.keys(typeMetrics)
-    .filter(metric => {
-      const inType = typeMetrics[metric] >= typeThreshold;
-      const inOther = (otherMetrics[metric] || 0) >= otherThreshold;
-      return inType && !inOther; // High in this type, low/absent in others
-    })
-    .sort((a, b) => typeMetrics[b] - typeMetrics[a]);
-  
-  return distinctive;
-}
 
 /**
  * Create individual sheets for each tournament's metric analysis
@@ -825,19 +773,34 @@ function createTypeSpecificSummaries(masterSs, courseTypes, correlationData) {
 function createCourseTypeSheet(masterSs, courseTypes, correlationData) {
   const sheet = masterSs.insertSheet("00_Course_Type_Classification");
   
-  sheet.appendRow(["COURSE TYPE CLASSIFICATION"]);
+  sheet.appendRow(["COURSE TYPE CLASSIFICATION (Based on Correlation Patterns)"]);
   sheet.getRange(1, 1).setFontWeight("bold").setFontSize(14);
   
   sheet.appendRow([" "]);
   
   let currentRow = 3;
   
-  Object.keys(courseTypes).forEach((typeName, typeIdx) => {
-    const courseType = courseTypes[typeName];
+  // Display in order: POWER, TECHNICAL, BALANCED
+  const displayOrder = ['POWER', 'TECHNICAL', 'BALANCED'];
+  
+  displayOrder.forEach(typeName => {
+    if (!courseTypes[typeName]) return;
     
-    // Type header
+    const courseType = courseTypes[typeName];
+    if (courseType.tournaments.length === 0) return;
+    
+    // Type header with description
+    let description = '';
+    if (typeName === 'POWER') {
+      description = ' - Driving Distance & Power Metrics Dominant';
+    } else if (typeName === 'TECHNICAL') {
+      description = ' - Short Game & Approach Metrics Dominant';
+    } else if (typeName === 'BALANCED') {
+      description = ' - Multiple Metric Types Equally Important';
+    }
+    
     sheet.getRange(currentRow, 1).setValue(
-      `${courseType.name} (${courseType.tournaments.length} courses)`
+      `${courseType.name}${description} (${courseType.tournaments.length} courses)`
     ).setFontWeight("bold").setFontSize(11).setBackground("#4472C4").setFontColor("white");
     
     currentRow++;
@@ -849,38 +812,6 @@ function createCourseTypeSheet(masterSs, courseTypes, correlationData) {
       sheet.appendRow([`  • ${t}`]);
       currentRow++;
     });
-    
-    // Common metrics
-    sheet.appendRow([" "]);
-    currentRow++;
-    sheet.appendRow(["Common Metrics (in all courses of this type):"]);
-    currentRow++;
-    
-    if (courseType.commonMetrics.length > 0) {
-      courseType.commonMetrics.forEach(m => {
-        sheet.appendRow([`  • ${m}`]);
-        currentRow++;
-      });
-    } else {
-      sheet.appendRow(["  (No common metrics across all courses)"]);
-      currentRow++;
-    }
-    
-    // Distinctive metrics
-    sheet.appendRow([" "]);
-    currentRow++;
-    sheet.appendRow(["Distinctive Metrics (key to this course type):"]);
-    currentRow++;
-    
-    if (courseType.distinctiveMetrics.length > 0) {
-      courseType.distinctiveMetrics.slice(0, 10).forEach(m => {
-        sheet.appendRow([`  • ${m}`]);
-        currentRow++;
-      });
-    } else {
-      sheet.appendRow(["  (No distinctive metrics identified)"]);
-      currentRow++;
-    }
     
     // Spacing
     sheet.appendRow([" "]);
@@ -894,13 +825,244 @@ function createCourseTypeSheet(masterSs, courseTypes, correlationData) {
   sheet.appendRow(["SUMMARY"]);
   sheet.getRange(summaryRow, 1).setFontWeight("bold");
   
-  sheet.appendRow([`Total Course Types: ${Object.keys(courseTypes).length}`]);
+  sheet.appendRow([`POWER Courses: ${courseTypes['POWER'].tournaments.length}`]);
+  sheet.appendRow([`TECHNICAL Courses: ${courseTypes['TECHNICAL'].tournaments.length}`]);
+  sheet.appendRow([`BALANCED Courses: ${courseTypes['BALANCED'].tournaments.length}`]);
   sheet.appendRow([`Total Tournaments: ${correlationData.tournaments.length}`]);
   
-  const avgCoursesPerType = correlationData.tournaments.length / Object.keys(courseTypes).length;
-  sheet.appendRow([`Average Courses per Type: ${avgCoursesPerType.toFixed(1)}`]);
-  
   sheet.autoResizeColumns(1, 2);
+}
+
+/**
+ * Create weight calibration sheet showing current vs recommended weights by course type
+ */
+function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
+  const sheet = masterSs.insertSheet("04_Weight_Calibration_Per_Tournament");
+  
+  sheet.appendRow(["WEIGHT CALIBRATION - Actual vs Template vs Recommended"]);
+  sheet.getRange(1, 1).setFontWeight("bold").setFontSize(14);
+  
+  sheet.appendRow([" "]);
+  
+  // Process each tournament in correlationData
+  let currentRow = 3;
+  
+  correlationData.tournaments.forEach(tournamentName => {
+    const tourCorrelations = correlationData.tournamentCorrelations[tournamentName];
+    if (!tourCorrelations || tourCorrelations.length === 0) return;
+    
+    // Get tournament workbook to read actual Configuration Sheet weights
+    const folders = DriveApp.getFoldersByName("Golf 2025");
+    if (!folders.hasNext()) return;
+    
+    const golfFolder = folders.next();
+    const files = golfFolder.getFilesByName(tournamentName);
+    if (!files.hasNext()) return;
+    
+    const tournamentSs = SpreadsheetApp.open(files.next());
+    const configSheet = tournamentSs.getSheetByName("Configuration Sheet");
+    
+    // Determine course type for this tournament
+    let courseType = null;
+    Object.keys(courseTypes).forEach(type => {
+      if (courseTypes[type].tournaments.includes(tournamentName)) {
+        courseType = type;
+      }
+    });
+    
+    if (!courseType) return;
+    
+    // Tournament header
+    sheet.getRange(currentRow, 1).setValue(`${tournamentName} (Type: ${courseType})`)
+      .setFontWeight("bold").setFontSize(11).setBackground("#4472C4").setFontColor("white");
+    
+    currentRow++;
+    
+    // Column headers
+    sheet.appendRow([
+      "Metric",
+      "Actual Weight",
+      "Template Weight",
+      "Recommended*",
+      "Actual vs Template",
+      "Template vs Recommended",
+      "Correlation"
+    ]);
+    
+    const headerRange = sheet.getRange(currentRow, 1, 1, 7);
+    headerRange.setBackground("#E0E0E0").setFontWeight("bold");
+    currentRow++;
+    
+    // Build metric data with actual, template, and recommended weights
+    let metricsData = [];
+    
+    tourCorrelations.slice(0, 15).forEach(metric => {
+      const metricName = metric.metric;
+      const correlation = metric.correlation;
+      
+      // Get actual weight from Configuration Sheet (Q16:Q24 for groups, or need to map metrics)
+      let actualWeight = 0;
+      if (configSheet) {
+        // Read group weights from column Q
+        const groupWeights = configSheet.getRange("Q16:Q24").getValues();
+        // For now, use the correlation as recommended weight normalized
+        // In full implementation would need metric→group mapping
+        const configData = configSheet.getRange("A1:O100").getValues();
+        // Look for metric in configuration sheet rows
+        for (let i = 0; i < configData.length; i++) {
+          if (configData[i][0] && configData[i][0].toString().includes(metricName)) {
+            actualWeight = parseFloat(configData[i][6]) || 0; // Column G onwards has metric weights
+            break;
+          }
+        }
+      }
+      
+      // Get template weight from WEIGHT_TEMPLATES
+      const templateData = getTemplateWeightForMetric(courseType, metricName);
+      const templateWeight = templateData || 0;
+      
+      // Recommended weight is the correlation value normalized
+      const recommendedWeight = Math.abs(correlation);
+      
+      metricsData.push({
+        metric: metricName,
+        actual: actualWeight,
+        template: templateWeight,
+        recommended: recommendedWeight,
+        correlation: correlation
+      });
+    });
+    
+    // Sort by absolute correlation
+    metricsData.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
+    
+    // Add rows for each metric
+    metricsData.forEach(m => {
+      const actualVsTemplate = (m.actual - m.template).toFixed(4);
+      const templateVsRec = (m.template - m.recommended).toFixed(4);
+      
+      sheet.appendRow([
+        m.metric,
+        m.actual.toFixed(4),
+        m.template.toFixed(4),
+        m.recommended.toFixed(4),
+        actualVsTemplate,
+        templateVsRec,
+        m.correlation.toFixed(4)
+      ]);
+      currentRow++;
+    });
+    
+    sheet.appendRow([" "]);
+    currentRow += 2;
+  });
+  
+  // Add legend
+  sheet.appendRow(["*Recommended weights are based on actual tournament correlation analysis"]);
+  sheet.appendRow(["Gap = Recommended Weight - Current Weight (positive = increase, negative = decrease)"]);
+  sheet.appendRow(["% Change = (Gap / Current Weight) × 100"]);
+  
+  sheet.autoResizeColumns(1, 7);
+}
+
+/**
+ * Get template weight for a specific metric in a course type
+ * Maps metric names to template group weights
+ */
+function getTemplateWeightForMetric(courseType, metricName) {
+  // Map metric names to group weights from WEIGHT_TEMPLATES
+  const WEIGHT_TEMPLATES = {
+    POWER: {
+      groupWeights: {
+        "Driving Performance": 0.130,
+        "Approach - Short (<100)": 0.145,
+        "Approach - Mid (100-150)": 0.180,
+        "Approach - Long (150-200)": 0.150,
+        "Approach - Very Long (>200)": 0.030,
+        "Putting": 0.120,
+        "Around the Green": 0.080,
+        "Scoring": 0.110,
+        "Course Management": 0.055
+      }
+    },
+    TECHNICAL: {
+      groupWeights: {
+        "Driving Performance": 0.065,
+        "Approach - Short (<100)": 0.148,
+        "Approach - Mid (100-150)": 0.185,
+        "Approach - Long (150-200)": 0.167,
+        "Approach - Very Long (>200)": 0.037,
+        "Putting": 0.107,
+        "Around the Green": 0.125,
+        "Scoring": 0.097,
+        "Course Management": 0.069
+      }
+    },
+    BALANCED: {
+      groupWeights: {
+        "Driving Performance": 0.090,
+        "Approach - Short (<100)": 0.148,
+        "Approach - Mid (100-150)": 0.186,
+        "Approach - Long (150-200)": 0.167,
+        "Approach - Very Long (>200)": 0.033,
+        "Putting": 0.119,
+        "Around the Green": 0.100,
+        "Scoring": 0.105,
+        "Course Management": 0.052
+      }
+    }
+  };
+  
+  // Metric to group mapping
+  const metricToGroup = {
+    "SG Total": "Driving Performance",
+    "Driving Distance": "Driving Performance",
+    "Driving Accuracy": "Driving Performance",
+    "SG OTT": "Driving Performance",
+    "Approach <100": "Approach - Short (<100)",
+    "Approach <150": "Approach - Mid (100-150)",
+    "Approach >150": "Approach - Long (150-200)",
+    "Approach >200": "Approach - Very Long (>200)",
+    "SG Putting": "Putting",
+    "SG Around Green": "Around the Green",
+    "Score": "Scoring",
+    "Scoring": "Scoring",
+    "Model Rank": "Course Management",
+    "Scrambling": "Course Management"
+  };
+  
+  // Find matching group for this metric
+  let group = null;
+  for (const [key, value] of Object.entries(metricToGroup)) {
+    if (metricName.includes(key) || metricName.toLowerCase().includes(key.toLowerCase())) {
+      group = value;
+      break;
+    }
+  }
+  
+  if (!group) {
+    // Default mapping for fuzzy matches
+    if (metricName.includes("Driving") || metricName.includes("Distance") || metricName.includes("OTT")) {
+      group = "Driving Performance";
+    } else if (metricName.includes("Approach") || metricName.includes("Proximity") || metricName.includes("Fairway")) {
+      // Determine which approach group based on yardage indicators
+      if (metricName.includes("<100")) group = "Approach - Short (<100)";
+      else if (metricName.includes("100") && !metricName.includes(">150")) group = "Approach - Mid (100-150)";
+      else if (metricName.includes(">200")) group = "Approach - Very Long (>200)";
+      else if (metricName.includes(">150") || metricName.includes("150")) group = "Approach - Long (150-200)";
+      else group = "Approach - Short (<100)"; // Default
+    } else if (metricName.includes("Putting")) {
+      group = "Putting";
+    } else if (metricName.includes("Around")) {
+      group = "Around the Green";
+    } else if (metricName.includes("Score") || metricName.includes("Scoring")) {
+      group = "Scoring";
+    } else {
+      group = "Course Management";
+    }
+  }
+  
+  return WEIGHT_TEMPLATES[courseType]?.groupWeights[group] || 0;
 }
 
 /**
