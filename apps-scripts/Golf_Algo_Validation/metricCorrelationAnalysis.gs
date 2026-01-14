@@ -1,8 +1,10 @@
 /**
  * Metric Correlation Analysis - Per-Tournament & Course Type Classification
- * 1. Analyzes each tournament individually
- * 2. Identifies metrics that separate top 10 finishers for each course
- * 3. Classifies courses into types based on metric pattern similarities
+ * Supports incremental updates: processes only new tournaments, recalculates aggregates
+ * 
+ * 1. Checks processing log for already-analyzed tournaments
+ * 2. Processes only new tournaments (appends to existing 02_ sheets)
+ * 3. Recalculates 03_ type summaries and 04_ weight guide from all data
  */
 
 function analyzeMetricCorrelations() {
@@ -17,8 +19,13 @@ function analyzeMetricCorrelations() {
     const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
     const masterSs = SpreadsheetApp.getActiveSpreadsheet();
     
+    // Get processing log to check which tournaments are already analyzed
+    const processedTournaments = getProcessedTournaments(masterSs);
+    console.log("Already processed:", processedTournaments);
+    
     let filesProcessed = 0;
     let filesWithData = 0;
+    let newTournamentsProcessed = [];
     
     // Define all 35 metrics
     const allMetrics = [
@@ -68,9 +75,17 @@ function analyzeMetricCorrelations() {
     while (workbookFiles.hasNext()) {
       const file = workbookFiles.next();
       const fileName = file.getName();
+      
+      // Skip if already processed
+      if (processedTournaments.includes(fileName)) {
+        console.log(`⏭️  ${fileName}: Already processed, skipping`);
+        continue;
+      }
+      
       const ss = SpreadsheetApp.open(file);
       
       console.log(`\n=== Processing ${fileName} ===`);
+      newTournamentsProcessed.push(fileName);
       
       // Initialize per-tournament metric correlations
       let tournamentMetrics = {};
@@ -348,15 +363,9 @@ function analyzeMetricCorrelations() {
           }
         }
         
-        // Invert correlation for metrics where HIGHER is better (SG metrics, Distance, Accuracy, GIR, etc.)
-        // These need inversion because we inverted positions for correlation calc
-        const metricLower = metric.toLowerCase();
-        const goodHigherMetrics = ['sg ', 'distance', 'accuracy', 'gir', 'scrambling', 'great shots', 'birdies', 'birdie chances'];
-        const shouldInvert = goodHigherMetrics.some(good => metricLower.includes(good));
-        if (shouldInvert) {
-          correlation = -correlation;
-        }
-        // Metrics where lower is better (poor shots, proximity, scoring) keep their natural correlation sign
+        // NOTE: Position inversion in calculatePearsonCorrelation handles the golf scoring direction
+        // Result: positive correlation = metric predicts winners, negative = metric worsens with winners
+        // No additional inversion needed - correlations are semantically correct as-is
         
         correlationData.tournamentBreakdown[fileName].metricAverages[metric] = {
           top10Avg: top10Avg,
@@ -529,12 +538,21 @@ function analyzeMetricCorrelations() {
       `Tournaments analyzed: ${correlationData.tournaments.length}\n` +
       `Valid tournaments: ${validTournaments.length}\n` +
       `Course types: ${Object.keys(courseTypeGroups).length}\n` +
-      `Total observations: ${correlationData.finisherMetrics.length}\n\n` +
+      `Total observations: ${correlationData.finisherMetrics.length}\n` +
+      `New tournaments processed: ${newTournamentsProcessed.length}\n\n` +
       `Sheets created:\n` +
       (Object.keys(courseTypeGroups).length > 0 ? `• 00_Course_Type_Classification\n` : ``) +
       (sortedMetrics.length > 0 ? `• 01_Aggregate_Metric_Report\n` : ``) +
-      (validTournaments.length > 0 ? `• 02_Tournament_[Name] sheets` : ``)
+      (validTournaments.length > 0 ? `• 02_Tournament_[Name] sheets\n` : ``) +
+      (Object.keys(courseTypeGroups).length > 0 ? `• 03_[Type]_Summary sheets\n` : ``) +
+      (Object.keys(courseTypeGroups).length > 0 ? `• 04_Weight_Calibration_Guide\n` : ``)
     );
+    
+    // Update processing log
+    if (newTournamentsProcessed.length > 0) {
+      updateProcessedTournaments(masterSs, newTournamentsProcessed);
+      console.log(`✅ Added ${newTournamentsProcessed.length} tournaments to processing log`);
+    }
     
   } catch (e) {
     console.error("Error in analyzeMetricCorrelations:", e);
@@ -1085,4 +1103,48 @@ function calculatePearsonCorrelation(positions, values) {
   if (denominator === 0) return 0;
   
   return numerator / denominator;
+}
+/**
+ * Get list of already-processed tournaments from processing log sheet
+ */
+function getProcessedTournaments(masterSs) {
+  let logSheet = masterSs.getSheetByName("_Processing_Log");
+  if (!logSheet) {
+    return [];
+  }
+  
+  const data = logSheet.getRange("A2:A1000").getValues();
+  const processed = [];
+  data.forEach(row => {
+    if (row[0]) {
+      processed.push(row[0].toString().trim());
+    }
+  });
+  return processed;
+}
+
+/**
+ * Update processing log with newly processed tournaments
+ */
+function updateProcessedTournaments(masterSs, newTournaments) {
+  let logSheet = masterSs.getSheetByName("_Processing_Log");
+  
+  // Create log sheet if it doesn't exist
+  if (!logSheet) {
+    logSheet = masterSs.insertSheet("_Processing_Log");
+    logSheet.appendRow(["Tournament Name", "Processed Date", "Status"]);
+    logSheet.getRange(1, 1, 1, 3).setFontWeight("bold").setBackground("#E0E0E0");
+  }
+  
+  // Add new tournaments to log
+  const now = new Date();
+  newTournaments.forEach(tournamentName => {
+    logSheet.appendRow([
+      tournamentName,
+      now.toLocaleString(),
+      "Processed"
+    ]);
+  });
+  
+  logSheet.autoResizeColumns(1, 3);
 }
