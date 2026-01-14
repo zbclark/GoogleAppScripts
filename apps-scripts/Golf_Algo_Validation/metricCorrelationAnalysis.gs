@@ -26,6 +26,7 @@ function analyzeMetricCorrelations() {
     let filesProcessed = 0;
     let filesWithData = 0;
     let newTournamentsProcessed = [];
+    const tournamentFiles = {};  // Map tournament names to file objects
     
     // Define all 35 metrics
     const allMetrics = [
@@ -313,6 +314,15 @@ function analyzeMetricCorrelations() {
           data.deltaTop10VsField = data.avgForTop10 - data.avgForField;
           data.countTop10 = top10Values.length;
           data.countField = allValues.length;
+          
+          // Calculate correlation for this tournament's metric
+          const positions = data.values.map(v => v.position);
+          const values = data.values.map(v => v.value);
+          if (positions.length > 2) {
+            data.correlation = calculatePearsonCorrelation(positions, values);
+          } else {
+            data.correlation = 0;
+          }
         }
       });
       
@@ -458,7 +468,7 @@ function analyzeMetricCorrelations() {
     );
     
     if (validTournaments.length > 0) {
-      createIndividualTournamentSheets(masterSs, correlationData);
+      createIndividualTournamentSheets(masterSs, correlationData, courseTypeGroups);
     }
     
     // 1.5. TYPE-SPECIFIC SUMMARY SHEETS (aggregates tournaments by classification)
@@ -476,62 +486,6 @@ function analyzeMetricCorrelations() {
       createWeightCalibrationSheet(masterSs, courseTypeGroups, correlationData);
     }
     
-    // 3. MAIN AGGREGATE REPORT (only if we have sorted metrics)
-    if (sortedMetrics.length > 0) {
-      const reportSheet = masterSs.insertSheet("01_Aggregate_Metric_Report");
-      
-      reportSheet.appendRow([
-        "AGGREGATE METRIC EFFECTIVENESS - TOP 10 FINISHERS vs FIELD AVERAGE"
-      ]);
-      reportSheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
-      
-      reportSheet.appendRow([" "]);
-      reportSheet.appendRow([
-        "Metric",
-        "Top 10 Avg",
-        "Field Avg",
-        "Delta (Difference)",
-        "% Above Field",
-        "Correlation",
-        "# Observations"
-      ]);
-      
-      // Format header
-      const headerRange = reportSheet.getRange(3, 1, 1, 7);
-      headerRange.setBackground("#4472C4").setFontColor("white").setFontWeight("bold");
-      
-      // Add metric data
-      sortedMetrics.forEach((metric, idx) => {
-        if (isNaN(metric.avgForField) || isNaN(metric.deltaTop10VsField)) return;
-        
-        const pctAboveField = metric.avgForField !== 0 ? 
-          ((metric.deltaTop10VsField / metric.avgForField) * 100).toFixed(1) : "N/A";
-        
-        reportSheet.appendRow([
-          metric.metric,
-          metric.avgForTop10.toFixed(3),
-          metric.avgForField.toFixed(3),
-          metric.deltaTop10VsField.toFixed(3),
-          pctAboveField + "%",
-          metric.correlation.toFixed(4),
-          metric.countTop10
-        ]);
-        
-        // Color code by delta magnitude
-        const rowIdx = idx + 4;
-        const absDelta = Math.abs(metric.deltaTop10VsField);
-        if (absDelta > 0.5) {
-          reportSheet.getRange(rowIdx, 4).setBackground("#90EE90");  // Green
-        } else if (absDelta > 0.2) {
-          reportSheet.getRange(rowIdx, 4).setBackground("#FFFFE0");  // Yellow
-        } else {
-          reportSheet.getRange(rowIdx, 4).setBackground("#FFB6C1");  // Light red
-        }
-      });
-      
-      reportSheet.autoResizeColumns(1, 7);
-    }
-    
     SpreadsheetApp.getUi().alert(
       `✅ Metric Correlation Analysis Complete!\n\n` +
       `Files processed: ${filesProcessed}\n` +
@@ -542,7 +496,6 @@ function analyzeMetricCorrelations() {
       `New tournaments processed: ${newTournamentsProcessed.length}\n\n` +
       `Sheets created:\n` +
       (Object.keys(courseTypeGroups).length > 0 ? `• 00_Course_Type_Classification\n` : ``) +
-      (sortedMetrics.length > 0 ? `• 01_Aggregate_Metric_Report\n` : ``) +
       (validTournaments.length > 0 ? `• 02_Tournament_[Name] sheets\n` : ``) +
       (Object.keys(courseTypeGroups).length > 0 ? `• 03_[Type]_Summary sheets\n` : ``) +
       (Object.keys(courseTypeGroups).length > 0 ? `• 04_Weight_Calibration_Guide\n` : ``)
@@ -606,25 +559,23 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
     // Classify based on dominant positive correlation pattern
     const scores = [
       { type: 'POWER', score: powerScore },
-      { type: 'TECHNICAL', score: technicalScore },
-      { type: 'BALANCED', score: (proximityScore + (powerScore + technicalScore) * 0.5) / 2 }
+      { type: 'TECHNICAL', score: technicalScore }
     ];
     
     scores.sort((a, b) => b.score - a.score);
     
-    // Classify: assign to type with highest score if it has positive correlations
+    // Classify: assign to type with highest score if it has clear dominance (2x difference)
     if (scores[0].score > 0) {
-      // Check if top two are close (balanced)
-      const scoreRatio = scores[1].score > 0 ? scores[1].score / scores[0].score : 0;
-      if (scoreRatio > 0.6) {
-        // Scores are similar enough to be BALANCED
-        courseTypes['BALANCED'].tournaments.push(tournament.name);
-      } else {
-        // Clear winner
+      const secondScore = scores[1].score > 0 ? scores[1].score : 0;
+      if (scores[0].score >= secondScore * 2) {
+        // Clear dominant type (at least 2x the second score)
         courseTypes[scores[0].type].tournaments.push(tournament.name);
+      } else {
+        // No clear dominance - mark as BALANCED
+        courseTypes['BALANCED'].tournaments.push(tournament.name);
       }
     } else {
-      // No strong correlations - mark as BALANCED
+      // No positive correlations - mark as BALANCED
       courseTypes['BALANCED'].tournaments.push(tournament.name);
     }
   });
@@ -639,16 +590,40 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
 /**
  * Create individual sheets for each tournament's metric analysis
  */
-function createIndividualTournamentSheets(masterSs, correlationData) {
+function createIndividualTournamentSheets(masterSs, correlationData, courseTypes) {
+  // Read configuration sheet weights once
+  const configWeights = getConfigurationSheetWeights();
+  
+  // Get tournament files for winner analysis
+  const folders = DriveApp.getFoldersByName("Golf 2025");
+  let tournamentFiles = {};
+  if (folders.hasNext()) {
+    const golfFolder = folders.next();
+    const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    while (workbookFiles.hasNext()) {
+      const file = workbookFiles.next();
+      tournamentFiles[file.getName()] = file;
+    }
+  }
+  
   correlationData.tournaments.forEach((tournament, idx) => {
     const breakdown = correlationData.tournamentBreakdown[tournament.name];
     const metrics = correlationData.tournamentCorrelations[tournament.name] || [];
+    
+    // Determine course type for this tournament
+    let tournamentType = "BALANCED";  // Default
+    for (const [typeName, typeData] of Object.entries(courseTypes)) {
+      if (typeData.tournaments.includes(tournament.name)) {
+        tournamentType = typeName;
+        break;
+      }
+    }
     
     const sheetName = `02_${tournament.name}`.substring(0, 49);  // Sheet name limit
     const sheet = masterSs.insertSheet(sheetName);
     
     // Header
-    sheet.appendRow([`${tournament.name} - Metric Analysis`]);
+    sheet.appendRow([`${tournament.name} - Metric Analysis (${tournamentType} Course)`]);
     sheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
     
     sheet.appendRow([`Top 10: ${breakdown.top10Count} | Total Finishers: ${breakdown.totalFinishers}`]);
@@ -660,10 +635,13 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       "Field Avg",
       "Delta",
       "% Above Field",
-      "Correlation"
+      "Correlation",
+      "Config Weight",
+      "Template Weight",
+      "Recommended Weight"
     ]);
     
-    const headerRange = sheet.getRange(4, 1, 1, 6);
+    const headerRange = sheet.getRange(4, 1, 1, 9);
     headerRange.setBackground("#70AD47").setFontColor("white").setFontWeight("bold");
     
     // Add all metrics sorted by % above field (descending by absolute percentage)
@@ -680,15 +658,65 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       });
     
     sortedMetrics.forEach((m, idx) => {
-      const pct = m.fieldAvg !== 0 ? ((m.delta / m.fieldAvg) * 100).toFixed(1) : "N/A";
+      // Calculate percentage with special handling for lower-is-better metrics
+      let pct = "N/A";
+      if (m.fieldAvg !== 0) {
+        const metricNameLower = m.metric.toLowerCase();
+        const isLowerBetter = metricNameLower.includes("proximity") || 
+                             metricNameLower.includes("scoring") || 
+                             metricNameLower.includes("poor shot");
+        
+        if (isLowerBetter) {
+          // For Proximity, Scoring Average, and Poor Shots (lower is better):
+          // Flip sign if top10 is actually better (lower values = improvement = positive %)
+          let adjustedDelta = m.delta;
+          if (m.top10Avg < m.fieldAvg) {
+            // Top 10 is better (lower values), show as positive improvement
+            adjustedDelta = Math.abs(m.delta);
+          } else if (m.top10Avg > m.fieldAvg) {
+            // Top 10 is worse (higher values), show as negative decline
+            adjustedDelta = -Math.abs(m.delta);
+          }
+          pct = ((adjustedDelta / Math.abs(m.fieldAvg)) * 100).toFixed(1);
+        } else {
+          // For all other metrics (higher is better): natural calculation
+          // Positive delta = improvement, negative delta = decline
+          pct = ((m.delta / m.fieldAvg) * 100).toFixed(1);
+        }
+      }
+      
       const correlation = m.correlation !== undefined ? m.correlation : 0;
+      const templateWeight = getTemplateWeightForMetric(tournamentType, m.metric);
+      const recommendedWeight = Math.abs(correlation);
+      
+      // Find matching config weight for this metric
+      // Try exact match first, then fuzzy matching
+      let configWeight = configWeights[m.metric] || 0;
+      
+      if (configWeight === 0) {
+        // Try partial matches if exact match didn't work
+        const metricLower = m.metric.toLowerCase();
+        for (const [configMetric, weight] of Object.entries(configWeights)) {
+          if (weight > 0) {  // Only consider non-zero weights
+            const configLower = configMetric.toLowerCase();
+            if (metricLower.includes(configLower) || configLower.includes(metricLower)) {
+              configWeight = weight;
+              break;
+            }
+          }
+        }
+      }
+
       sheet.appendRow([
         m.metric,
         m.top10Avg.toFixed(3),
         m.fieldAvg.toFixed(3),
         m.delta.toFixed(3),
         pct + "%",
-        correlation.toFixed(4)
+        correlation.toFixed(4),
+        configWeight.toFixed(4),
+        templateWeight.toFixed(4),
+        recommendedWeight.toFixed(4)
       ]);
       
       const rowIdx = idx + 5;
@@ -700,7 +728,100 @@ function createIndividualTournamentSheets(masterSs, correlationData) {
       }
     });
     
-    sheet.autoResizeColumns(1, 6);
+    // ========== WINNER ANALYSIS SECTION ==========
+    // Add spacing
+    const metricsEndRow = sheet.getLastRow();
+    sheet.appendRow([" "]);
+    sheet.appendRow(["TOP-20 FINISHER PREDICTION ANALYSIS"]);
+    sheet.getRange(metricsEndRow + 2, 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
+    
+    sheet.appendRow(["Finish Pos", "Player Name", "Model Rank", "Miss Score", "Gap Analysis"]);
+    const winnerHeaderRow = sheet.getLastRow();
+    sheet.getRange(winnerHeaderRow, 1, 1, 5).setFontWeight("bold").setBackground("#b3d9e8").setFontColor("white");
+    
+    // Load winner data from tournament file
+    const tournamentFile = tournamentFiles[tournament.name];
+    if (tournamentFile) {
+      try {
+        const tournamendSs = SpreadsheetApp.open(tournamentFile);
+        const resultsSheet = tournamendSs.getSheetByName("Tournament Results");
+        
+        if (resultsSheet) {
+          const resultsRange = resultsSheet.getRange("B6:E");
+          const resultsData = resultsRange.getValues();
+          const results = [];
+          
+          for (let i = 0; i < resultsData.length; i++) {
+            const row = resultsData[i];
+            const dgId = String(row[0] || "").trim();
+            const name = String(row[1] || "").trim();
+            const modelRankStr = String(row[2] || "").trim();
+            const finishStr = String(row[3] || "").trim();
+            
+            if (!dgId) break;
+            
+            const modelRank = isNaN(parseInt(modelRankStr)) ? 999 : parseInt(modelRankStr);
+            
+            let finishPosition = 999;
+            if (!isNaN(parseInt(finishStr))) {
+              finishPosition = parseInt(finishStr);
+            } else if (finishStr.includes("T")) {
+              const cleanedPos = finishStr.replace("T", "");
+              if (!isNaN(parseInt(cleanedPos))) {
+                finishPosition = parseInt(cleanedPos);
+              }
+            }
+            
+            results.push({
+              name: name,
+              modelRank: modelRank,
+              finishPosition: finishPosition,
+              finishText: finishStr,
+              isCut: finishPosition === 999
+            });
+          }
+          
+          // Filter to top 20 finishers
+          const top20Finishers = results
+            .filter(r => r.finishPosition <= 20 && r.finishPosition !== 999)
+            .sort((a, b) => a.finishPosition - b.finishPosition);
+          
+          // Add each finisher
+          let totalMiss = 0;
+          let finisherCount = 0;
+          
+          for (const finisher of top20Finishers) {
+            const missScore = finisher.modelRank - finisher.finishPosition;
+            totalMiss += Math.abs(missScore);
+            finisherCount++;
+            
+            const gapAnalysis = missScore > 0 
+              ? `Predicted ${missScore} spots too low` 
+              : `Predicted ${Math.abs(missScore)} spots too high`;
+            
+            sheet.appendRow([
+              finisher.finishText,
+              finisher.name,
+              finisher.modelRank,
+              missScore,
+              gapAnalysis
+            ]);
+          }
+          
+          // Add average miss summary
+          if (finisherCount > 0) {
+            const avgMiss = (totalMiss / finisherCount).toFixed(1);
+            sheet.appendRow([" "]);
+            sheet.appendRow([`Average Miss Score: ${avgMiss}`]);
+            sheet.getRange(sheet.getLastRow(), 1).setFontStyle("italic");
+          }
+        }
+      } catch (e) {
+        console.log(`Warning: Could not load winner analysis for ${tournament.name}: ${e.message}`);
+      }
+    }
+    
+    sheet.autoResizeColumns(1, 9);
   });
 }
 
@@ -929,8 +1050,8 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
     // Sort by absolute correlation
     metricsData.sort((a, b) => Math.abs(b.correlation) - Math.abs(a.correlation));
     
-    // Add rows for each metric (top 15)
-    metricsData.slice(0, 15).forEach(m => {
+    // Add rows for each metric (ALL metrics, not just top 15)
+    metricsData.forEach(m => {
       // Get template weight
       const templateWeight = getTemplateWeightForMetric(typeName, m.metric);
       
@@ -972,10 +1093,10 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
 
 /**
  * Get template weight for a specific metric in a course type
- * Maps metric names to template group weights
+ * Maps metric names to template group weights from templateLoader.js
  */
 function getTemplateWeightForMetric(courseType, metricName) {
-  // Map metric names to group weights from WEIGHT_TEMPLATES
+  // Exact templates from Golf_Algorithm/templateLoader.js
   const WEIGHT_TEMPLATES = {
     POWER: {
       groupWeights: {
@@ -1018,56 +1139,167 @@ function getTemplateWeightForMetric(courseType, metricName) {
     }
   };
   
-  // Metric to group mapping
-  const metricToGroup = {
-    "SG Total": "Driving Performance",
-    "Driving Distance": "Driving Performance",
-    "Driving Accuracy": "Driving Performance",
-    "SG OTT": "Driving Performance",
-    "Approach <100": "Approach - Short (<100)",
-    "Approach <150": "Approach - Mid (100-150)",
-    "Approach >150": "Approach - Long (150-200)",
-    "Approach >200": "Approach - Very Long (>200)",
-    "SG Putting": "Putting",
-    "SG Around Green": "Around the Green",
-    "Score": "Scoring",
-    "Scoring": "Scoring",
-    "Model Rank": "Course Management",
-    "Scrambling": "Course Management"
-  };
-  
-  // Find matching group for this metric
+  const metricLower = metricName.toLowerCase();
   let group = null;
-  for (const [key, value] of Object.entries(metricToGroup)) {
-    if (metricName.includes(key) || metricName.toLowerCase().includes(key.toLowerCase())) {
-      group = value;
-      break;
+  
+  // Check for Driving metrics
+  if (metricLower.includes("driving distance") || (metricLower.includes("distance") && !metricLower.includes("approach"))) {
+    group = "Driving Performance";
+  } else if (metricLower.includes("driving accuracy") || (metricLower.includes("accuracy") && !metricLower.includes("approach"))) {
+    group = "Driving Performance";
+  } else if (metricLower.includes("sg ott") || metricLower.includes("sg total")) {
+    group = "Driving Performance";
+  }
+  
+  // Check for Approach metrics with specific distance ranges
+  if (!group && (metricLower.includes("approach") || metricLower.includes("proximity") || metricLower.includes("fairway") || metricLower.includes("gir"))) {
+    if (metricLower.includes("<100")) {
+      group = "Approach - Short (<100)";
+    } else if (metricLower.includes(">200")) {
+      group = "Approach - Very Long (>200)";
+    } else if (metricLower.includes("150-200") || metricLower.includes("<200")) {
+      group = "Approach - Long (150-200)";
+    } else if (metricLower.includes("100-150") || metricLower.includes("<150")) {
+      group = "Approach - Mid (100-150)";
+    } else if (metricLower.includes(">150")) {
+      group = "Approach - Long (150-200)";
+    } else {
+      group = "Approach - Short (<100)";
     }
   }
   
+  // Check for Putting
+  if (!group && metricLower.includes("putting")) {
+    group = "Putting";
+  }
+  
+  // Check for Around the Green
+  if (!group && metricLower.includes("around")) {
+    group = "Around the Green";
+  }
+  
+  // Check for Scoring metrics (includes SG T2G, Scoring Avg, Birdie, GIR)
+  if (!group && (metricLower.includes("sg t2g") || metricLower.includes("scoring") || metricLower.includes("birdie") || metricLower.includes("bogey") || (metricLower.includes("gir") && !metricLower.includes("approach")) || metricLower.includes("greens"))) {
+    group = "Scoring";
+  }
+  
+  // Check for Course Management (Scrambling, Great Shots, Poor Shots)
+  if (!group && (metricLower.includes("scrambling") || metricLower.includes("great shot") || metricLower.includes("poor shot") || metricLower.includes("model rank"))) {
+    group = "Course Management";
+  }
+  
+  // Default fallback
   if (!group) {
-    // Default mapping for fuzzy matches
-    if (metricName.includes("Driving") || metricName.includes("Distance") || metricName.includes("OTT")) {
-      group = "Driving Performance";
-    } else if (metricName.includes("Approach") || metricName.includes("Proximity") || metricName.includes("Fairway")) {
-      // Determine which approach group based on yardage indicators
-      if (metricName.includes("<100")) group = "Approach - Short (<100)";
-      else if (metricName.includes("100") && !metricName.includes(">150")) group = "Approach - Mid (100-150)";
-      else if (metricName.includes(">200")) group = "Approach - Very Long (>200)";
-      else if (metricName.includes(">150") || metricName.includes("150")) group = "Approach - Long (150-200)";
-      else group = "Approach - Short (<100)"; // Default
-    } else if (metricName.includes("Putting")) {
-      group = "Putting";
-    } else if (metricName.includes("Around")) {
-      group = "Around the Green";
-    } else if (metricName.includes("Score") || metricName.includes("Scoring")) {
-      group = "Scoring";
-    } else {
-      group = "Course Management";
-    }
+    group = "Scoring";
   }
   
   return WEIGHT_TEMPLATES[courseType]?.groupWeights[group] || 0;
+}
+
+/**
+ * Read metric weights from Golf_Algorithm Configuration Sheet
+ * Reads the individual metric weights (columns G-O) that were loaded via template
+ * Returns a map of metric names to their configured weights
+ */
+function getConfigurationSheetWeights() {
+  try {
+    // Open Golf_Algorithm spreadsheet by looking for it in Drive
+    const files = DriveApp.getFilesByName("Golf_Algorithm");
+    if (!files.hasNext()) {
+      console.log("⚠️ Golf_Algorithm spreadsheet not found");
+      return {};
+    }
+    
+    const golfAlgoFile = files.next();
+    const golfAlgoSs = SpreadsheetApp.open(golfAlgoFile);
+    const configSheet = golfAlgoSs.getSheetByName("Configuration Sheet");
+    
+    if (!configSheet) {
+      console.log("⚠️ Configuration Sheet not found in Golf_Algorithm");
+      return {};
+    }
+    
+    // Read individual metric weights from columns G-O (loaded by template)
+    const metricWeights = {};
+    
+    // Driving Performance (Row 16, Columns G-I)
+    metricWeights["Driving Distance"] = configSheet.getRange("G16").getValue() || 0;
+    metricWeights["Driving Accuracy"] = configSheet.getRange("H16").getValue() || 0;
+    metricWeights["SG OTT"] = configSheet.getRange("I16").getValue() || 0;
+    
+    // Approach - Short (<100) (Row 17, Columns G-I)
+    metricWeights["Approach <100 GIR"] = configSheet.getRange("G17").getValue() || 0;
+    metricWeights["Approach <100 SG"] = configSheet.getRange("H17").getValue() || 0;
+    metricWeights["Approach <100 Prox"] = configSheet.getRange("I17").getValue() || 0;
+    
+    // Approach - Mid (100-150) (Row 18, Columns G-L)
+    metricWeights["Approach <150 FW GIR"] = configSheet.getRange("G18").getValue() || 0;
+    metricWeights["Approach <150 FW SG"] = configSheet.getRange("H18").getValue() || 0;
+    metricWeights["Approach <150 FW Prox"] = configSheet.getRange("I18").getValue() || 0;
+    metricWeights["Approach <150 Rough GIR"] = configSheet.getRange("J18").getValue() || 0;
+    metricWeights["Approach <150 Rough SG"] = configSheet.getRange("K18").getValue() || 0;
+    metricWeights["Approach <150 Rough Prox"] = configSheet.getRange("L18").getValue() || 0;
+    
+    // Approach - Long (150-200) (Row 19, Columns G-I)
+    metricWeights["Approach <200 FW GIR"] = configSheet.getRange("G19").getValue() || 0;
+    metricWeights["Approach <200 FW SG"] = configSheet.getRange("H19").getValue() || 0;
+    metricWeights["Approach <200 FW Prox"] = configSheet.getRange("I19").getValue() || 0;
+    metricWeights["Approach >150 Rough GIR"] = configSheet.getRange("J19").getValue() || 0;
+    metricWeights["Approach >150 Rough SG"] = configSheet.getRange("K19").getValue() || 0;
+    metricWeights["Approach >150 Rough Prox"] = configSheet.getRange("L19").getValue() || 0;
+    
+    // Approach - Very Long (>200) (Row 20, Columns G-I)
+    metricWeights["Approach >200 FW GIR"] = configSheet.getRange("G20").getValue() || 0;
+    metricWeights["Approach >200 FW SG"] = configSheet.getRange("H20").getValue() || 0;
+    metricWeights["Approach >200 FW Prox"] = configSheet.getRange("I20").getValue() || 0;
+    metricWeights["Approach >200 FW Rough GIR"] = configSheet.getRange("J20").getValue() || 0;
+    metricWeights["Approach >200 FW Rough SG"] = configSheet.getRange("K20").getValue() || 0;
+    metricWeights["Approach >200 FW Rough Prox"] = configSheet.getRange("L20").getValue() || 0;
+    
+    // Putting (Row 21, Column G)
+    metricWeights["SG Putting"] = configSheet.getRange("G21").getValue() || 0;
+    
+    // Around the Green (Row 22, Column G)
+    metricWeights["SG Around Green"] = configSheet.getRange("G22").getValue() || 0;
+    
+    // Scoring (Row 23, Columns G-I)
+    metricWeights["SG T2G"] = configSheet.getRange("G23").getValue() || 0;
+    metricWeights["Scoring Average"] = configSheet.getRange("H23").getValue() || 0;
+    metricWeights["Birdie Chances Created"] = configSheet.getRange("I23").getValue() || 0;
+    metricWeights["Birdies or Better"] = configSheet.getRange("J23").getValue() || 0;
+    metricWeights["Greens in Regulation"] = configSheet.getRange("K23").getValue() || 0;
+    metricWeights["Approach <100 SG"] = configSheet.getRange("L23").getValue() || 0;
+    metricWeights["Approach <150 FW SG"] = configSheet.getRange("M23").getValue() || 0;
+    metricWeights["Approach <150 Rough SG"] = configSheet.getRange("N23").getValue() || 0;
+    metricWeights["Approach >150 Rough SG"] = configSheet.getRange("O23").getValue() || 0;
+    
+    // Course Management (Row 24, Columns G-O)
+    metricWeights["Scrambling"] = configSheet.getRange("G24").getValue() || 0;
+    metricWeights["Great Shots"] = configSheet.getRange("H24").getValue() || 0;
+    metricWeights["Poor Shots"] = configSheet.getRange("I24").getValue() || 0;
+    metricWeights["Approach <100 Prox"] = configSheet.getRange("J24").getValue() || 0;
+    metricWeights["Approach <150 FW Prox"] = configSheet.getRange("K24").getValue() || 0;
+    metricWeights["Approach <150 Rough Prox"] = configSheet.getRange("L24").getValue() || 0;
+    metricWeights["Approach >150 Rough Prox"] = configSheet.getRange("M24").getValue() || 0;
+    metricWeights["Approach <200 FW Prox"] = configSheet.getRange("N24").getValue() || 0;
+    metricWeights["Approach >200 FW Prox"] = configSheet.getRange("O24").getValue() || 0;
+    
+    // Log for debugging
+    const nonZeroCount = Object.values(metricWeights).filter(v => v > 0).length;
+    console.log(`✓ Config weights loaded: ${nonZeroCount} non-zero metrics`);
+    if (nonZeroCount > 0) {
+      const samples = Object.entries(metricWeights).filter(([k, v]) => v > 0).slice(0, 3);
+      samples.forEach(([metric, weight]) => {
+        console.log(`  ${metric}: ${weight}`);
+      });
+    }
+    
+    return metricWeights;
+    
+  } catch (e) {
+    console.error("Error reading config weights: " + e.message);
+    return {};
+  }
 }
 
 /**

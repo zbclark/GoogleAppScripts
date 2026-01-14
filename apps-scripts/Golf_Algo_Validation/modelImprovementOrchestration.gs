@@ -122,8 +122,8 @@ function runCompleteModelAnalysis() {
         "1. Review 'Season Accuracy Summary' - model vs reality comparison",
         "2. Check 'Calibration Report' - where you missed and why",
         "3. Examine '00_Course_Type_Classification' - tournament groupings",
-        "4. Study '01_Aggregate_Metric_Report' - which metrics matter most",
-        "5. Open individual '02_Tournament_*' sheets - course-specific insights",
+        "4. Open individual '02_Tournament_*' sheets - course-specific insights",
+        "5. Review '03_POWER/TECHNICAL/BALANCED_Summary' sheets by course type",
         "6. Compare Template weights to your current weights",
         "7. For low-accuracy tournaments, identify systemic issues",
         "8. Adjust weights and re-test on past tournaments"
@@ -143,9 +143,9 @@ function runCompleteModelAnalysis() {
       `🎯 Calibration Report\n` +
       `🏆 Winner Prediction Analysis\n` +
       `⚖️  Weight Effectiveness Report\n` +
-      `📈 Aggregate Metric Report + Course Types\n` +
-      `📋 Individual Tournament Analysis Sheets\n` +
-      `⚙️  Template Metrics by Type\n` +
+      `� 00_Course_Type_Classification\n` +
+      `📋 02_Tournament_* Analysis Sheets\n` +
+      `📊 03_Type_Summary Sheets (POWER/TECHNICAL/BALANCED)\n` +
       `🎨 Comprehensive Summary\n\n` +
       `NEXT: Open "Comprehensive Analysis Summary" for prioritized action items`
     );
@@ -382,10 +382,10 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
     { name: "Calibration Report", desc: "Detailed miss analysis - why you missed and patterns" },
     { name: "Winner Prediction Analysis", desc: "Top 5/10/20 prediction accuracy - how well you rank winners" },
     { name: "Weight Effectiveness Report", desc: "Which weights drive the most accurate predictions" },
-    { name: "01_Aggregate_Metric_Report", desc: "Top metrics ranked by predictive power (delta > 0.5 = strong)" },
     { name: "00_Course_Type_Classification", desc: "Which tournaments cluster together - POWER/TECHNICAL/BALANCED" },
-    { name: "Template Metrics by Type", desc: "Recommended metric weights derived from actual results" },
-    { name: "02_Tournament_[Name] sheets", desc: "Per-course metric effectiveness - customize by course type" }
+    { name: "02_Tournament_[Name] sheets", desc: "Per-course metric effectiveness - customize by course type" },
+    { name: "03_[Type]_Summary sheets", desc: "Aggregated metrics by course type - POWER, TECHNICAL, BALANCED" },
+    { name: "04_Weight_Calibration_Guide", desc: "Template weights with recommendations by course type" }
   ];
   
   sheets.forEach((s, idx) => {
