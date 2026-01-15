@@ -340,3 +340,46 @@ function analyzeGreatestAccuracyGap() {
     ui.alert(`Error: ${e.message}`);
   }
 }
+
+/**
+ * VALIDATION FUNCTIONS - Year-specific validation runners
+ */
+
+function runValidation2025() {
+  writeValidationToSheet(2025);
+}
+
+function runValidation2026() {
+  writeValidationToSheet(2026);
+}
+
+function writeValidationToSheet(year) {
+  try {
+    const summary = validateAllTournaments();
+    if (summary.error) {
+      SpreadsheetApp.getUi().alert(`Error: ${summary.error}`);
+      return;
+    }
+    const ss = SpreadsheetApp.getActiveSpreadsheet();
+    const sheetName = `${year} Validation`;
+    let sheet = ss.getSheetByName(sheetName);
+    if (!sheet) {
+      sheet = ss.insertSheet(sheetName);
+    }
+    const lastRow = sheet.getLastRow();
+    const startRow = lastRow > 0 ? lastRow + 3 : 1;
+    const headers = ["Date", "Tournament", "Correlation", "RMSE", "Top-10 %", "Matched"];
+    sheet.getRange(startRow, 1, 1, headers.length).setValues([headers]).setFontWeight("bold");
+    const dataStartRow = startRow + 1;
+    const runDate = new Date().toLocaleDateString();
+    const resultData = summary.individualResults.map(r => [runDate, r.tournament, r.correlation, r.rmse, r.topTenAccuracy, r.matchedPlayers]);
+    if (resultData.length > 0) {
+      sheet.getRange(dataStartRow, 1, resultData.length, headers.length).setValues(resultData);
+    }
+    sheet.autoResizeColumns(1, headers.length);
+    let msg = `✅ Done!\n\nValidated: ${summary.tournamentsValidated}\nSkipped: ${summary.tournamentsSkipped}\nFailed: ${summary.failedValidations}\n\nCorr: ${summary.averageCorrelation}\nRMSE: ${summary.averageRMSE}`;
+    SpreadsheetApp.getUi().alert(msg);
+  } catch (e) {
+    SpreadsheetApp.getUi().alert(`ERROR: ${e.message}`);
+  }
+}
