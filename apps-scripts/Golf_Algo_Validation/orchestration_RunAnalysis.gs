@@ -184,27 +184,44 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
   }
   
   const sheet = masterSs.insertSheet("Comprehensive Analysis Summary", 0);
+  sheet.setColumnWidth(1, 700);
+  sheet.setColumnWidth(2, 1);
   
-  sheet.setColumnWidth(1, 600);
-  sheet.setColumnWidth(2, 400);
-  sheet.setColumnWidth(3, 150);
-  sheet.setColumnWidth(4, 150);
+  let currentRow = 1;
   
-  let row = 1;
+  // Helper function to add formatted section header
+  const addSectionHeader = (text, bgColor) => {
+    sheet.getRange(currentRow, 1).setBackground(bgColor).setFontColor("white").setFontWeight("bold").setFontSize(13).setWrap(true);
+    sheet.getRange(currentRow, 1).setValue(text);
+    sheet.setRowHeight(currentRow, 24);
+    currentRow++;
+    return currentRow - 1;
+  };
   
-  sheet.getRange(row, 1, 1, 4).setBackground("#1f2937").setFontColor("white").setFontWeight("bold").setFontSize(14);
-  sheet.appendRow(["🎯 COMPREHENSIVE MODEL ANALYSIS SUMMARY", "", "", ""]);
-  row++;
+  // Helper function to add spacer row
+  const addSpacer = () => {
+    sheet.setRowHeight(currentRow, 8);
+    currentRow++;
+  };
   
-  sheet.getRange(row, 1).setFontSize(11);
-  sheet.appendRow([`Generated: ${new Date().toLocaleString()}`, "", "", ""]);
-  row += 2;
+  // Helper function to add content
+  const addContent = (text, isBold = false, fontSize = 11) => {
+    const range = sheet.getRange(currentRow, 1);
+    range.setValue(text);
+    range.setFontSize(fontSize);
+    if (isBold) range.setFontWeight("bold");
+    range.setWrap(true);
+    sheet.setRowHeight(currentRow, 20);
+    currentRow++;
+  };
   
-  // ===== PHASES COMPLETED =====
-  sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#3b82f6").setFontColor("white");
-  sheet.appendRow(["✅ PHASES COMPLETED", "", "", ""]);
-  row++;
+  // TITLE
+  addSectionHeader("🎯 COMPREHENSIVE MODEL ANALYSIS SUMMARY", "#1f2937");
+  addContent(`Generated: ${new Date().toLocaleString()}`);
+  addSpacer();
   
+  // PHASES COMPLETED
+  addSectionHeader("✅ PHASES COMPLETED", "#3b82f6");
   const phases = [
     "1. ✓ Phase 1: Metric Correlation Analysis - what metrics predict winners",
     "2. ✓ Phase 2: Post-Tournament Calibration - actual results vs model",
@@ -213,17 +230,11 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
     "5. ⏳ Phase 4: Iterative Optimization - coming next",
     "6. ⏳ Phase 6: Final Model Documentation - coming next"
   ];
+  phases.forEach(phase => addContent(phase));
+  addSpacer();
   
-  phases.forEach(phase => {
-    sheet.appendRow([phase, "", "", ""]);
-  });
-  row += phases.length + 1;
-  
-  // ===== KEY SHEETS TO REVIEW =====
-  sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#10b981").setFontColor("white");
-  sheet.appendRow(["📋 KEY SHEETS TO REVIEW (In Order)", "", "", ""]);
-  row++;
-  
+  // KEY SHEETS TO REVIEW
+  addSectionHeader("📋 KEY SHEETS TO REVIEW (In Order)", "#10b981");
   const sheets = [
     { name: "Calibration Report", desc: "Actual finish positions vs model - where you missed" },
     { name: "00_Course_Type_Classification", desc: "Which tournaments cluster together - POWER/TECHNICAL/BALANCED" },
@@ -232,17 +243,14 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
     { name: "04_Weight_Calibration_Guide", desc: "Template weights with recommendations by course type" },
     { name: "Weight Templates", desc: "Comprehensive weight comparison across all metrics and types" }
   ];
-  
   sheets.forEach((s, idx) => {
-    sheet.appendRow([`${idx + 1}. ${s.name}`, s.desc, "", ""]);
+    addContent(`${idx + 1}. ${s.name}`, true);
+    addContent(`   → ${s.desc}`);
   });
-  row += sheets.length + 1;
+  addSpacer();
   
-  // ===== DIAGNOSTIC WORKFLOW =====
-  sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#f59e0b").setFontColor("white");
-  sheet.appendRow(["🔍 DIAGNOSTIC WORKFLOW", "", "", ""]);
-  row++;
-  
+  // DIAGNOSTIC WORKFLOW
+  addSectionHeader("🔍 DIAGNOSTIC WORKFLOW", "#f59e0b");
   const steps = [
     { title: "STEP 1: Identify Problem Tournaments", items: [
       "• Open 'Calibration Report' - find tournaments with worst accuracy",
@@ -276,24 +284,21 @@ function createComprehensiveSummarySheet(masterSs, recommendations) {
   ];
   
   steps.forEach(step => {
-    sheet.appendRow([step.title, "", "", ""]);
-    row++;
-    step.items.forEach(item => {
-      sheet.appendRow([item, "", "", ""]);
-      row++;
+    addContent(step.title, true, 12);
+    step.items.forEach(item => addContent(item));
+    addSpacer();
+  });
+  
+  // NEXT STEPS
+  addSectionHeader("✅ NEXT STEPS", "#06b6d4");
+  if (recommendations && recommendations.nextSteps) {
+    recommendations.nextSteps.forEach((step, idx) => {
+      addContent(`${idx + 1}. ${step}`);
     });
-    row++;
-  });
+  }
   
-  // ===== NEXT STEPS =====
-  sheet.getRange(row, 1).setFontWeight("bold").setFontSize(12).setBackground("#06b6d4").setFontColor("white");
-  sheet.appendRow(["✅ NEXT STEPS", "", "", ""]);
-  row++;
-  
-  recommendations.nextSteps.forEach((step, idx) => {
-    sheet.appendRow([step, "", "", ""]);
-    row++;
-  });
+  // Format entire first column for text wrapping
+  sheet.getRange(1, 1, currentRow).setWrapStrategy(SpreadsheetApp.WrapStrategy.WRAP);
 }
 
 /**
