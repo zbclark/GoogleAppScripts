@@ -1,5 +1,12 @@
 # Model Diagnostic & Improvement Checklist
 
+**📘 Companion to:** [VALIDATION_FRAMEWORK.md](../../VALIDATION_FRAMEWORK.md) (Phases 1-3)  
+**Used with:** [MODEL_IMPROVEMENT_GUIDE.md](MODEL_IMPROVEMENT_GUIDE.md) (Strategic workflow)
+
+This checklist provides a tactical step-by-step guide for executing the validation phases described in VALIDATION_FRAMEWORK.md.
+
+---
+
 ## Pre-Analysis Checklist
 - [ ] Have at least 3-5 tournament results available
 - [ ] Each tournament has "Tournament Results" sheet with actual finishes

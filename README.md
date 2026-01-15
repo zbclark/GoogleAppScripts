@@ -3,6 +3,11 @@
 
 This repository is a workspace to store Google Apps Script projects locally.
 
+**📋 Main References:**
+- **[VALIDATION_FRAMEWORK.md](VALIDATION_FRAMEWORK.md)** - Complete 6-phase validation & improvement system
+- **[MODEL_IMPROVEMENT_GUIDE.md](apps-scripts/Golf_Algo_Validation/MODEL_IMPROVEMENT_GUIDE.md)** - Strategic workflow for using validation data
+- **[IMPROVEMENT_CHECKLIST.md](apps-scripts/Golf_Algo_Validation/IMPROVEMENT_CHECKLIST.md)** - Tactical analysis checklist
+
 ## Pulling all Apps Script projects into this repo
 
 I added a helper script that lists your Google Apps Script projects (via `clasp`) and clones or updates them into the `apps-scripts/` directory.

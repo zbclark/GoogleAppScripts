@@ -9,24 +9,18 @@ function runCompleteModelAnalysis() {
     const ui = SpreadsheetApp.getUi();
     const masterSs = SpreadsheetApp.getActiveSpreadsheet();
     
-    ui.alert("🏌️ Starting COMPREHENSIVE Model Analysis...\n\nThis will run ALL validation functions:\n1. Model Accuracy (vs predictions)\n2. Post-Tournament Calibration\n3. Metric Correlation Analysis\n4. Winner Prediction Effectiveness\n5. Weight Effectiveness Analysis\n6. Course Type Classification\n7. Weight Template Generation\n\nThis may take 3-5 minutes.");
+    ui.alert("🏌️ Starting COMPREHENSIVE Model Analysis...\n\nThis will run ALL validation functions:\n1. Post-Tournament Calibration\n2. Metric Correlation Analysis (includes player accuracy data)\n3. Winner Prediction Effectiveness\n4. Weight Effectiveness Analysis\n5. Course Type Classification\n6. Weight Template Generation\n\nThis may take 3-5 minutes.");
     
     console.log("\n" + "=".repeat(90));
     console.log("🎯 COMPREHENSIVE MODEL ANALYSIS - COMPLETE WORKFLOW STARTING");
     console.log("=".repeat(90));
     
     // ========== PHASE 1: MODEL ACCURACY VALIDATION ==========
-    console.log("\n📊 PHASE 1: Model Accuracy Diagnostics (vs Pre-Tournament Predictions)");
+    // DEPRECATED: Player accuracy data now consolidated into 02_ Tournament Sheets
+    console.log("\n📊 PHASE 1: Model Accuracy Analysis");
     console.log("-".repeat(90));
-    
-    try {
-      console.log("Running analyzeModelAccuracy()...");
-      // This is already called from menu, but runs independently
-      // It creates per-tournament accuracy sheets and season summary
-      console.log("✓ Model accuracy analysis captured");
-    } catch (e) {
-      console.log(`⚠️ Model accuracy skipped: ${e.message}`);
-    }
+    console.log("ℹ️  Player accuracy data now integrated into 02_Tournament_* sheets (see Phase 5)");
+    console.log("ℹ️  Each 02_ sheet shows player deltas sorted by Model Rank with Miss Score & Gap Analysis");
     
     // ========== PHASE 2: POST-TOURNAMENT CALIBRATION ==========
     console.log("\n🎯 PHASE 2: Post-Tournament Calibration (Actual Results vs Model)");
@@ -44,17 +38,10 @@ function runCompleteModelAnalysis() {
     }
     
     // ========== PHASE 3: WINNER PREDICTION ANALYSIS ==========
-    console.log("\n🏆 PHASE 3: Winner Prediction Analysis (Top Finisher Focus)");
+    console.log("\n🏆 PHASE 3: Winner Prediction Analysis (In 02_ Tournament Sheets)");
     console.log("-".repeat(90));
-    
-    try {
-      console.log("Running analyzeWinnerPredictions()...");
-      // Detailed breakdown of top 5, top 10, top 20 predictions
-      analyzeWinnerPredictions();
-      console.log("✓ Winner prediction analysis complete");
-    } catch (e) {
-      console.log(`⚠️ Winner prediction skipped: ${e.message}`);
-    }
+    console.log("Winner analysis now integrated into 02_Tournament_* sheets via metric correlation analysis");
+    console.log("✓ Winner prediction analysis included in Phase 5\n");
     
     // ========== PHASE 4: WEIGHT EFFECTIVENESS ANALYSIS ==========
     console.log("\n⚖️  PHASE 4: Weight Effectiveness Analysis");
@@ -332,6 +319,12 @@ function analyzeAndGenerateRecommendations(calibrationResults, metricResults, co
  * Create comprehensive summary with all analysis insights
  */
 function createComprehensiveSummarySheet(masterSs, recommendations) {
+  // Delete old sheet if it exists
+  let oldSheet = masterSs.getSheetByName("Comprehensive Analysis Summary");
+  if (oldSheet) {
+    masterSs.deleteSheet(oldSheet);
+  }
+  
   const sheet = masterSs.insertSheet("Comprehensive Analysis Summary", 0);
   
   // Set column widths first

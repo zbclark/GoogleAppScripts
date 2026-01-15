@@ -28,23 +28,43 @@ function analyzeMetricCorrelations() {
     let newTournamentsProcessed = [];
     const tournamentFiles = {};  // Map tournament names to file objects
     
-    // Define all 35 metrics
+    // Define all 35 metrics - matches sortOrder exactly
     const allMetrics = [
-      // Historical Metrics (17)
-      "SG Total", "Driving Distance", "Driving Accuracy",
-      "SG T2G", "SG Approach", "SG Around Green",
-      "SG OTT", "SG Putting", "Greens in Regulation",
-      "Scrambling", "Great Shots", "Poor Shots", 
-      "Scoring Average", "Birdies or Better", "Birdie Chances Created",
-      "Fairway Proximity", "Rough Proximity",
-      
-      // Approach Metrics (18)
-      "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox",
-      "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
-      "Approach <150 Rough GIR", "Approach <150 Rough SG", "Approach <150 Rough Prox",
-      "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
-      "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
-      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox"
+          "Driving Distance",
+          "Driving Accuracy",
+          "SG OTT",
+          "Approach <100 GIR",
+          "Approach <100 SG",
+          "Approach <100 Prox",
+          "Approach <150 FW GIR",
+          "Approach <150 FW SG",
+          "Approach <150 FW Prox",
+          "Approach <200 FW GIR",
+          "Approach <200 FW SG",
+          "Approach <200 FW Prox",
+          "Approach >200 FW GIR",
+          "Approach >200 FW SG",
+          "Approach >200 FW Prox",
+          "SG Putting",
+          "SG Around Green",
+          "SG T2G",
+          "Scoring Average",
+          "Birdie Chances Created",
+          "Approach <100 SG",
+          "Approach <150 FW SG",
+          "Approach <150 Rough SG",
+          "Approach >150 Rough SG",
+          "Approach <200 FW SG",
+          "Approach >200 FW SG",
+          "Scrambling",
+          "Great Shots",
+          "Poor Shot Avoidance",
+          "Approach <100 Prox",
+          "Approach <150 FW Prox",
+          "Approach <150 Rough Prox",
+          "Approach >150 Rough Prox",
+          "Approach <200 FW Prox",
+          "Approach >200 FW Prox"
     ];
     
     // Initialize correlation tracker with per-tournament analysis
@@ -661,9 +681,78 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       }))
       .filter(m => m.delta !== undefined && m.fieldAvg !== 0)
       .sort((a, b) => {
-        const pctA = a.fieldAvg !== 0 ? Math.abs(a.delta / a.fieldAvg) : 0;
-        const pctB = b.fieldAvg !== 0 ? Math.abs(b.delta / b.fieldAvg) : 0;
-        return pctB - pctA;  // Descending
+        // Exact sort order as specified - group by distance threshold, then by metric type within each threshold
+        const sortOrder = [
+          "Driving Distance",
+          "Driving Accuracy",
+          "SG OTT",
+          "Approach <100 GIR",
+          "Approach <100 SG",
+          "Approach <100 Prox",
+          "Approach <150 FW GIR",
+          "Approach <150 FW SG",
+          "Approach <150 FW Prox",
+          "Approach <200 FW GIR",
+          "Approach <200 FW SG",
+          "Approach <200 FW Prox",
+          "Approach >200 FW GIR",
+          "Approach >200 FW SG",
+          "Approach >200 FW Prox",
+          "SG Putting",
+          "SG Around Green",
+          "SG T2G",
+          "Scoring Average",
+          "Birdie Chances Created",
+          "Approach <100 SG",
+          "Approach <150 FW SG",
+          "Approach <150 Rough SG",
+          "Approach >150 Rough SG",
+          "Approach <200 FW SG",
+          "Approach >200 FW SG",
+          "Scrambling",
+          "Great Shots",
+          "Poor Shot Avoidance",
+          "Approach <100 Prox",
+          "Approach <150 FW Prox",
+          "Approach <150 Rough Prox",
+          "Approach >150 Rough Prox",
+          "Approach <200 FW Prox",
+          "Approach >200 FW Prox"
+        ];
+        
+        // Find best matching index - check for exact match first, then partial
+        const findBestMatch = (metricName) => {
+          const metricLower = metricName.toLowerCase();
+          
+          for (let i = 0; i < sortOrder.length; i++) {
+            const sortKeyLower = sortOrder[i].toLowerCase();
+            // Exact match (highest priority)
+            if (metricLower === sortKeyLower) {
+              return i;
+            }
+          }
+          
+          // Partial match - metricLower contains sortKey
+          let bestIndex = sortOrder.length;
+          let bestLength = 0;
+          
+          for (let i = 0; i < sortOrder.length; i++) {
+            const sortKeyLower = sortOrder[i].toLowerCase();
+            if (metricLower.includes(sortKeyLower)) {
+              if (sortKeyLower.length > bestLength) {
+                bestIndex = i;
+                bestLength = sortKeyLower.length;
+              }
+            }
+          }
+          
+          return bestIndex;
+        };
+        
+        const indexA = findBestMatch(a.metric);
+        const indexB = findBestMatch(b.metric);
+        
+        return indexA - indexB;
       });
     
     // Calculate recommended weights based on correlation strength within each group
@@ -753,6 +842,10 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
         console.log(`  ${m.metric}: configWeight = ${configWeight}`);
       }
 
+      // Always show Template Weight and Recommended Weight for all metrics
+      const templateWeightValue = templateWeight.toFixed(4);
+      const recommendedWeightValue = recommendedWeight.toFixed(4);
+
       sheet.appendRow([
         m.metric,
         m.top10Avg.toFixed(3),
@@ -761,8 +854,8 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
         pct + "%",
         correlation.toFixed(4),
         configWeight.toFixed(4),
-        templateWeight.toFixed(4),
-        recommendedWeight.toFixed(4)
+        templateWeightValue,
+        recommendedWeightValue
       ]);
       
       const rowIdx = idx + 5;
@@ -774,15 +867,14 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       }
     });
     
-    // ========== DETAILED PLAYER METRICS SECTION ==========
+    // ========== PLAYER ACCURACY DATA SECTION (DELTAS) ==========
     // Add spacing and header
     const metricsEndRow = sheet.getLastRow();
     sheet.appendRow([" "]);
-    sheet.appendRow(["CONFIGURATION METRICS - PLAYER DATA"]);
+    sheet.appendRow(["PLAYER-LEVEL ACCURACY ANALYSIS"]);
     sheet.getRange(metricsEndRow + 2, 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
     
-    // Load player names from tournament file
-    const playerNamesMap = new Map();
+    // Load tournament file with actual results and model data
     const tournamentFile = tournamentFiles[tournament.name];
     if (tournamentFile) {
       try {
@@ -790,181 +882,194 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
         const resultsSheet = tournamendSs.getSheetByName("Tournament Results");
         
         if (resultsSheet) {
-          const resultsRange = resultsSheet.getRange("B6:C500");
+          // Read Tournament Results to get player data with model and actual values
+          const resultsRange = resultsSheet.getDataRange();
           const resultsData = resultsRange.getValues();
           
-          console.log(`Loading player names for ${tournament.name}: found ${resultsData.length} rows`);
+          // Map column headers to indices
+          let colMap = {};
+          const headerRow = resultsData[4]; // Row 5 (index 4) contains headers
           
-          for (let i = 0; i < resultsData.length; i++) {
-            const row = resultsData[i];
-            const dgId = String(row[0] || "").trim();
-            const name = String(row[1] || "").trim();
+          headerRow.forEach((header, idx) => {
+            const h = String(header || "").toLowerCase().trim();
+            if (h === "dg id") colMap.dgId = idx;
+            if (h === "player name") colMap.name = idx;
+            if (h === "model rank") colMap.modelRank = idx;
+            if (h === "finish position") colMap.finishPos = idx;
             
-            if (!dgId) break;
-            
-            playerNamesMap.set(dgId, name);
-            if (i < 3) {
-              console.log(`  Row ${i}: dgId="${dgId}", name="${name}"`);
+            // Actual metric values
+            if (h === "sg total") colMap.sgTotal = idx;
+            if (h === "driving distance") colMap.drivDist = idx;
+            if (h === "driving accuracy") colMap.drivAcc = idx;
+            if (h === "sg t2g") colMap.sgT2G = idx;
+            if (h === "sg approach") colMap.sgApproach = idx;
+            if (h === "sg around green") colMap.sgAroundGreen = idx;
+            if (h === "sg ott") colMap.sgOTT = idx;
+            if (h === "sg putting") colMap.sgPutting = idx;
+            if (h === "greens in regulation") colMap.gir = idx;
+            if (h === "fairway proximity") {
+              colMap.fairwayProx = idx;
+              console.log(`✓ Found Fairway Proximity at column ${idx}`);
             }
-          }
-          console.log(`  Total player names loaded: ${playerNamesMap.size}`);
-        }
-      } catch (e) {
-        console.log(`Note: Could not load player names from ${tournament.name}: ${e.message}`);
-      }
-    }
-    
-    // Get finisher metrics for this tournament
-    const finisherMetrics = correlationData.finisherMetrics.filter(fm => fm.tournament === tournament.name);
-    
-    // Log config weights for debugging (already loaded at function start)
-    if (finisherMetrics.length > 0) {
-      console.log(`Player data section - Config weights available: ${Object.keys(configWeights).length} entries`);
-      // Determine which metrics to display (the ones with data in this tournament)
-      const metricsToDisplay = [
-        "Driving Distance", "Driving Accuracy", "SG OTT",
-        "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox",
-        "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
-        "SG Putting", "SG Around Green", "SG T2G",
-        "Scoring Average", "Birdie Chances Created", "Birdies or Better",
-        "Scrambling", "Great Shots", "Poor Shots"
-      ];
-      
-      // Build header row with columns: Position, Player Name, DG ID, then all metrics
-      const playerHeaderRow = ["Finish Pos", "Player Name", "DG ID", ...metricsToDisplay];
-      sheet.appendRow(playerHeaderRow);
-      
-      const playerDataHeaderRow = sheet.getLastRow();
-      sheet.getRange(playerDataHeaderRow, 1, 1, playerHeaderRow.length)
-        .setFontWeight("bold")
-        .setBackground("#d9e8f5")
-        .setFontColor("black");
-      
-      // Sort finishers by position
-      const sortedFinishers = finisherMetrics.sort((a, b) => a.position - b.position);
-      
-      // Add each finisher's data
-      sortedFinishers.forEach((finisher, idx) => {
-        const playerName = playerNamesMap.get(finisher.dgId) || finisher.dgId;
-        if (idx < 3) {
-          console.log(`  Finisher ${idx}: dgId="${finisher.dgId}", playerName="${playerName}"`);
-        }
-        const rowData = [
-          finisher.position,
-          playerName,
-          finisher.dgId
-        ];
-        
-        // Add metric values for this finisher
-        metricsToDisplay.forEach(metric => {
-          const value = finisher[metric];
-          rowData.push(value !== undefined && !isNaN(value) ? parseFloat(value).toFixed(2) : "");
-        });
-        
-        sheet.appendRow(rowData);
-        
-        // Highlight top 10 finishers
-        if (finisher.position <= 10) {
-          sheet.getRange(sheet.getLastRow(), 1, 1, rowData.length).setBackground("#ffffcc");
-        }
-      });
-      
-      // Auto-resize columns
-      sheet.autoResizeColumns(1, playerHeaderRow.length);
-    }
-
-    
-    // ========== WINNER ANALYSIS SECTION ==========
-    // Add spacing
-    sheet.appendRow([" "]);
-    sheet.appendRow(["TOP-20 FINISHER PREDICTION ANALYSIS"]);
-    sheet.getRange(sheet.getLastRow(), 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
-    
-    sheet.appendRow(["Finish Pos", "Player Name", "Model Rank", "Miss Score", "Gap Analysis"]);
-    const winnerHeaderRow = sheet.getLastRow();
-    sheet.getRange(winnerHeaderRow, 1, 1, 5).setFontWeight("bold").setBackground("#b3d9e8").setFontColor("white");
-    
-    // Use already-loaded tournamentFile from metrics section
-    if (tournamentFile) {
-      try {
-        const tournamendSs = SpreadsheetApp.open(tournamentFile);
-        const resultsSheet = tournamendSs.getSheetByName("Tournament Results");
-        
-        if (resultsSheet) {
-          const resultsRange = resultsSheet.getRange("B6:E");
-          const resultsData = resultsRange.getValues();
-          const results = [];
+            if (h === "rough proximity") {
+              colMap.roughProx = idx;
+              console.log(`✓ Found Rough Proximity at column ${idx}`);
+            }
+            
+            // Model metric values
+            if (h === "sg total - model") colMap.sgTotalModel = idx;
+            if (h === "driving distance - model") colMap.drivDistModel = idx;
+            if (h === "driving accuracy - model") colMap.drivAccModel = idx;
+            if (h === "sg t2g - model") colMap.sgT2GModel = idx;
+            if (h === "sg approach - model") colMap.sgApproachModel = idx;
+            if (h === "sg around green - model") colMap.sgAroundGreenModel = idx;
+            if (h === "sg ott - model") colMap.sgOTTModel = idx;
+            if (h === "sg putting - model") colMap.sgPuttingModel = idx;
+            if (h === "greens in regulation - model") colMap.girModel = idx;
+            if (h === "fairway proximity - model") {
+              colMap.fairwayProxModel = idx;
+              console.log(`✓ Found Fairway Proximity - Model at column ${idx}`);
+            }
+            if (h === "rough proximity - model") {
+              colMap.roughProxModel = idx;
+              console.log(`✓ Found Rough Proximity - Model at column ${idx}`);
+            }
+          });
           
-          for (let i = 0; i < resultsData.length; i++) {
+          // Log all found columns
+          console.log("Full colMap:", colMap);
+          console.log("Total columns in data:", headerRow.length);
+          console.log("Column headers around Y-AB:", headerRow.slice(24, 28));
+          
+          // Parse player data
+          const playerDataWithDeltas = [];
+          for (let i = 5; i < resultsData.length; i++) {
             const row = resultsData[i];
-            const dgId = String(row[0] || "").trim();
-            const name = String(row[1] || "").trim();
-            const modelRankStr = String(row[2] || "").trim();
-            const finishStr = String(row[3] || "").trim();
+            const dgId = String(row[colMap.dgId] || "").trim();
+            const name = String(row[colMap.name] || "").trim();
             
             if (!dgId) break;
             
-            const modelRank = isNaN(parseInt(modelRankStr)) ? 999 : parseInt(modelRankStr);
-            
-            let finishPosition = 999;
+            const modelRank = parseInt(row[colMap.modelRank]) || 999;
+            const finishStr = String(row[colMap.finishPos] || "").trim();
+            let finishPos = 999;
             if (!isNaN(parseInt(finishStr))) {
-              finishPosition = parseInt(finishStr);
+              finishPos = parseInt(finishStr);
             } else if (finishStr.includes("T")) {
-              const cleanedPos = finishStr.replace("T", "");
-              if (!isNaN(parseInt(cleanedPos))) {
-                finishPosition = parseInt(cleanedPos);
-              }
+              finishPos = parseInt(finishStr.replace("T", "")) || 999;
             }
             
-            results.push({
+            if (finishPos === 999) continue; // Skip non-finishers
+            
+            // Calculate deltas for all metrics (Model - Actual)
+            const statDeltas = {
+              "SG Total": (parseFloat(row[colMap.sgTotalModel]) || 0) - (parseFloat(row[colMap.sgTotal]) || 0),
+              "Driving Distance": (parseFloat(row[colMap.drivDistModel]) || 0) - (parseFloat(row[colMap.drivDist]) || 0),
+              "Driving Accuracy": (parseFloat(row[colMap.drivAccModel]) || 0) - (parseFloat(row[colMap.drivAcc]) || 0),
+              "SG T2G": (parseFloat(row[colMap.sgT2GModel]) || 0) - (parseFloat(row[colMap.sgT2G]) || 0),
+              "SG Approach": (parseFloat(row[colMap.sgApproachModel]) || 0) - (parseFloat(row[colMap.sgApproach]) || 0),
+              "SG Around Green": (parseFloat(row[colMap.sgAroundGreenModel]) || 0) - (parseFloat(row[colMap.sgAroundGreen]) || 0),
+              "SG OTT": (parseFloat(row[colMap.sgOTTModel]) || 0) - (parseFloat(row[colMap.sgOTT]) || 0),
+              "SG Putting": (parseFloat(row[colMap.sgPuttingModel]) || 0) - (parseFloat(row[colMap.sgPutting]) || 0),
+              "GIR": (parseFloat(row[colMap.girModel]) || 0) - (parseFloat(row[colMap.gir]) || 0),
+              "Fairway Proximity": (parseFloat(row[colMap.fairwayProxModel]) || 0) - (parseFloat(row[colMap.fairwayProx]) || 0),
+              "Rough Proximity": (parseFloat(row[colMap.roughProxModel]) || 0) - (parseFloat(row[colMap.roughProx]) || 0)
+            };
+            
+            playerDataWithDeltas.push({
               name: name,
+              dgId: dgId,
               modelRank: modelRank,
-              finishPosition: finishPosition,
+              finishPos: finishPos,
               finishText: finishStr,
-              isCut: finishPosition === 999
+              statDeltas: statDeltas
             });
           }
           
-          // Filter to top 20 finishers
-          const top20Finishers = results
-            .filter(r => r.finishPosition <= 20 && r.finishPosition !== 999)
-            .sort((a, b) => a.finishPosition - b.finishPosition);
-          
-          // Add each finisher
-          let totalMiss = 0;
-          let finisherCount = 0;
-          
-          for (const finisher of top20Finishers) {
-            const missScore = finisher.modelRank - finisher.finishPosition;
-            totalMiss += Math.abs(missScore);
-            finisherCount++;
+          if (playerDataWithDeltas.length > 0) {
+            // Sort by model rank ascending (low to high)
+            playerDataWithDeltas.sort((a, b) => a.modelRank - b.modelRank);
             
-            const gapAnalysis = missScore > 0 
-              ? `Predicted ${missScore} spots too low` 
-              : `Predicted ${Math.abs(missScore)} spots too high`;
+            // Build header row
+            const deltaMetrics = [
+              "SG Total Δ", "Driving Distance Δ", "Driving Accuracy Δ",
+              "SG T2G Δ", "SG Approach Δ", "SG Around Green Δ",
+              "SG OTT Δ", "SG Putting Δ", "GIR Δ",
+              "Fairway Proximity Δ", "Rough Proximity Δ"
+            ];
             
-            sheet.appendRow([
-              finisher.finishText,
-              finisher.name,
-              finisher.modelRank,
-              missScore,
-              gapAnalysis
-            ]);
-          }
-          
-          // Add average miss summary
-          if (finisherCount > 0) {
-            const avgMiss = (totalMiss / finisherCount).toFixed(1);
-            sheet.appendRow([" "]);
-            sheet.appendRow([`Average Miss Score: ${avgMiss}`]);
-            sheet.getRange(sheet.getLastRow(), 1).setFontStyle("italic");
+            const playerHeaderRow = ["Player", "Model Rank", "Finish Pos", "Miss Score", "Gap Analysis", ...deltaMetrics];
+            sheet.appendRow(playerHeaderRow);
+            
+            const playerDataHeaderRow = sheet.getLastRow();
+            sheet.getRange(playerDataHeaderRow, 1, 1, playerHeaderRow.length)
+              .setFontWeight("bold")
+              .setBackground("#1f2937")
+              .setFontColor("white");
+            
+            // Add each player's data
+            playerDataWithDeltas.forEach((player, idx) => {
+              // Calculate Miss Score and Gap Analysis
+              const missScore = player.modelRank - player.finishPos;
+              let gapAnalysis = "";
+              if (missScore === 0) {
+                gapAnalysis = "Perfect";
+              } else if (missScore > 0) {
+                gapAnalysis = `Predicted ${missScore} spots too high`;
+              } else {
+                gapAnalysis = `Predicted ${Math.abs(missScore)} spots too low`;
+              }
+              
+              const rowData = [
+                player.name,
+                player.modelRank,
+                player.finishText,
+                missScore,
+                gapAnalysis
+              ];
+              
+              // Debug: Log metrics
+              if (idx === 0) {
+                console.log("statDeltas keys:", Object.keys(player.statDeltas));
+              }
+              
+              // Add delta values for this player
+              deltaMetrics.forEach(deltaKey => {
+                const metricKey = deltaKey.replace(" Δ", "");
+                const delta = player.statDeltas[metricKey];
+                
+                // Debug first player
+                if (idx === 0) {
+                  console.log(`  ${metricKey}: delta=${delta}`);
+                }
+                
+                // Format based on metric type
+                if (metricKey.includes("Distance") || metricKey === "Scoring Average") {
+                  rowData.push(delta !== undefined ? delta.toFixed(0) : "");
+                } else if (metricKey === "Driving Accuracy" || metricKey.includes("Proximity")) {
+                  rowData.push(delta !== undefined ? delta.toFixed(1) : "");
+                } else {
+                  rowData.push(delta !== undefined ? delta.toFixed(2) : "");
+                }
+              });
+              
+              sheet.appendRow(rowData);
+              
+              // Highlight top 10 finishers
+              if (player.finishPos <= 10) {
+                sheet.getRange(sheet.getLastRow(), 1, 1, rowData.length).setBackground("#ffffcc");
+              }
+            });
+            
+            // Auto-resize columns
+            sheet.autoResizeColumns(1, playerHeaderRow.length);
+            console.log(`✓ Added ${playerDataWithDeltas.length} players with delta data to ${tournament.name}`);
           }
         }
       } catch (e) {
-        console.log(`Warning: Could not load winner analysis for ${tournament.name}: ${e.message}`);
+        console.log(`Note: Could not load player delta data from ${tournament.name}: ${e.message}`);
       }
     }
-
     
     sheet.autoResizeColumns(1, 9);
   });
@@ -1654,20 +1759,43 @@ function getTournamentConfigurationWeights(tournamentWorkbook) {
     metricWeights["Approach <150 FW SG"] = configSheet.getRange("H18").getValue() || 0;
     metricWeights["Approach <150 FW Prox"] = configSheet.getRange("I18").getValue() || 0;
     
-    // Short Game (Row 19, Columns G-I)
-    metricWeights["SG Putting"] = configSheet.getRange("G19").getValue() || 0;
-    metricWeights["SG Around Green"] = configSheet.getRange("H19").getValue() || 0;
-    metricWeights["SG T2G"] = configSheet.getRange("I19").getValue() || 0;
+    // Approach - Long (150-200 FW) (Row 19, Columns G-I)
+    metricWeights["Approach <200 FW GIR"] = configSheet.getRange("G19").getValue() || 0;
+    metricWeights["Approach <200 FW SG"] = configSheet.getRange("H19").getValue() || 0;
+    metricWeights["Approach <200 FW Prox"] = configSheet.getRange("I19").getValue() || 0;
     
-    // Overall (Row 20, Columns G-I)
-    metricWeights["Scoring Average"] = configSheet.getRange("G20").getValue() || 0;
-    metricWeights["Birdie Chances Created"] = configSheet.getRange("H20").getValue() || 0;
-    metricWeights["Birdies or Better"] = configSheet.getRange("I20").getValue() || 0;
+    // Approach - Very Long (>200 FW) (Row 20, Columns G-I)
+    metricWeights["Approach >200 FW GIR"] = configSheet.getRange("G20").getValue() || 0;
+    metricWeights["Approach >200 FW SG"] = configSheet.getRange("H20").getValue() || 0;
+    metricWeights["Approach >200 FW Prox"] = configSheet.getRange("I20").getValue() || 0;
     
-    // Additional metrics
-    metricWeights["Scrambling"] = configSheet.getRange("G21").getValue() || 0;
-    metricWeights["Great Shots"] = configSheet.getRange("H21").getValue() || 0;
-    metricWeights["Poor Shots"] = configSheet.getRange("I21").getValue() || 0;
+    // Putting (Row 21, Column G)
+    metricWeights["SG Putting"] = configSheet.getRange("G21").getValue() || 0;
+
+    // Around the Green (Row 22, Columnn G)
+    metricWeights["SG Around Green"] = configSheet.getRange("G22").getValue() || 0;
+
+    // Scoring (Row 23, Column G-O) - Context-based SG metrics
+    metricWeights["SG T2G"] = configSheet.getRange("G23").getValue() || 0;
+    metricWeights["Scoring Average"] = configSheet.getRange("H23").getValue() || 0;
+    metricWeights["Birdie Chances Created"] = configSheet.getRange("I23").getValue() || 0;
+    metricWeights["Scoring - Approach <100 SG"] = configSheet.getRange("J23").getValue() || 0;
+    metricWeights["Scoring - Approach <150 FW SG"] = configSheet.getRange("K23").getValue() || 0;
+    metricWeights["Scoring - Approach <150 Rough SG"] = configSheet.getRange("L23").getValue() || 0;
+    metricWeights["Scoring - Approach >150 Rough SG"] = configSheet.getRange("M23").getValue() || 0;
+    metricWeights["Scoring - Approach <200 FW SG"] = configSheet.getRange("N23").getValue() || 0;
+    metricWeights["Scoring - Approach >200 FW SG"] = configSheet.getRange("O23").getValue() || 0;
+
+    // Course Management (Row 24, Columns G-O) - Context-based Prox metrics
+    metricWeights["Scrambling"] = configSheet.getRange("G24").getValue() || 0;
+    metricWeights["Great Shots"] = configSheet.getRange("H24").getValue() || 0;
+    metricWeights["Poor Shot Avoidance"] = configSheet.getRange("I24").getValue() || 0;
+    metricWeights["Course Management - Approach <100 Prox"] = configSheet.getRange("J24").getValue() || 0;
+    metricWeights["Course Management - Approach <150 FW Prox"] = configSheet.getRange("K24").getValue() || 0;
+    metricWeights["Course Management - Approach <150 Rough Prox"] = configSheet.getRange("L24").getValue() || 0;
+    metricWeights["Course Management - Approach >150 Rough Prox"] = configSheet.getRange("M24").getValue() || 0;
+    metricWeights["Course Management - Approach <200 FW Prox"] = configSheet.getRange("N24").getValue() || 0;
+    metricWeights["Course Management - Approach >200 FW Prox"] = configSheet.getRange("O24").getValue() || 0;
     
     console.log(`Config weights loaded: ${Object.keys(metricWeights).length} metrics`);
     return metricWeights;

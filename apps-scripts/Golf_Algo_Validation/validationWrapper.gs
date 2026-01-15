@@ -7,6 +7,7 @@ function analyzeModelAccuracy() {
   try {
     const folders = DriveApp.getFoldersByName("Golf 2025");
     if (!folders.hasNext()) {
+      console.log("❌ Golf 2025 folder not found - Phase 1 cannot proceed");
       SpreadsheetApp.getUi().alert("Golf 2025 folder not found");
       return;
     }
@@ -14,6 +15,7 @@ function analyzeModelAccuracy() {
     const golfFolder = folders.next();
     const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
     const masterSs = SpreadsheetApp.getActiveSpreadsheet();
+    console.log("📋 PHASE 1: analyzeModelAccuracy() STARTING");
     
     // Clear old analysis sheets
     const sheets = masterSs.getSheets();
@@ -68,16 +70,26 @@ function analyzeModelAccuracy() {
         if (h === "sg total") colMap.sgTotal = i;
         if (h === "driving distance") colMap.drivDist = i;
         if (h === "driving accuracy") colMap.drivAcc = i;
+        if (h === "sg t2g") colMap.sgT2G = i;
         if (h === "sg approach") colMap.sgApproach = i;
         if (h === "sg around green") colMap.sgAroundGreen = i;
+        if (h === "sg ott") colMap.sgOTT = i;
         if (h === "sg putting") colMap.sgPutting = i;
+        if (h === "greens in regulation") colMap.gir = i;
+        if (h === "fairway proximity") colMap.fairwayProx = i;
+        if (h === "rough proximity") colMap.roughProx = i;
         // Model columns (pre-tournament predictions)
         if (h === "sg total - model") colMap.sgTotalModel = i;
         if (h === "driving distance - model") colMap.drivDistModel = i;
         if (h === "driving accuracy - model") colMap.drivAccModel = i;
+        if (h === "sg t2g - model") colMap.sgT2GModel = i;
         if (h === "sg approach - model") colMap.sgApproachModel = i;
         if (h === "sg around green - model") colMap.sgAroundGreenModel = i;
+        if (h === "sg ott - model") colMap.sgOTTModel = i;
         if (h === "sg putting - model") colMap.sgPuttingModel = i;
+        if (h === "greens in regulation - model") colMap.girModel = i;
+        if (h === "fairway proximity - model") colMap.fairwayProxModel = i;
+        if (h === "rough proximity - model") colMap.roughProxModel = i;
       }
       
       console.log(`✓ ${fileName}: Column map ready (${Object.keys(colMap).length} columns found)`);
@@ -131,14 +143,19 @@ function analyzeModelAccuracy() {
           statDeltas: {}
         };
         
-        // Collect stat deltas: Delta = Model - Actual
+        // Collect stat deltas: Delta = Model - Actual (11 metrics)
         const statList = [
           { key: "SG Total", actual: colMap.sgTotal, model: colMap.sgTotalModel },
           { key: "Driving Distance", actual: colMap.drivDist, model: colMap.drivDistModel },
           { key: "Driving Accuracy", actual: colMap.drivAcc, model: colMap.drivAccModel },
+          { key: "SG T2G", actual: colMap.sgT2G, model: colMap.sgT2GModel },
           { key: "SG Approach", actual: colMap.sgApproach, model: colMap.sgApproachModel },
           { key: "SG Around Green", actual: colMap.sgAroundGreen, model: colMap.sgAroundGreenModel },
-          { key: "SG Putting", actual: colMap.sgPutting, model: colMap.sgPuttingModel }
+          { key: "SG OTT", actual: colMap.sgOTT, model: colMap.sgOTTModel },
+          { key: "SG Putting", actual: colMap.sgPutting, model: colMap.sgPuttingModel },
+          { key: "GIR", actual: colMap.gir, model: colMap.girModel },
+          { key: "Fairway Proximity", actual: colMap.fairwayProx, model: colMap.fairwayProxModel },
+          { key: "Rough Proximity", actual: colMap.roughProx, model: colMap.roughProxModel }
         ];
         
         for (const stat of statList) {
@@ -210,8 +227,8 @@ function createTournamentAnalysis(masterSs, tournamentName, players) {
   sheet = masterSs.insertSheet(sheetName);
   
   // Header
-  sheet.appendRow(["Player", "Model Rank", "Finish Pos", "Miss Score", "SG Total Δ", "Driving Dist Δ", "Driving Acc Δ", "SG Approach Δ", "SG Around Green Δ", "SG Putting Δ"]);
-  sheet.getRange(1, 1, 1, 10).setFontWeight("bold").setBackground("#1f2937").setFontColor("white");
+  sheet.appendRow(["Player", "Model Rank", "Finish Pos", "Miss Score", "Gap Analysis", "SG Total Δ", "Driving Dist Δ", "Driving Acc Δ", "SG T2G Δ", "SG Approach Δ", "SG Around Green Δ", "SG OTT Δ", "SG Putting Δ", "GIR Δ", "Fairway Prox Δ", "Rough Prox Δ"]);
+  sheet.getRange(1, 1, 1, 16).setFontWeight("bold").setBackground("#1f2937").setFontColor("white");
   
   // Sort by miss score descending
   const sorted = players.sort((a, b) => Math.abs(b.modelRank - b.finishPos) - Math.abs(a.modelRank - a.finishPos));
@@ -220,22 +237,33 @@ function createTournamentAnalysis(masterSs, tournamentName, players) {
   for (const player of sorted) {
     if (player.finishPos === 999) continue; // Skip non-finishers
     
+    const missScore = Math.abs(player.modelRank - player.finishPos);
+    const gapAnalysis = missScore === 0 ? "Perfect" : 
+                        player.modelRank > player.finishPos ? `Predicted ${missScore} spots too low` : 
+                        `Predicted ${missScore} spots too high`;
+    
     sheet.appendRow([
       player.name,
       player.modelRank,
       player.finishText,
-      Math.abs(player.modelRank - player.finishPos),
+      missScore,
+      gapAnalysis,
       (player.statDeltas["SG Total"] || 0).toFixed(2),
       (player.statDeltas["Driving Distance"] || 0).toFixed(0),
       (player.statDeltas["Driving Accuracy"] || 0).toFixed(1),
+      (player.statDeltas["SG T2G"] || 0).toFixed(2),
       (player.statDeltas["SG Approach"] || 0).toFixed(2),
       (player.statDeltas["SG Around Green"] || 0).toFixed(2),
-      (player.statDeltas["SG Putting"] || 0).toFixed(2)
+      (player.statDeltas["SG OTT"] || 0).toFixed(2),
+      (player.statDeltas["SG Putting"] || 0).toFixed(2),
+      (player.statDeltas["GIR"] || 0).toFixed(2),
+      (player.statDeltas["Fairway Proximity"] || 0).toFixed(1),
+      (player.statDeltas["Rough Proximity"] || 0).toFixed(1)
     ]);
   }
   
   // Format
-  sheet.autoResizeColumns(1, 10);
+  sheet.autoResizeColumns(1, 16);
   
   // Summary
   const avgMiss = sorted.filter(p => p.finishPos !== 999).reduce((s, p) => s + Math.abs(p.modelRank - p.finishPos), 0) / sorted.filter(p => p.finishPos !== 999).length;

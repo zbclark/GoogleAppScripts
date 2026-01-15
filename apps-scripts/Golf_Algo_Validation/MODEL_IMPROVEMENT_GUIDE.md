@@ -1,5 +1,13 @@
 # Golf Prediction Model Improvement Workflow
 
+**📘 Strategic Companion to:** [VALIDATION_FRAMEWORK.md](../../VALIDATION_FRAMEWORK.md)  
+**Tactical Checklist Version:** [IMPROVEMENT_CHECKLIST.md](IMPROVEMENT_CHECKLIST.md)
+
+This guide describes HOW TO USE the analysis outputs from VALIDATION_FRAMEWORK.md Phases 1-4.  
+For WHAT functions to build, see VALIDATION_FRAMEWORK.md. For step-by-step execution, see IMPROVEMENT_CHECKLIST.md.
+
+---
+
 ## Strategic Framework: The 4-Phase Analysis Cycle
 
 ### Phase 1: UNDERSTAND ACTUAL PERFORMANCE
