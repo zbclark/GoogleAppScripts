@@ -486,6 +486,11 @@ function analyzeMetricCorrelations() {
       createWeightCalibrationSheet(masterSs, courseTypeGroups, correlationData);
     }
     
+    // 2.75. COMPREHENSIVE WEIGHT TEMPLATES SHEET (all metrics with 3-way comparison)
+    if (Object.keys(courseTypeGroups).length > 0) {
+      createComprehensiveWeightTemplatesSheet(masterSs, courseTypeGroups, correlationData);
+    }
+    
     SpreadsheetApp.getUi().alert(
       `✅ Metric Correlation Analysis Complete!\n\n` +
       `Files processed: ${filesProcessed}\n` +
@@ -591,10 +596,7 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
  * Create individual sheets for each tournament's metric analysis
  */
 function createIndividualTournamentSheets(masterSs, correlationData, courseTypes) {
-  // Read configuration sheet weights once
-  const configWeights = getConfigurationSheetWeights();
-  
-  // Get tournament files for winner analysis
+  // Get tournament files for winner analysis and config weights
   const folders = DriveApp.getFoldersByName("Golf 2025");
   let tournamentFiles = {};
   if (folders.hasNext()) {
@@ -609,6 +611,13 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
   correlationData.tournaments.forEach((tournament, idx) => {
     const breakdown = correlationData.tournamentBreakdown[tournament.name];
     const metrics = correlationData.tournamentCorrelations[tournament.name] || [];
+    
+    // Get tournament-specific config weights from the tournament workbook
+    const tournamentWorkbook = tournamentFiles[tournament.name] 
+      ? SpreadsheetApp.open(tournamentFiles[tournament.name])
+      : null;
+    const configWeights = getTournamentConfigurationWeights(tournamentWorkbook);
+    console.log(`Tournament "${tournament.name}": Config weights loaded: ${Object.keys(configWeights).length} entries`);
     
     // Determine course type for this tournament
     let tournamentType = "BALANCED";  // Default
@@ -657,6 +666,29 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
         return pctB - pctA;  // Descending
       });
     
+    // Calculate recommended weights based on correlation strength within each group
+    // Group metrics and find max correlation per group
+    const metricGroups = getMetricGroupings();
+    const groupMaxCorrelations = {};
+    
+    // Find max correlation by group
+    for (const [groupName, metrics] of Object.entries(metricGroups)) {
+      let maxCorrelation = 0;
+      for (const metricName of metrics) {
+        const metricData = breakdown.metricAverages[metricName];
+        if (metricData) {
+          const absCorr = Math.abs(metricData.correlation || 0);
+          if (absCorr > maxCorrelation) {
+            maxCorrelation = absCorr;
+          }
+        }
+      }
+      groupMaxCorrelations[groupName] = maxCorrelation;
+    }
+    
+    // Get group weights for this course type
+    const groupWeights = getGroupWeights(tournamentType);
+    
     sortedMetrics.forEach((m, idx) => {
       // Calculate percentage with special handling for lower-is-better metrics
       let pct = "N/A";
@@ -687,7 +719,16 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       
       const correlation = m.correlation !== undefined ? m.correlation : 0;
       const templateWeight = getTemplateWeightForMetric(tournamentType, m.metric);
-      const recommendedWeight = Math.abs(correlation);
+      
+      // Calculate recommended weight based on correlation strength within the metric's group
+      // Formula: templateWeight * (metricCorrelation / maxCorrelationInGroup)
+      let recommendedWeight = 0;
+      const metricGroup = getMetricGroup(m.metric);
+      if (metricGroup && groupMaxCorrelations[metricGroup] > 0) {
+        const maxCorr = groupMaxCorrelations[metricGroup];
+        const correlationRatio = Math.abs(correlation) / maxCorr;
+        recommendedWeight = templateWeight * correlationRatio;
+      }
       
       // Find matching config weight for this metric
       // Try exact match first, then fuzzy matching
@@ -701,10 +742,15 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
             const configLower = configMetric.toLowerCase();
             if (metricLower.includes(configLower) || configLower.includes(metricLower)) {
               configWeight = weight;
+              console.log(`  Matched "${m.metric}" to config metric "${configMetric}" = ${weight}`);
               break;
             }
           }
         }
+      }
+      
+      if (configWeight > 0) {
+        console.log(`  ${m.metric}: configWeight = ${configWeight}`);
       }
 
       sheet.appendRow([
@@ -728,19 +774,117 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       }
     });
     
-    // ========== WINNER ANALYSIS SECTION ==========
-    // Add spacing
+    // ========== DETAILED PLAYER METRICS SECTION ==========
+    // Add spacing and header
     const metricsEndRow = sheet.getLastRow();
     sheet.appendRow([" "]);
-    sheet.appendRow(["TOP-20 FINISHER PREDICTION ANALYSIS"]);
+    sheet.appendRow(["CONFIGURATION METRICS - PLAYER DATA"]);
     sheet.getRange(metricsEndRow + 2, 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
+    
+    // Load player names from tournament file
+    const playerNamesMap = new Map();
+    const tournamentFile = tournamentFiles[tournament.name];
+    if (tournamentFile) {
+      try {
+        const tournamendSs = SpreadsheetApp.open(tournamentFile);
+        const resultsSheet = tournamendSs.getSheetByName("Tournament Results");
+        
+        if (resultsSheet) {
+          const resultsRange = resultsSheet.getRange("B6:C500");
+          const resultsData = resultsRange.getValues();
+          
+          console.log(`Loading player names for ${tournament.name}: found ${resultsData.length} rows`);
+          
+          for (let i = 0; i < resultsData.length; i++) {
+            const row = resultsData[i];
+            const dgId = String(row[0] || "").trim();
+            const name = String(row[1] || "").trim();
+            
+            if (!dgId) break;
+            
+            playerNamesMap.set(dgId, name);
+            if (i < 3) {
+              console.log(`  Row ${i}: dgId="${dgId}", name="${name}"`);
+            }
+          }
+          console.log(`  Total player names loaded: ${playerNamesMap.size}`);
+        }
+      } catch (e) {
+        console.log(`Note: Could not load player names from ${tournament.name}: ${e.message}`);
+      }
+    }
+    
+    // Get finisher metrics for this tournament
+    const finisherMetrics = correlationData.finisherMetrics.filter(fm => fm.tournament === tournament.name);
+    
+    // Log config weights for debugging (already loaded at function start)
+    if (finisherMetrics.length > 0) {
+      console.log(`Player data section - Config weights available: ${Object.keys(configWeights).length} entries`);
+      // Determine which metrics to display (the ones with data in this tournament)
+      const metricsToDisplay = [
+        "Driving Distance", "Driving Accuracy", "SG OTT",
+        "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox",
+        "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
+        "SG Putting", "SG Around Green", "SG T2G",
+        "Scoring Average", "Birdie Chances Created", "Birdies or Better",
+        "Scrambling", "Great Shots", "Poor Shots"
+      ];
+      
+      // Build header row with columns: Position, Player Name, DG ID, then all metrics
+      const playerHeaderRow = ["Finish Pos", "Player Name", "DG ID", ...metricsToDisplay];
+      sheet.appendRow(playerHeaderRow);
+      
+      const playerDataHeaderRow = sheet.getLastRow();
+      sheet.getRange(playerDataHeaderRow, 1, 1, playerHeaderRow.length)
+        .setFontWeight("bold")
+        .setBackground("#d9e8f5")
+        .setFontColor("black");
+      
+      // Sort finishers by position
+      const sortedFinishers = finisherMetrics.sort((a, b) => a.position - b.position);
+      
+      // Add each finisher's data
+      sortedFinishers.forEach((finisher, idx) => {
+        const playerName = playerNamesMap.get(finisher.dgId) || finisher.dgId;
+        if (idx < 3) {
+          console.log(`  Finisher ${idx}: dgId="${finisher.dgId}", playerName="${playerName}"`);
+        }
+        const rowData = [
+          finisher.position,
+          playerName,
+          finisher.dgId
+        ];
+        
+        // Add metric values for this finisher
+        metricsToDisplay.forEach(metric => {
+          const value = finisher[metric];
+          rowData.push(value !== undefined && !isNaN(value) ? parseFloat(value).toFixed(2) : "");
+        });
+        
+        sheet.appendRow(rowData);
+        
+        // Highlight top 10 finishers
+        if (finisher.position <= 10) {
+          sheet.getRange(sheet.getLastRow(), 1, 1, rowData.length).setBackground("#ffffcc");
+        }
+      });
+      
+      // Auto-resize columns
+      sheet.autoResizeColumns(1, playerHeaderRow.length);
+    }
+
+    
+    // ========== WINNER ANALYSIS SECTION ==========
+    // Add spacing
+    sheet.appendRow([" "]);
+    sheet.appendRow(["TOP-20 FINISHER PREDICTION ANALYSIS"]);
+    sheet.getRange(sheet.getLastRow(), 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
     
     sheet.appendRow(["Finish Pos", "Player Name", "Model Rank", "Miss Score", "Gap Analysis"]);
     const winnerHeaderRow = sheet.getLastRow();
     sheet.getRange(winnerHeaderRow, 1, 1, 5).setFontWeight("bold").setBackground("#b3d9e8").setFontColor("white");
     
-    // Load winner data from tournament file
-    const tournamentFile = tournamentFiles[tournament.name];
+    // Use already-loaded tournamentFile from metrics section
     if (tournamentFile) {
       try {
         const tournamendSs = SpreadsheetApp.open(tournamentFile);
@@ -820,9 +964,188 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
         console.log(`Warning: Could not load winner analysis for ${tournament.name}: ${e.message}`);
       }
     }
+
     
     sheet.autoResizeColumns(1, 9);
   });
+}
+
+/**
+ * Create comprehensive weight templates sheet showing all metrics with 3-way weight comparison
+ * Shows Config Weight vs Template Weight vs Recommended Weight across all course types
+ */
+function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlationData) {
+  // Get config weights - average across all tournaments
+  const allConfigWeights = {};
+  let tournamentCount = 0;
+  
+  // Get tournament files to read config weights from each
+  const folders = DriveApp.getFoldersByName("Golf 2025");
+  if (folders.hasNext()) {
+    const golfFolder = folders.next();
+    const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
+    const tourFiles = {};
+    while (workbookFiles.hasNext()) {
+      const file = workbookFiles.next();
+      tourFiles[file.getName()] = file;
+    }
+    
+    // Aggregate config weights from each tournament
+    correlationData.tournaments.forEach(tournament => {
+      if (tourFiles[tournament.name]) {
+        const tourSs = SpreadsheetApp.open(tourFiles[tournament.name]);
+        const weights = getTournamentConfigurationWeights(tourSs);
+        if (Object.keys(weights).length > 0) {
+          Object.entries(weights).forEach(([metric, weight]) => {
+            if (!allConfigWeights[metric]) {
+              allConfigWeights[metric] = { sum: 0, count: 0 };
+            }
+            allConfigWeights[metric].sum += weight || 0;
+            allConfigWeights[metric].count += 1;
+          });
+          tournamentCount++;
+        }
+      }
+    });
+  }
+  
+  // Calculate averages
+  const configWeights = {};
+  Object.entries(allConfigWeights).forEach(([metric, data]) => {
+    configWeights[metric] = data.count > 0 ? data.sum / data.count : 0;
+  });
+  
+  console.log(`Comprehensive sheet: Aggregated ${Object.keys(configWeights).length} config weight metrics from ${tournamentCount} tournaments`);
+  
+  // Delete old Weight Templates if it exists (will be replaced)
+  let oldSheet = masterSs.getSheetByName("Weight Templates");
+  if (oldSheet) {
+    masterSs.deleteSheet(oldSheet);
+  }
+  
+  const sheet = masterSs.insertSheet("Weight Templates");
+  
+  sheet.appendRow(["COMPREHENSIVE WEIGHT TEMPLATES - All Metrics by Course Type"]);
+  sheet.getRange(1, 1).setFontWeight("bold").setFontSize(14);
+  
+  sheet.appendRow([" "]);
+  
+  let currentRow = 3;
+  const displayOrder = ['POWER', 'TECHNICAL', 'BALANCED'];
+  
+  displayOrder.forEach(typeName => {
+    if (!courseTypes[typeName] || courseTypes[typeName].tournaments.length === 0) return;
+    
+    const courseType = courseTypes[typeName];
+    
+    // Type header
+    sheet.getRange(currentRow, 1).setValue(
+      `${typeName} COURSES (${courseType.tournaments.length} tournaments)`
+    ).setFontWeight("bold").setFontSize(11).setBackground("#4472C4").setFontColor("white");
+    
+    currentRow++;
+    
+    // Column headers
+    sheet.appendRow([
+      "Metric",
+      "Config Weight",
+      "Template Weight",
+      "Recommended Weight",
+      "Config vs Template",
+      "Config vs Recommended"
+    ]);
+    
+    const headerRange = sheet.getRange(currentRow, 1, 1, 6);
+    headerRange.setBackground("#D9E8F5").setFontWeight("bold");
+    currentRow++;
+    
+    // Collect all metrics with their weights
+    const allMetrics = getMetricGroupings();
+    const metricsList = [];
+    
+    for (const [groupName, metrics] of Object.entries(allMetrics)) {
+      for (const metricName of metrics) {
+        metricsList.push({
+          name: metricName,
+          group: groupName
+        });
+      }
+    }
+    
+    // Group correlations for recommended weight calculation
+    const groupCorrelationTotals = {};
+    for (const [groupName, metrics] of Object.entries(allMetrics)) {
+      let maxCorrelation = 0;
+      let hasData = false;
+      for (const metricName of metrics) {
+        // Get average correlation across all tournaments for this metric
+        let avgCorr = 0;
+        let corrCount = 0;
+        for (const tournament of correlationData.tournaments) {
+          const breakdown = correlationData.tournamentBreakdown[tournament.name];
+          if (breakdown && breakdown.metricAverages[metricName]) {
+            avgCorr += Math.abs(breakdown.metricAverages[metricName].correlation || 0);
+            corrCount++;
+            hasData = true;
+          }
+        }
+        if (corrCount > 0) {
+          avgCorr = avgCorr / corrCount;
+          if (avgCorr > maxCorrelation) {
+            maxCorrelation = avgCorr;
+          }
+        }
+      }
+      groupCorrelationTotals[groupName] = { max: maxCorrelation, hasData: hasData };
+    }
+    
+    const groupWeights = getGroupWeights(typeName);
+    
+    // Add each metric
+    metricsList.forEach(m => {
+      const configWeight = configWeights[m.name] || 0;
+      const templateWeight = getTemplateWeightForMetric(typeName, m.name);
+      
+      // Calculate recommended weight: templateWeight * (metricCorrelation / maxCorrelationInGroup)
+      let recommendedWeight = 0;
+      const groupData = groupCorrelationTotals[m.group];
+      if (groupData && groupData.max > 0) {
+        // Get this specific metric's average correlation
+        let metricAvgCorr = 0;
+        let metricCorrCount = 0;
+        for (const tournament of correlationData.tournaments) {
+          const breakdown = correlationData.tournamentBreakdown[tournament.name];
+          if (breakdown && breakdown.metricAverages[m.name]) {
+            metricAvgCorr += Math.abs(breakdown.metricAverages[m.name].correlation || 0);
+            metricCorrCount++;
+          }
+        }
+        if (metricCorrCount > 0) {
+          metricAvgCorr = metricAvgCorr / metricCorrCount;
+          const correlationRatio = metricAvgCorr / groupData.max;
+          recommendedWeight = templateWeight * correlationRatio;
+        }
+      }
+      
+      const configVsTemplate = templateWeight > 0 ? (((configWeight - templateWeight) / templateWeight) * 100).toFixed(1) : "N/A";
+      const configVsRec = recommendedWeight > 0 ? (((configWeight - recommendedWeight) / recommendedWeight) * 100).toFixed(1) : "N/A";
+      
+      sheet.appendRow([
+        m.name,
+        configWeight.toFixed(4),
+        templateWeight.toFixed(4),
+        recommendedWeight.toFixed(4),
+        configVsTemplate === "N/A" ? "N/A" : configVsTemplate + "%",
+        configVsRec === "N/A" ? "N/A" : configVsRec + "%"
+      ]);
+      
+      currentRow++;
+    });
+    
+    currentRow += 2; // Space between course types
+  });
+  
+  sheet.autoResizeColumns(1, 6);
 }
 
 /**
@@ -1093,129 +1416,223 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
 
 /**
  * Get template weight for a specific metric in a course type
- * Maps metric names to template group weights from templateLoader.js
+ * Maps metric names to template individual metric weights from templateLoader.js
+ * Returns the individual metric weight (distribution within group, not multiplied by group weight)
  */
 function getTemplateWeightForMetric(courseType, metricName) {
-  // Exact templates from Golf_Algorithm/templateLoader.js
-  const WEIGHT_TEMPLATES = {
+  // Individual metric weights from WEIGHT_TEMPLATES in templateLoader.js
+  // These are the distribution percentages within each group (before multiplying by group weight)
+  const METRIC_TEMPLATES = {
     POWER: {
-      groupWeights: {
-        "Driving Performance": 0.130,
-        "Approach - Short (<100)": 0.145,
-        "Approach - Mid (100-150)": 0.180,
-        "Approach - Long (150-200)": 0.150,
-        "Approach - Very Long (>200)": 0.030,
-        "Putting": 0.120,
-        "Around the Green": 0.080,
-        "Scoring": 0.110,
-        "Course Management": 0.055
-      }
+      // Driving Performance [0.404, 0.123, 0.472]
+      "Driving Distance": 0.404,
+      "Driving Accuracy": 0.123,
+      "SG OTT": 0.472,
+      
+      // Approach <100 [0.14, 0.33, 0.53]
+      "Approach <100 GIR": 0.14,
+      "Approach <100 SG": 0.33,
+      "Approach <100 Prox": 0.53,
+      
+      // Approach 100-150 [0.12, 0.32, 0.56]
+      "Approach <150 FW GIR": 0.12,
+      "Approach <150 FW SG": 0.32,
+      "Approach <150 FW Prox": 0.56,
+      "Approach <150 Rough GIR": 0.0,
+      "Approach <150 Rough SG": 0.0,
+      "Approach <150 Rough Prox": 0.0,
+      
+      // Approach 150-200 [0.11, 0.30, 0.59]
+      "Approach <200 FW GIR": 0.11,
+      "Approach <200 FW SG": 0.30,
+      "Approach <200 FW Prox": 0.59,
+      "Approach >150 Rough GIR": 0.0,
+      "Approach >150 Rough SG": 0.0,
+      "Approach >150 Rough Prox": 0.0,
+      
+      // Approach >200 [0.10, 0.25, 0.65]
+      "Approach >200 FW GIR": 0.10,
+      "Approach >200 FW SG": 0.25,
+      "Approach >200 FW Prox": 0.65,
+      "Approach >200 FW Rough GIR": 0.0,
+      "Approach >200 FW Rough SG": 0.0,
+      "Approach >200 FW Rough Prox": 0.0,
+      
+      // Putting [1.0]
+      "SG Putting": 1.0,
+      
+      // Around Green [1.0]
+      "SG Around Green": 1.0,
+      
+      // Scoring [0.20, 0.10, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
+      "SG T2G": 0.20,
+      "Scoring Average": 0.10,
+      "Birdie Chances Created": 0.10,
+      "Birdies or Better": 0.15,
+      "Greens in Regulation": 0.15,
+      "Approach <100 SG": 0.15,
+      "Approach <150 FW SG": 0.10,
+      "Approach <150 Rough SG": 0.05,
+      "Approach >150 Rough SG": 0.0,
+      
+      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Scrambling": 0.12,
+      "Great Shots": 0.08,
+      "Poor Shots": 0.08,
+      "Approach <100 Prox": 0.10,
+      "Approach <150 FW Prox": 0.10,
+      "Approach <150 Rough Prox": 0.15,
+      "Approach >150 Rough Prox": 0.20,
+      "Approach <200 FW Prox": 0.12,
+      "Approach >200 FW Prox": 0.05
     },
     TECHNICAL: {
-      groupWeights: {
-        "Driving Performance": 0.065,
-        "Approach - Short (<100)": 0.148,
-        "Approach - Mid (100-150)": 0.185,
-        "Approach - Long (150-200)": 0.167,
-        "Approach - Very Long (>200)": 0.037,
-        "Putting": 0.107,
-        "Around the Green": 0.125,
-        "Scoring": 0.097,
-        "Course Management": 0.069
-      }
+      // Driving Performance [0.086, 0.354, 0.560]
+      "Driving Distance": 0.086,
+      "Driving Accuracy": 0.354,
+      "SG OTT": 0.560,
+      
+      // Approach <100 [0.09, 0.32, 0.59]
+      "Approach <100 GIR": 0.09,
+      "Approach <100 SG": 0.32,
+      "Approach <100 Prox": 0.59,
+      
+      // Approach 100-150 [0.09, 0.29, 0.62]
+      "Approach <150 FW GIR": 0.09,
+      "Approach <150 FW SG": 0.29,
+      "Approach <150 FW Prox": 0.62,
+      "Approach <150 Rough GIR": 0.0,
+      "Approach <150 Rough SG": 0.0,
+      "Approach <150 Rough Prox": 0.0,
+      
+      // Approach 150-200 [0.08, 0.27, 0.65]
+      "Approach <200 FW GIR": 0.08,
+      "Approach <200 FW SG": 0.27,
+      "Approach <200 FW Prox": 0.65,
+      "Approach >150 Rough GIR": 0.0,
+      "Approach >150 Rough SG": 0.0,
+      "Approach >150 Rough Prox": 0.0,
+      
+      // Approach >200 [0.08, 0.22, 0.70]
+      "Approach >200 FW GIR": 0.08,
+      "Approach >200 FW SG": 0.22,
+      "Approach >200 FW Prox": 0.70,
+      "Approach >200 FW Rough GIR": 0.0,
+      "Approach >200 FW Rough SG": 0.0,
+      "Approach >200 FW Rough Prox": 0.0,
+      
+      // Putting [1.0]
+      "SG Putting": 1.0,
+      
+      // Around Green [1.0]
+      "SG Around Green": 1.0,
+      
+      // Scoring [0.18, 0.12, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
+      "SG T2G": 0.18,
+      "Scoring Average": 0.12,
+      "Birdie Chances Created": 0.10,
+      "Birdies or Better": 0.15,
+      "Greens in Regulation": 0.15,
+      "Approach <100 SG": 0.15,
+      "Approach <150 FW SG": 0.10,
+      "Approach <150 Rough SG": 0.05,
+      "Approach >150 Rough SG": 0.0,
+      
+      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Scrambling": 0.12,
+      "Great Shots": 0.08,
+      "Poor Shots": 0.08,
+      "Approach <100 Prox": 0.10,
+      "Approach <150 FW Prox": 0.10,
+      "Approach <150 Rough Prox": 0.15,
+      "Approach >150 Rough Prox": 0.20,
+      "Approach <200 FW Prox": 0.12,
+      "Approach >200 FW Prox": 0.05
     },
     BALANCED: {
-      groupWeights: {
-        "Driving Performance": 0.090,
-        "Approach - Short (<100)": 0.148,
-        "Approach - Mid (100-150)": 0.186,
-        "Approach - Long (150-200)": 0.167,
-        "Approach - Very Long (>200)": 0.033,
-        "Putting": 0.119,
-        "Around the Green": 0.100,
-        "Scoring": 0.105,
-        "Course Management": 0.052
-      }
+      // Driving Performance [0.061, 0.410, 0.529]
+      "Driving Distance": 0.061,
+      "Driving Accuracy": 0.410,
+      "SG OTT": 0.529,
+      
+      // Approach <100 [0.12, 0.34, 0.54]
+      "Approach <100 GIR": 0.12,
+      "Approach <100 SG": 0.34,
+      "Approach <100 Prox": 0.54,
+      
+      // Approach 100-150 [0.11, 0.35, 0.54]
+      "Approach <150 FW GIR": 0.11,
+      "Approach <150 FW SG": 0.35,
+      "Approach <150 FW Prox": 0.54,
+      "Approach <150 Rough GIR": 0.0,
+      "Approach <150 Rough SG": 0.0,
+      "Approach <150 Rough Prox": 0.0,
+      
+      // Approach 150-200 [0.10, 0.32, 0.58]
+      "Approach <200 FW GIR": 0.10,
+      "Approach <200 FW SG": 0.32,
+      "Approach <200 FW Prox": 0.58,
+      "Approach >150 Rough GIR": 0.0,
+      "Approach >150 Rough SG": 0.0,
+      "Approach >150 Rough Prox": 0.0,
+      
+      // Approach >200 [0.09, 0.27, 0.64]
+      "Approach >200 FW GIR": 0.09,
+      "Approach >200 FW SG": 0.27,
+      "Approach >200 FW Prox": 0.64,
+      "Approach >200 FW Rough GIR": 0.0,
+      "Approach >200 FW Rough SG": 0.0,
+      "Approach >200 FW Rough Prox": 0.0,
+      
+      // Putting [1.0]
+      "SG Putting": 1.0,
+      
+      // Around Green [1.0]
+      "SG Around Green": 1.0,
+      
+      // Scoring [0.19, 0.11, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
+      "SG T2G": 0.19,
+      "Scoring Average": 0.11,
+      "Birdie Chances Created": 0.10,
+      "Birdies or Better": 0.15,
+      "Greens in Regulation": 0.15,
+      "Approach <100 SG": 0.15,
+      "Approach <150 FW SG": 0.10,
+      "Approach <150 Rough SG": 0.05,
+      "Approach >150 Rough SG": 0.0,
+      
+      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Scrambling": 0.12,
+      "Great Shots": 0.08,
+      "Poor Shots": 0.08,
+      "Approach <100 Prox": 0.10,
+      "Approach <150 FW Prox": 0.10,
+      "Approach <150 Rough Prox": 0.15,
+      "Approach >150 Rough Prox": 0.20,
+      "Approach <200 FW Prox": 0.12,
+      "Approach >200 FW Prox": 0.05
     }
   };
   
-  const metricLower = metricName.toLowerCase();
-  let group = null;
-  
-  // Check for Driving metrics
-  if (metricLower.includes("driving distance") || (metricLower.includes("distance") && !metricLower.includes("approach"))) {
-    group = "Driving Performance";
-  } else if (metricLower.includes("driving accuracy") || (metricLower.includes("accuracy") && !metricLower.includes("approach"))) {
-    group = "Driving Performance";
-  } else if (metricLower.includes("sg ott") || metricLower.includes("sg total")) {
-    group = "Driving Performance";
-  }
-  
-  // Check for Approach metrics with specific distance ranges
-  if (!group && (metricLower.includes("approach") || metricLower.includes("proximity") || metricLower.includes("fairway") || metricLower.includes("gir"))) {
-    if (metricLower.includes("<100")) {
-      group = "Approach - Short (<100)";
-    } else if (metricLower.includes(">200")) {
-      group = "Approach - Very Long (>200)";
-    } else if (metricLower.includes("150-200") || metricLower.includes("<200")) {
-      group = "Approach - Long (150-200)";
-    } else if (metricLower.includes("100-150") || metricLower.includes("<150")) {
-      group = "Approach - Mid (100-150)";
-    } else if (metricLower.includes(">150")) {
-      group = "Approach - Long (150-200)";
-    } else {
-      group = "Approach - Short (<100)";
-    }
-  }
-  
-  // Check for Putting
-  if (!group && metricLower.includes("putting")) {
-    group = "Putting";
-  }
-  
-  // Check for Around the Green
-  if (!group && metricLower.includes("around")) {
-    group = "Around the Green";
-  }
-  
-  // Check for Scoring metrics (includes SG T2G, Scoring Avg, Birdie, GIR)
-  if (!group && (metricLower.includes("sg t2g") || metricLower.includes("scoring") || metricLower.includes("birdie") || metricLower.includes("bogey") || (metricLower.includes("gir") && !metricLower.includes("approach")) || metricLower.includes("greens"))) {
-    group = "Scoring";
-  }
-  
-  // Check for Course Management (Scrambling, Great Shots, Poor Shots)
-  if (!group && (metricLower.includes("scrambling") || metricLower.includes("great shot") || metricLower.includes("poor shot") || metricLower.includes("model rank"))) {
-    group = "Course Management";
-  }
-  
-  // Default fallback
-  if (!group) {
-    group = "Scoring";
-  }
-  
-  return WEIGHT_TEMPLATES[courseType]?.groupWeights[group] || 0;
+  // Return the individual metric weight for the given course type and metric
+  return METRIC_TEMPLATES[courseType]?.[metricName] || 0;
 }
 
 /**
- * Read metric weights from Golf_Algorithm Configuration Sheet
- * Reads the individual metric weights (columns G-O) that were loaded via template
- * Returns a map of metric names to their configured weights
+ * Read metric weights from a tournament's Configuration Sheet
+ * Each tournament workbook has its own unique weights
  */
-function getConfigurationSheetWeights() {
+function getTournamentConfigurationWeights(tournamentWorkbook) {
   try {
-    // Open Golf_Algorithm spreadsheet by looking for it in Drive
-    const files = DriveApp.getFilesByName("Golf_Algorithm");
-    if (!files.hasNext()) {
-      console.log("⚠️ Golf_Algorithm spreadsheet not found");
+    if (!tournamentWorkbook) {
+      console.log("⚠️ No tournament workbook provided");
       return {};
     }
     
-    const golfAlgoFile = files.next();
-    const golfAlgoSs = SpreadsheetApp.open(golfAlgoFile);
-    const configSheet = golfAlgoSs.getSheetByName("Configuration Sheet");
+    const configSheet = tournamentWorkbook.getSheetByName("Configuration Sheet");
     
     if (!configSheet) {
-      console.log("⚠️ Configuration Sheet not found in Golf_Algorithm");
+      console.log("⚠️ Configuration Sheet not found in tournament workbook");
       return {};
     }
     
@@ -1232,76 +1649,34 @@ function getConfigurationSheetWeights() {
     metricWeights["Approach <100 SG"] = configSheet.getRange("H17").getValue() || 0;
     metricWeights["Approach <100 Prox"] = configSheet.getRange("I17").getValue() || 0;
     
-    // Approach - Mid (100-150) (Row 18, Columns G-L)
+    // Approach - Mid (<150 FW) (Row 18, Columns G-I)
     metricWeights["Approach <150 FW GIR"] = configSheet.getRange("G18").getValue() || 0;
     metricWeights["Approach <150 FW SG"] = configSheet.getRange("H18").getValue() || 0;
     metricWeights["Approach <150 FW Prox"] = configSheet.getRange("I18").getValue() || 0;
-    metricWeights["Approach <150 Rough GIR"] = configSheet.getRange("J18").getValue() || 0;
-    metricWeights["Approach <150 Rough SG"] = configSheet.getRange("K18").getValue() || 0;
-    metricWeights["Approach <150 Rough Prox"] = configSheet.getRange("L18").getValue() || 0;
     
-    // Approach - Long (150-200) (Row 19, Columns G-I)
-    metricWeights["Approach <200 FW GIR"] = configSheet.getRange("G19").getValue() || 0;
-    metricWeights["Approach <200 FW SG"] = configSheet.getRange("H19").getValue() || 0;
-    metricWeights["Approach <200 FW Prox"] = configSheet.getRange("I19").getValue() || 0;
-    metricWeights["Approach >150 Rough GIR"] = configSheet.getRange("J19").getValue() || 0;
-    metricWeights["Approach >150 Rough SG"] = configSheet.getRange("K19").getValue() || 0;
-    metricWeights["Approach >150 Rough Prox"] = configSheet.getRange("L19").getValue() || 0;
+    // Short Game (Row 19, Columns G-I)
+    metricWeights["SG Putting"] = configSheet.getRange("G19").getValue() || 0;
+    metricWeights["SG Around Green"] = configSheet.getRange("H19").getValue() || 0;
+    metricWeights["SG T2G"] = configSheet.getRange("I19").getValue() || 0;
     
-    // Approach - Very Long (>200) (Row 20, Columns G-I)
-    metricWeights["Approach >200 FW GIR"] = configSheet.getRange("G20").getValue() || 0;
-    metricWeights["Approach >200 FW SG"] = configSheet.getRange("H20").getValue() || 0;
-    metricWeights["Approach >200 FW Prox"] = configSheet.getRange("I20").getValue() || 0;
-    metricWeights["Approach >200 FW Rough GIR"] = configSheet.getRange("J20").getValue() || 0;
-    metricWeights["Approach >200 FW Rough SG"] = configSheet.getRange("K20").getValue() || 0;
-    metricWeights["Approach >200 FW Rough Prox"] = configSheet.getRange("L20").getValue() || 0;
+    // Overall (Row 20, Columns G-I)
+    metricWeights["Scoring Average"] = configSheet.getRange("G20").getValue() || 0;
+    metricWeights["Birdie Chances Created"] = configSheet.getRange("H20").getValue() || 0;
+    metricWeights["Birdies or Better"] = configSheet.getRange("I20").getValue() || 0;
     
-    // Putting (Row 21, Column G)
-    metricWeights["SG Putting"] = configSheet.getRange("G21").getValue() || 0;
+    // Additional metrics
+    metricWeights["Scrambling"] = configSheet.getRange("G21").getValue() || 0;
+    metricWeights["Great Shots"] = configSheet.getRange("H21").getValue() || 0;
+    metricWeights["Poor Shots"] = configSheet.getRange("I21").getValue() || 0;
     
-    // Around the Green (Row 22, Column G)
-    metricWeights["SG Around Green"] = configSheet.getRange("G22").getValue() || 0;
-    
-    // Scoring (Row 23, Columns G-I)
-    metricWeights["SG T2G"] = configSheet.getRange("G23").getValue() || 0;
-    metricWeights["Scoring Average"] = configSheet.getRange("H23").getValue() || 0;
-    metricWeights["Birdie Chances Created"] = configSheet.getRange("I23").getValue() || 0;
-    metricWeights["Birdies or Better"] = configSheet.getRange("J23").getValue() || 0;
-    metricWeights["Greens in Regulation"] = configSheet.getRange("K23").getValue() || 0;
-    metricWeights["Approach <100 SG"] = configSheet.getRange("L23").getValue() || 0;
-    metricWeights["Approach <150 FW SG"] = configSheet.getRange("M23").getValue() || 0;
-    metricWeights["Approach <150 Rough SG"] = configSheet.getRange("N23").getValue() || 0;
-    metricWeights["Approach >150 Rough SG"] = configSheet.getRange("O23").getValue() || 0;
-    
-    // Course Management (Row 24, Columns G-O)
-    metricWeights["Scrambling"] = configSheet.getRange("G24").getValue() || 0;
-    metricWeights["Great Shots"] = configSheet.getRange("H24").getValue() || 0;
-    metricWeights["Poor Shots"] = configSheet.getRange("I24").getValue() || 0;
-    metricWeights["Approach <100 Prox"] = configSheet.getRange("J24").getValue() || 0;
-    metricWeights["Approach <150 FW Prox"] = configSheet.getRange("K24").getValue() || 0;
-    metricWeights["Approach <150 Rough Prox"] = configSheet.getRange("L24").getValue() || 0;
-    metricWeights["Approach >150 Rough Prox"] = configSheet.getRange("M24").getValue() || 0;
-    metricWeights["Approach <200 FW Prox"] = configSheet.getRange("N24").getValue() || 0;
-    metricWeights["Approach >200 FW Prox"] = configSheet.getRange("O24").getValue() || 0;
-    
-    // Log for debugging
-    const nonZeroCount = Object.values(metricWeights).filter(v => v > 0).length;
-    console.log(`✓ Config weights loaded: ${nonZeroCount} non-zero metrics`);
-    if (nonZeroCount > 0) {
-      const samples = Object.entries(metricWeights).filter(([k, v]) => v > 0).slice(0, 3);
-      samples.forEach(([metric, weight]) => {
-        console.log(`  ${metric}: ${weight}`);
-      });
-    }
-    
+    console.log(`Config weights loaded: ${Object.keys(metricWeights).length} metrics`);
     return metricWeights;
-    
   } catch (e) {
-    console.error("Error reading config weights: " + e.message);
+    console.log(`Error reading tournament config weights: ${e.message}`);
     return {};
   }
 }
-
+    
 /**
  * Calculate Pearson correlation coefficient
  * Negative correlation with position = better metric (lower position = better rank)
@@ -1379,4 +1754,100 @@ function updateProcessedTournaments(masterSs, newTournaments) {
   });
   
   logSheet.autoResizeColumns(1, 3);
+}
+
+/**
+ * Get all metrics grouped by their category
+ * Used for calculating recommended weights based on correlation strength
+ */
+function getMetricGroupings() {
+  return {
+    "Driving Performance": [
+      "Driving Distance", "Driving Accuracy", "SG OTT"
+    ],
+    "Approach - Short (<100)": [
+      "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox"
+    ],
+    "Approach - Mid (100-150)": [
+      "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
+      "Approach <150 Rough GIR", "Approach <150 Rough SG", "Approach <150 Rough Prox"
+    ],
+    "Approach - Long (150-200)": [
+      "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
+      "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox"
+    ],
+    "Approach - Very Long (>200)": [
+      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
+      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox"
+    ],
+    "Putting": [
+      "SG Putting"
+    ],
+    "Around the Green": [
+      "SG Around Green"
+    ],
+    "Scoring": [
+      "SG T2G", "Scoring Average", "Birdie Chances Created",
+      "Birdies or Better", "Greens in Regulation"
+    ],
+    "Course Management": [
+      "Scrambling", "Great Shots", "Poor Shots"
+    ]
+  };
+}
+
+/**
+ * Get the group name for a specific metric
+ */
+function getMetricGroup(metricName) {
+  const groupings = getMetricGroupings();
+  for (const [groupName, metrics] of Object.entries(groupings)) {
+    if (metrics.includes(metricName)) {
+      return groupName;
+    }
+  }
+  return null;
+}
+
+/**
+ * Get group weights for a specific course type
+ */
+function getGroupWeights(courseType) {
+  const COURSE_TYPE_GROUP_WEIGHTS = {
+    POWER: {
+      "Driving Performance": 0.130,
+      "Approach - Short (<100)": 0.145,
+      "Approach - Mid (100-150)": 0.180,
+      "Approach - Long (150-200)": 0.150,
+      "Approach - Very Long (>200)": 0.030,
+      "Putting": 0.120,
+      "Around the Green": 0.080,
+      "Scoring": 0.110,
+      "Course Management": 0.055
+    },
+    TECHNICAL: {
+      "Driving Performance": 0.065,
+      "Approach - Short (<100)": 0.148,
+      "Approach - Mid (100-150)": 0.185,
+      "Approach - Long (150-200)": 0.167,
+      "Approach - Very Long (>200)": 0.037,
+      "Putting": 0.107,
+      "Around the Green": 0.125,
+      "Scoring": 0.097,
+      "Course Management": 0.069
+    },
+    BALANCED: {
+      "Driving Performance": 0.090,
+      "Approach - Short (<100)": 0.148,
+      "Approach - Mid (100-150)": 0.186,
+      "Approach - Long (150-200)": 0.167,
+      "Approach - Very Long (>200)": 0.033,
+      "Putting": 0.119,
+      "Around the Green": 0.100,
+      "Scoring": 0.105,
+      "Course Management": 0.052
+    }
+  };
+  
+  return COURSE_TYPE_GROUP_WEIGHTS[courseType] || COURSE_TYPE_GROUP_WEIGHTS.BALANCED;
 }

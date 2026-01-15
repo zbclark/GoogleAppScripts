@@ -264,66 +264,17 @@ function createCalibrationReport(masterSs, calibrationData) {
     rowNum++;
   }
   
-  // Top finishers detail - with dynamic metrics pulled from each tournament's analysis
-  sheet.appendRow([" "]);
-  sheet.appendRow(["TOP FINISHERS ANALYSIS (All Tournaments)"]);
-  const analysisRow = rowNum + 3;
-  sheet.getRange(analysisRow, 1).setFontWeight("bold").setFontSize(12);
-  
-  // Build header with tournament-specific top metrics
-  let headers = ["Tournament", "Finisher", "Finish", "Predicted Rank", "Miss", "Accuracy"];
-  let metricsByTournament = {};
-  
-  // For each tournament, find its top 4 metrics by delta
-  for (const t of calibrationData.tournaments) {
-    const topMetrics = getTopMetricsForTournament(t.name);
-    metricsByTournament[t.name] = topMetrics;
-    headers.push(...topMetrics.map(m => m.name));
-  }
-  
-  sheet.appendRow(headers);
-  sheet.getRange(analysisRow + 1, 1, 1, headers.length).setFontWeight("bold").setBackground("#e5e7eb");
-  
-  let detailRow = analysisRow + 2;
-  for (const t of calibrationData.tournaments) {
-    const topMetrics = metricsByTournament[t.name] || [];
-    
-    for (const finisher of t.topFinishers.sort((a, b) => a.actualFinish - b.actualFinish)) {
-      let row = [
-        t.name,
-        finisher.name,
-        finisher.actualFinish,
-        finisher.predictedRank,
-        finisher.missScore,
-        finisher.inTopXPredicted
-      ];
-      
-      // Add values for the tournament's top metrics
-      topMetrics.forEach(metric => {
-        const value = finisher.stats[metric.key];
-        row.push(value !== undefined ? (typeof value === 'number' ? value.toFixed(2) : value) : "N/A");
-      });
-      
-      sheet.appendRow(row);
-      detailRow++;
-    }
-  }
-  
-  sheet.autoResizeColumns(1, headers.length);
-  
+  // Top finishers analysis moved to individual 02_ tournament sheets
   // Weight recommendations
   sheet.appendRow([" "]);
-  const recRow = detailRow + 2;
-  sheet.appendRow(["WEIGHT ADJUSTMENT RECOMMENDATIONS"]);
+  const recRow = rowNum + 3;
+  sheet.appendRow(["NEXT STEPS"]);
   sheet.getRange(recRow, 1).setFontWeight("bold").setFontSize(12);
   
-  sheet.appendRow(["Based on actual finisher analysis:"]);
-  sheet.appendRow(["• Review top finishers with high Miss Scores (> 15)"]);
-  sheet.appendRow(["• Check their Top Metrics vs predictions"]);
-  sheet.appendRow(["• Top Metrics are the ones that actually separated winners at each course"]);
-  sheet.appendRow(["• If finishers exceed expected values in those metrics: increase their weights"]);
-  sheet.appendRow(["• If finishers underperform on top metrics: check if you're measuring them correctly"]);
-  sheet.appendRow(["• Save calibrated weights for similar course types"]);
+  sheet.appendRow(["1. Review individual 02_Tournament_* sheets for detailed top finisher analysis"]);
+  sheet.appendRow(["2. Each tournament sheet shows player metrics that correlated with finisher positions"]);
+  sheet.appendRow(["3. Compare Config Weight vs Template Weight vs Recommended Weight"]);
+  sheet.appendRow(["4. Adjust weights for metrics that show strong correlation but low current weight"]);
 }
 
 /**
