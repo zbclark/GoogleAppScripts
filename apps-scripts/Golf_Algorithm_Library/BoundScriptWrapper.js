@@ -33,6 +33,11 @@ function onOpen() {
       .addSeparator()
       .addItem('Run Model', 'generatePlayerRankings')
       .addSeparator()
+      .addSubMenu(ui.createMenu('📊 Tournament Results')
+        .addItem('Fetch Current Results', 'fetchTournamentFinalResults')
+        .addItem('🧪 Historical Analysis (Sandbox)', 'fetchHistoricalTournamentResultsSandbox')
+        .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults'))
+      .addSeparator()
       .addItem('🧪 Test Library Connection', 'testLibraryConnection')
       .addToUi();
     
@@ -143,6 +148,10 @@ function fetchTournamentFinalResults() {
 
 function fetchHistoricalTournamentResults() {
   GolfAlgorithm.fetchHistoricalTournamentResults();
+}
+
+function fetchHistoricalTournamentResultsSandbox() {
+  GolfAlgorithm.fetchHistoricalTournamentResultsSandbox();
 }
 
 // ===== SHEET MANAGEMENT =====
