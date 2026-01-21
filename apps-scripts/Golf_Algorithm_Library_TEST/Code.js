@@ -1,26 +1,3 @@
-// ===== DETAILED VALIDATION (02 SHEET) =====
-function writeDetailedValidationSheet02Wrapper() {
-  try {
-    var ss = SpreadsheetApp.getActiveSpreadsheet();
-    var sheet = ss.getActiveSheet();
-    var fileId = ss.getId();
-    var sheetName = sheet.getName();
-    // Only run for TEST library workbook (customize this check as needed)
-    if (ss.getName().indexOf('TEST') === -1) {
-      SpreadsheetApp.getUi().alert('This function is only available in the TEST library workbook.');
-      return;
-    }
-    var result = GolfAlgorithm.validateTournamentSheet(fileId, sheetName);
-    if (result.error) {
-      SpreadsheetApp.getUi().alert('Validation error: ' + result.error);
-      return;
-    }
-    var newSheetName = GolfAlgorithm.writeDetailedValidationSheet02(fileId, sheetName, result);
-    SpreadsheetApp.getUi().alert('Detailed validation sheet created: ' + newSheetName);
-  } catch (e) {
-    SpreadsheetApp.getUi().alert('Error: ' + e.toString());
-  }
-}
 /**
  * BOUND SCRIPT WRAPPER
  * 
@@ -78,7 +55,7 @@ function onOpen() {
  * NOTE: This MUST be in the bound script for installable triggers to work
  */
 function onEditInstallableTrigger(e) {
-  GolfAlgorithm.onEditInstallableTrigger(e);
+  GolfAlgorithmLibraryTEST.onEditInstallableTrigger(e);
 }
 
 /**
@@ -87,151 +64,152 @@ function onEditInstallableTrigger(e) {
  */
 function testLibraryConnection() {
   try {
-    SpreadsheetApp.getUi().alert('✓ Library is connected!\n\nThe GolfAlgorithm library is working correctly.');
+    SpreadsheetApp.getUi().alert('✓ Library is connected!\n\nThe GolfAlgorithmLibraryTEST library is working correctly.');
   } catch (e) {
     SpreadsheetApp.getUi().alert('✗ Library connection failed:\n\n' + e.toString());
   }
 }
 
 function setupSheet() {
-  GolfAlgorithm.setupSheet();
+  GolfAlgorithmLibraryTEST.setupSheet();
 }
 
 function clearConfig() {
-  GolfAlgorithm.clearConfig();
+  GolfAlgorithmLibraryTEST.clearConfig();
 }
 
 function checkTriggersExist() {
-  return GolfAlgorithm.checkTriggersExist();
+  return GolfAlgorithmLibraryTEST.checkTriggersExist();
 }
 
 function authorizeScript() {
-  GolfAlgorithm.authorizeScript();
+  GolfAlgorithmLibraryTEST.authorizeScript();
 }
 
 // ===== TEMPLATE LOADER =====
 function loadWeightTemplate() {
-  GolfAlgorithm.loadWeightTemplate();
+  GolfAlgorithmLibraryTEST.loadWeightTemplate();
 }
 
 function showTemplateInfo() {
-  GolfAlgorithm.showTemplateInfo();
+  GolfAlgorithmLibraryTEST.showTemplateInfo();
 }
 
 // ===== DATA FETCHING =====
 function fetchAndWriteData() {
-  GolfAlgorithm.fetchAndWriteData();
+  GolfAlgorithmLibraryTEST.fetchAndWriteData();
 }
 
 function updateTournamentsAndDropdowns() {
-  GolfAlgorithm.updateTournamentsAndDropdowns();
+  GolfAlgorithmLibraryTEST.updateTournamentsAndDropdowns();
 }
 
 // ===== MODEL EXECUTION =====
 function generatePlayerRankings() {
-  GolfAlgorithm.generatePlayerRankings();
+  GolfAlgorithmLibraryTEST.generatePlayerRankings();
 }
 
 // ===== VALIDATION =====
 function validatePredictions() {
-  return GolfAlgorithm.validatePredictions();
+  return GolfAlgorithmLibraryTEST.validatePredictions();
 }
 
 function validateLastTournament() {
-  GolfAlgorithm.validateLastTournament();
+  GolfAlgorithmLibraryTEST.validateLastTournament();
 }
 
 function checkPlayerDataQuality() {
-  GolfAlgorithm.checkPlayerDataQuality();
+  GolfAlgorithmLibraryTEST.checkPlayerDataQuality();
 }
 
 // ===== CONFIGURATION & COURSE SETUP =====
 function getCourseNameAndNum() {
-  return GolfAlgorithm.getCourseNameAndNum();
+  return GolfAlgorithmLibraryTEST.getCourseNameAndNum();
 }
 
 function setCoursesDropdown() {
-  GolfAlgorithm.setCoursesDropdown();
+  GolfAlgorithmLibraryTEST.setCoursesDropdown();
 }
 
 function getUniqueCourses(eventId) {
-  return GolfAlgorithm.getUniqueCourses(eventId);
+  return GolfAlgorithmLibraryTEST.getUniqueCourses(eventId);
 }
 
 function setCourseDropdown(sheet, courses) {
-  GolfAlgorithm.setCourseDropdown(sheet, courses);
+  GolfAlgorithmLibraryTEST.setCourseDropdown(sheet, courses);
 }
 
 function updateCourseNumber(sheet) {
-  GolfAlgorithm.updateCourseNumber(sheet);
+  GolfAlgorithmLibraryTEST.updateCourseNumber(sheet);
 }
 
 // ===== TOURNAMENT RESULTS =====
 function fetchTournamentFinalResults() {
-  GolfAlgorithm.fetchTournamentFinalResults();
+  GolfAlgorithmLibraryTEST.fetchTournamentFinalResults();
 }
 
 function fetchHistoricalTournamentResults() {
-  GolfAlgorithm.fetchHistoricalTournamentResults();
+  GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResults();
 }
 
 function fetchHistoricalTournamentResultsSandbox() {
-  GolfAlgorithm.fetchHistoricalTournamentResultsSandbox();
+  GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResultsSandbox();
 }
 
 // ===== SHEET MANAGEMENT =====
 function updateSheets() {
-  GolfAlgorithm.updateSheets();
+  GolfAlgorithmLibraryTEST.updateSheets();
 }
 
 function updateDataSheets() {
-  GolfAlgorithm.updateDataSheets();
+  GolfAlgorithmLibraryTEST.updateDataSheets();
 }
 
 function getCachedCourseData(maxAgeInDays) {
-  return GolfAlgorithm.getCachedCourseData(maxAgeInDays);
+  return GolfAlgorithmLibraryTEST.getCachedCourseData(maxAgeInDays);
 }
 
 // ===== DEBUG FUNCTIONS =====
 function debugCalculations() {
-  GolfAlgorithm.debugCalculations();
+  GolfAlgorithmLibraryTEST.debugCalculations();
 }
 
 function debugSpecificEventPlayer() {
-  GolfAlgorithm.debugSpecificEventPlayer();
+  GolfAlgorithmLibraryTEST.debugSpecificEventPlayer();
 }
 
 function debugFleetwoodValspar() {
-  GolfAlgorithm.debugFleetwoodValspar();
+  GolfAlgorithmLibraryTEST.debugFleetwoodValspar();
 }
 
 function debugHistoricalDataFlow() {
-  GolfAlgorithm.debugHistoricalDataFlow();
+  GolfAlgorithmLibraryTEST.debugHistoricalDataFlow();
 }
 
 function removeProtections() {
-  GolfAlgorithm.removeProtections();
+  GolfAlgorithmLibraryTEST.removeProtections();
 }
 
 // ===== API KEY MANAGEMENT =====
 function getApiKey() {
-  return GolfAlgorithm.getApiKey();
+  return GolfAlgorithmLibraryTEST.getApiKey();
 }
 
 function setApiKey() {
-  GolfAlgorithm.setApiKey();
+  GolfAlgorithmLibraryTEST.setApiKey();
 }
 
 function hasApiKey() {
-  return GolfAlgorithm.hasApiKey();
+  return GolfAlgorithmLibraryTEST.hasApiKey();
 }
 
 // ===== UTILITY FUNCTIONS =====
 function columnToLetter(column) {
-  return GolfAlgorithm.columnToLetter(column);
+  return GolfAlgorithmLibraryTEST.columnToLetter(column);
 }
 
 function getTourSelection() {
-  return GolfAlgorithm.getTourSelection();
+  return GolfAlgorithmLibraryTEST.getTourSelection();
 }
 
+/

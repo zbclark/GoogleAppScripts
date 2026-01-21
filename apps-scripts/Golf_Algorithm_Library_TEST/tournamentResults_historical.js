@@ -130,15 +130,21 @@ function fetchHistoricalTournamentResults() {
  * @param {Sheet} resultsSheet - Target sheet for results
  * @param {boolean} isSandbox - If true, skip writing to Historical Data
  */
-function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
+async function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
+  console.log("=== Starting Historical Tournament Results Fetch ===");
+  console.log("Sandbox mode:", isSandbox);
+  
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const modelSheet = ss.getSheetByName("Player Ranking Model");
   const configSheet = ss.getSheetByName("Configuration Sheet");
+
+  console.log("Found sheets - Model:", !!modelSheet, "Config:", !!configSheet);
 
   // Only get/create Historical Data sheet if NOT in sandbox mode
   let historicalSheet = null;
   if (!isSandbox) {
     historicalSheet = ss.getSheetByName("Historical Data") || ss.insertSheet("Historical Data");
+    console.log("Historical Data sheet:", !!historicalSheet);
   }
 
   if (!modelSheet || !configSheet) {
@@ -148,6 +154,8 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
 
   // Fetch eventId from Configuration Sheet cell G9
   const eventId = configSheet.getRange("G9").getValue();
+  console.log("Event ID from G9:", eventId);
+  
   if (!eventId) {
     SpreadsheetApp.getUi().alert("Event ID not found in Configuration Sheet (G9). Aborting operation.");
     return;
@@ -155,6 +163,7 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
 
   // Assume tour is PGA
   const tour = "pga"; // DataGolf uses lowercase
+  console.log("Tour:", tour);
 
   // Prompt user for year
   const ui = SpreadsheetApp.getUi();
@@ -163,57 +172,118 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
     : "Enter the year for the historical data:";
   const yearResponse = ui.prompt(promptMsg, ui.ButtonSet.OK_CANCEL);
   if (yearResponse.getSelectedButton() !== ui.Button.OK) {
+    console.log("User canceled year input");
     ui.alert("Year input canceled. Aborting operation.");
     return;
   }
   const year = yearResponse.getResponseText();
+  console.log("Year entered:", year);
 
   // API parameters
   let apiKey = PropertiesService.getScriptProperties().getProperty("DATAGOLF_API_KEY");
   if (!apiKey) {
     apiKey = "764c0376abb1182965e53df33338"; // Fallback
+    console.log("Using fallback API key");
   }
-  const fileFormat = "json";
-
-  // Build API URL for historical data
-  const apiUrl = `https://feeds.datagolf.com/historical-raw-data/rounds?tour=${tour}&event_id=${eventId}&year=${year}&file_format=${fileFormat}&key=${apiKey}`;
 
   try {
-    // Show progress
-    const statusMsg = isSandbox 
-      ? `🧪 Fetching ${year} data for event ${eventId}...`
-      : `Fetching ${year} data for event ${eventId}...`;
-    resultsSheet.getRange("F2").setValue(statusMsg);
-    SpreadsheetApp.flush();
+    let rawData = null;
+    let dataSource = "API";
     
-    // Fetch data from API
-    const response = UrlFetchApp.fetch(apiUrl);
-    const data = JSON.parse(response.getContentText());
+    // Check if data already exists in Historical Data sheet (only in production mode)
+    if (!isSandbox && historicalSheet && historicalSheet.getLastRow() > 0) {
+      console.log("Checking Historical Data sheet for existing data...");
+      // Historical Data starts at column 2, so get range starting from column 2
+      const lastRow = historicalSheet.getLastRow();
+      const lastCol = historicalSheet.getLastColumn();
+      if (lastCol >= 2) {
+        const allData = historicalSheet.getRange(1, 2, lastRow, lastCol - 1).getValues();
+        const headers = allData[0];
+        const eventIdIdx = headers.indexOf("event_id");
+        const yearIdx = headers.indexOf("year");
+        
+        if (eventIdIdx >= 0 && yearIdx >= 0) {
+          // Find rows matching this event_id and year
+          const matchingRows = allData.slice(1).filter(row => 
+            String(row[eventIdIdx]) === String(eventId) && 
+            String(row[yearIdx]) === String(year)
+          );
+          
+          if (matchingRows.length > 0) {
+            console.log("Found existing data in Historical Data:", matchingRows.length, "rows");
+            rawData = [headers, ...matchingRows];
+            dataSource = "Historical Data";
+          } else {
+            console.log("No existing data found for event", eventId, "year", year);
+          }
+        }
+      }
+    }
+    
+    // If data not found in Historical Data, fetch from API
+    if (!rawData) {
+      const statusMsg = isSandbox 
+        ? `🧪 Fetching ${year} data for event ${eventId}...`
+        : `Fetching ${year} data for event ${eventId}...`;
+      resultsSheet.getRange("F2").setValue(statusMsg);
+      SpreadsheetApp.flush();
+      
+      console.log("Fetching data from API using existing fetchHistoricalDataBatch function...");
+      rawData = await fetchHistoricalDataBatch([tour], eventId, year, apiKey, MAIN_HEADERS);
+      
+      if (!rawData || rawData.length <= 1) {
+        console.log("No data returned from fetchHistoricalDataBatch");
+        resultsSheet.getRange("F3").setValue("No data found for this tournament");
+        return;
+      }
+    }
+    
+    console.log("Raw data retrieved from", dataSource + ":", rawData.length - 1, "rows (including header)");
+    
+    // Parse the raw data back into structured format
+    // Raw data is in format: [headers, ...rows] where each row matches MAIN_HEADERS
+    const data = parseRawDataToStructured(rawData);
+    console.log("Data parsed successfully");
+    console.log("Found", data.scores ? data.scores.length : 0, "players");
 
     // Extract metadata
     const eventName = data.event_name || "Tournament";
     const courseName = data.course_name || "Course";
     const lastUpdated = data.last_updated || new Date().toISOString();
+    
+    console.log("Event Name:", eventName);
+    console.log("Course Name:", courseName);
 
-    // Write raw data to Historical Data sheet (only in production mode)
-    if (!isSandbox && historicalSheet && data.rounds && data.rounds.length > 0) {
-      const rawHeaders = Object.keys(data.rounds[0] || {});
-      const existingHeaders = historicalSheet.getRange(1, 1, 1, historicalSheet.getLastColumn()).getValues()[0];
-
-      // Check if headers match, otherwise write headers
-      if (!existingHeaders || existingHeaders.length === 0 || !rawHeaders.every((header, i) => header === existingHeaders[i])) {
-        historicalSheet.insertRows(1);
-        historicalSheet.getRange(1, 1, 1, rawHeaders.length).setValues([rawHeaders]);
+    // Write raw data to Historical Data sheet (only in production mode and if from API)
+    // rawData from fetchHistoricalDataBatch is already in [headers, ...rows] format
+    if (!isSandbox && historicalSheet && dataSource === "API" && rawData.length > 1) {
+      console.log("Writing raw data to Historical Data sheet...");
+      
+      const dataHeaders = rawData[0]; // First row is headers
+      const dataRows = rawData.slice(1); // Rest are data rows
+      
+      // Check if Historical Data sheet is empty or has different headers
+      const lastRow = historicalSheet.getLastRow();
+      if (lastRow === 0) {
+        // Empty sheet - write headers first (starting at column 2)
+        historicalSheet.getRange(1, 2, 1, dataHeaders.length).setValues([dataHeaders]);
+        console.log("Wrote headers to empty Historical Data sheet");
       }
 
-      const rawData = data.rounds.map(round => rawHeaders.map(header => round[header] || ""));
-
-      // Insert new data at the top of the Historical Data sheet
-      historicalSheet.insertRows(2, rawData.length);
-      historicalSheet.getRange(2, 1, rawData.length, rawHeaders.length).setValues(rawData);
+      // Append data rows at the end (starting at column 2)
+      const startRow = historicalSheet.getLastRow() + 1;
+      historicalSheet.getRange(startRow, 2, dataRows.length, dataHeaders.length).setValues(dataRows);
+      console.log("Wrote", dataRows.length, "rows to Historical Data starting at row", startRow);
+    } else if (dataSource === "Historical Data") {
+      console.log("Data already exists in Historical Data - skipping write");
+    } else if (isSandbox) {
+      console.log("Sandbox mode - skipping Historical Data write");
+    } else if (!isSandbox) {
+      console.log("No data to write to Historical Data (rawData length:", rawData.length, ")");
     }
 
     // Write merged data to Tournament Results sheet
+    console.log("Preparing Tournament Results sheet data...");
     const headers = [
       "DG ID", "Player Name", "Model Rank", "Finish Position", "Score", 
       "SG Total", "SG Total - Model", 
@@ -230,11 +300,13 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
     ];
 
     // Write metadata to sheet
+    console.log("Writing metadata to Tournament Results sheet...");
     resultsSheet.getRange("C2").setValue(eventName);
     resultsSheet.getRange("C3").setValue(courseName);
     resultsSheet.getRange("C4").setValue(lastUpdated);
     
     // Write headers
+    console.log("Writing headers to Tournament Results sheet...");
     for (let i = 0; i < headers.length; i++) {
       resultsSheet.getRange(5, 2 + i)
         .setValue(headers[i])
@@ -244,17 +316,23 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
     }
     
     // Read model data
+    console.log("Reading model data from Player Ranking Model sheet...");
     const modelData = {};
     readModelData(modelSheet, modelData);
 
     // Log how many players we found in model data
-    console.log(`Loaded model data for ${Object.keys(modelData).length} players`);
+    console.log("Loaded model data for", Object.keys(modelData).length, "players");
     
-    // Process player data from API
+    // Process player data from API - HISTORICAL FORMAT
+    // Uses the same format as fetchAndWriteData.js's processNestedStructure
+    console.log("Processing player data from API response...");
     let playerRows = [];
     
-    if (data.live_stats && Array.isArray(data.live_stats)) {
-        data.live_stats.forEach(player => {
+    // Historical API returns data.scores array with player-level aggregates
+    if (data.scores && Array.isArray(data.scores)) {
+        console.log("Found scores array with", data.scores.length, "players");
+        
+        data.scores.forEach(player => {
             const dgId = player.dg_id;
             const modelInfo = modelData[dgId] || {};
             
@@ -263,13 +341,13 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
             dgId,                                  // DG ID
             player.player_name,                    // Player Name
             modelInfo.rank || "N/A",               // Model Rank
-            player.position || "N/A",              // Finish Position
-            player.total || "N/A",                 // Score
+            player.fin_text || "N/A",              // Finish Position
+            player.total_score || "N/A",           // Score
             player.sg_total || 0,                  // SG Total
             modelInfo.sgTotal || 0,                // SG Total - Model
-            player.distance || 0,                  // Driving Distance
+            player.driving_dist || 0,              // Driving Distance
             modelInfo.drivingDistance || 0,        // Driving Distance - Model
-            player.accuracy || 0,                  // Driving Accuracy
+            player.driving_acc || 0,               // Driving Accuracy
             modelInfo.drivingAccuracy || 0,        // Driving Accuracy - Model
             player.sg_t2g || 0,                    // SG T2G
             modelInfo.sgT2G || 0,                  // SG T2G - Model
@@ -285,19 +363,21 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
             modelInfo.gir || 0,                    // Greens in Regulation - Model
             player.prox_fw || 0,                   // Fairway Proximity
             modelInfo.fairwayProx || 0,            // Fairway Proximity - Model
-            player.prox_rough || 0,                // Rough Proximity
+            player.prox_rgh || 0,                  // Rough Proximity
             modelInfo.roughProx || 0,              // Rough Proximity - Model
             player.sg_bs || 0                      // SG BS
             ];
             
         playerRows.push({
-            position: player.position,
+            position: player.fin_text || player.position || "999",
             data: row
         });
     });
-          
+      
+      console.log("Processed", playerRows.length, "player rows");
       
       // Sort by finish position
+      console.log("Sorting players by finish position...");
       playerRows.sort((a, b) => {
         // Handle "T" tied positions
         const posA = a.position.replace("T", "");
@@ -309,40 +389,37 @@ function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
       const sortedRows = playerRows.map(pr => pr.data);
       
       // Write to sheet
+      console.log("Writing", sortedRows.length, "rows to Tournament Results sheet...");
       if (sortedRows.length > 0) {
         resultsSheet.getRange(6, 2, sortedRows.length, headers.length)
             .setValues(sortedRows)
             .setHorizontalAlignment("center");
 
+        console.log("Formatting Tournament Results sheet...");
         formatTournamentResults(resultsSheet, RESULTS_METRIC_TYPES);
         
         // Add success message
         resultsSheet.getRange("F2").setValue("Last updated: " + new Date().toLocaleString());
         resultsSheet.getRange("F3").setValue(`Found ${sortedRows.length} players from API`);
         
-        // NEW: Validate predictions against actual results
-        try {
-          validateTournamentPredictions(resultsSheet, playerRows);
-        } catch (validationError) {
-          console.error("Validation error (non-blocking):", validationError);
-          // Don't throw - validation should not break results display
-        }
       } else {
+        console.warn("No player rows to write!");
         resultsSheet.getRange("F3").setValue("No player data found in API response");
       }
     } else {
-      resultsSheet.getRange("F3").setValue("Invalid API response format");
+      console.error("No scores array found in API response");
+      console.log("API response keys:", Object.keys(data));
+      resultsSheet.getRange("F3").setValue("Invalid API response format - expected 'scores' array");
     }
 
-
+    console.log("=== Historical Tournament Results Fetch Complete ===");
     
   } catch (error) {
     console.error(`Error fetching DataGolf results: ${error.message}`);
+    console.error("Error stack:", error.stack);
     resultsSheet.getRange("F3").setValue(`Error: ${error.message}`);
     resultsSheet.getRange("F4").setValue(error.stack);
   }
-
-
 }
   // Function to read model data from a sheet
 function readModelData(sheet, modelData) {
@@ -1348,5 +1425,99 @@ function getCategoryForMetric(metricName) {
   }
   
   return "";
+}
+
+/**
+ * Helper function to convert raw data rows back into structured player scores
+ * @param {Array} rawData - [headers, ...rows] format from fetchHistoricalDataBatch
+ * @returns {Object} Structured data with scores array
+ */
+function parseRawDataToStructured(rawData) {
+  if (!rawData || rawData.length <= 1) {
+    return { scores: [] };
+  }
+  
+  const headers = rawData[0];
+  const rows = rawData.slice(1);
+  
+  // Group by player
+  const playerMap = {};
+  let eventName = "";
+  let eventCompleted = "";
+  
+  rows.forEach(row => {
+    const dgId = row[headers.indexOf("dg_id")];
+    const playerName = row[headers.indexOf("player_name")];
+    
+    if (!eventName) eventName = row[headers.indexOf("event_name")] || "";
+    if (!eventCompleted) eventCompleted = row[headers.indexOf("event_completed")] || "";
+    
+    if (!playerMap[dgId]) {
+      playerMap[dgId] = {
+        dg_id: dgId,
+        player_name: playerName,
+        fin_text: row[headers.indexOf("fin_text")] || "",
+        score_sum: 0,  // Total strokes
+        course_par_sum: 0,  // Total par
+        sg_total: 0,
+        sg_t2g: 0,
+        sg_app: 0,
+        sg_arg: 0,
+        sg_ott: 0,
+        sg_putt: 0,
+        sg_bs: 0,
+        driving_dist: 0,
+        driving_acc: 0,
+        gir: 0,
+        prox_fw: 0,
+        prox_rgh: 0,
+        rounds: 0
+      };
+    }
+    
+    const player = playerMap[dgId];
+    // Sum actual strokes and course par to calculate net to par
+    const roundScore = parseFloat(row[headers.indexOf("score")]) || 0;
+    const coursePar = parseFloat(row[headers.indexOf("course_par")]) || 72;
+    player.score_sum += roundScore;
+    player.course_par_sum += coursePar;
+    player.sg_total += parseFloat(row[headers.indexOf("sg_total")]) || 0;
+    player.sg_t2g += parseFloat(row[headers.indexOf("sg_t2g")]) || 0;
+    player.sg_app += parseFloat(row[headers.indexOf("sg_app")]) || 0;
+    player.sg_arg += parseFloat(row[headers.indexOf("sg_arg")]) || 0;
+    player.sg_ott += parseFloat(row[headers.indexOf("sg_ott")]) || 0;
+    player.sg_putt += parseFloat(row[headers.indexOf("sg_putt")]) || 0;
+    player.sg_bs += parseFloat(row[headers.indexOf("sg_bs")]) || 0;
+    player.driving_dist += parseFloat(row[headers.indexOf("driving_dist")]) || 0;
+    player.driving_acc += parseFloat(row[headers.indexOf("driving_acc")]) || 0;
+    player.gir += parseFloat(row[headers.indexOf("gir")]) || 0;
+    player.prox_fw += parseFloat(row[headers.indexOf("prox_fw")]) || 0;
+    player.prox_rgh += parseFloat(row[headers.indexOf("prox_rgh")]) || 0;
+    player.rounds++;
+  });
+  
+  // Average the SG categories and per-round stats, calculate net to par
+  const scores = Object.values(playerMap).map(player => ({
+    ...player,
+    total_score: player.score_sum - player.course_par_sum,  // Net to par
+    sg_total: player.sg_total / player.rounds,
+    sg_t2g: player.sg_t2g / player.rounds,
+    sg_app: player.sg_app / player.rounds,
+    sg_arg: player.sg_arg / player.rounds,
+    sg_ott: player.sg_ott / player.rounds,
+    sg_putt: player.sg_putt / player.rounds,
+    sg_bs: player.sg_bs / player.rounds,
+    driving_dist: player.driving_dist / player.rounds,
+    driving_acc: player.driving_acc / player.rounds,
+    gir: player.gir / player.rounds,
+    prox_fw: player.prox_fw / player.rounds,
+    prox_rgh: player.prox_rgh / player.rounds
+  }));
+  
+  return {
+    event_name: eventName,
+    event_completed: eventCompleted,
+    scores: scores
+  };
 }
 
