@@ -24,23 +24,19 @@ function onOpen() {
   try {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu('‼️ Model Tools ‼️')
-      .addItem('Clear Config Settings', 'clearConfig')
       .addItem('Setup Sheet Permissions', 'setupSheet')
+      .addItem('Clear Config Settings', 'clearConfig')
       .addItem('Update Tournaments and Dropdowns', 'updateTournamentsAndDropdowns')
       .addSeparator()
       .addItem('⚙️ Load Weight Template', 'loadWeightTemplate')
-      .addItem('📋 Show Templates', 'showTemplateInfo')
       .addSeparator()
+      .addItem('Update Tournament Field, Approach, and Historical Data Sheets', 'updateDataSheets')
       .addItem('Run Model', 'generatePlayerRankings')
       .addSeparator()
       .addSubMenu(ui.createMenu('📊 Tournament Results')
         .addItem('Fetch Current Results', 'fetchTournamentFinalResults')
-        .addItem('🧪 Historical Analysis (Sandbox)', 'fetchHistoricalTournamentResultsSandbox')
-        .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults'))
-      .addSeparator()
-      .addItem('Validate Current Tournament Sheet', 'validateCurrentTournamentSheet')
-      .addSeparator()
-      .addItem('🧪 Test Library Connection', 'testLibraryConnection')
+        .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults')
+        .addItem('Validate Current Tournament Sheet', 'validateTournamentSetup'))
       .addToUi();
     
     Logger.log('Menu created successfully');
@@ -48,28 +44,42 @@ function onOpen() {
     Logger.log('Error creating menu: ' + e.toString());
     SpreadsheetApp.getActiveSpreadsheet().toast('Error creating menu: ' + e.toString(), 'Error', 10);
   }
-}
+  // First check if everything is already configured
+  const isConfigured = PropertiesService.getScriptProperties().getProperty('IS_CONFIGURED') === 'true';
+  console.log("Is sheet already configured?", isConfigured);
 
-/**
- * Installable onEdit trigger handler
- * NOTE: This MUST be in the bound script for installable triggers to work
- */
-function onEditInstallableTrigger(e) {
-  GolfAlgorithmLibraryTEST.onEditInstallableTrigger(e);
-}
-
-/**
- * Test function to verify library is connected properly
- * Run this manually from the script editor to test
- */
-function testLibraryConnection() {
+  const courseData = PropertiesService.getScriptProperties().getProperty('COURSE_EVENTS');
+    
+  // Skip setup if already configured
+  if (isConfigured) {
+    if (courseData){
+      console.log("Sheet is already configured, skipping setup checks");
+      return;
+    }
+  }
+  
   try {
-    SpreadsheetApp.getUi().alert('✓ Library is connected!\n\nThe GolfAlgorithmLibraryTEST library is working correctly.');
+    
+    // Mark as configured
+    if (checkTriggersExist() && hasApiKey()) {
+      console.log("Core settings configured, setting IS_CONFIGURED to true");
+      PropertiesService.getScriptProperties().setProperty('IS_CONFIGURED', 'true');
+    } else {
+      console.log("Configuration incomplete. Triggers exist:", checkTriggersExist(), 
+                  "API key exists:", hasApiKey(), 
+                  "courseData exists:", courseData ? "yes" : "no");
+    }    
   } catch (e) {
-    SpreadsheetApp.getUi().alert('✗ Library connection failed:\n\n' + e.toString());
+    console.error("Error in automatic setup:", e);
+    SpreadsheetApp.getActive().toast(
+      'Please run "Setup Sheet" from the Model Tools menu',
+      '⚠️ Setup Needed',
+      30
+    );
   }
 }
 
+// ===== WRAPPERS NEEDED FOR MENU BUTTONS =====
 function setupSheet() {
   GolfAlgorithmLibraryTEST.setupSheet();
 }
@@ -78,69 +88,33 @@ function clearConfig() {
   GolfAlgorithmLibraryTEST.clearConfig();
 }
 
-function checkTriggersExist() {
-  return GolfAlgorithmLibraryTEST.checkTriggersExist();
-}
-
-function authorizeScript() {
-  GolfAlgorithmLibraryTEST.authorizeScript();
-}
-
-// ===== TEMPLATE LOADER =====
+// ===== DATA / SHEET ACTIONS =====
 function loadWeightTemplate() {
   GolfAlgorithmLibraryTEST.loadWeightTemplate();
 }
-
-function showTemplateInfo() {
-  GolfAlgorithmLibraryTEST.showTemplateInfo();
-}
-
-// ===== DATA FETCHING =====
-function fetchAndWriteData() {
-  GolfAlgorithmLibraryTEST.fetchAndWriteData();
-}
-
 function updateTournamentsAndDropdowns() {
   GolfAlgorithmLibraryTEST.updateTournamentsAndDropdowns();
 }
 
-// ===== MODEL EXECUTION =====
+// ====== MODEL EXECUTION ======
+function updateDataSheets() { 
+  GolfAlgorithmLibraryTEST.updateDataSheets();
+}
+
 function generatePlayerRankings() {
   GolfAlgorithmLibraryTEST.generatePlayerRankings();
 }
 
 // ===== VALIDATION =====
-function validatePredictions() {
-  return GolfAlgorithmLibraryTEST.validatePredictions();
-}
 
-function validateLastTournament() {
-  GolfAlgorithmLibraryTEST.validateLastTournament();
-}
-
-function checkPlayerDataQuality() {
-  GolfAlgorithmLibraryTEST.checkPlayerDataQuality();
-}
-
-// ===== CONFIGURATION & COURSE SETUP =====
-function getCourseNameAndNum() {
-  return GolfAlgorithmLibraryTEST.getCourseNameAndNum();
-}
-
-function setCoursesDropdown() {
-  GolfAlgorithmLibraryTEST.setCoursesDropdown();
-}
-
-function getUniqueCourses(eventId) {
-  return GolfAlgorithmLibraryTEST.getUniqueCourses(eventId);
-}
-
-function setCourseDropdown(sheet, courses) {
-  GolfAlgorithmLibraryTEST.setCourseDropdown(sheet, courses);
-}
-
-function updateCourseNumber(sheet) {
-  GolfAlgorithmLibraryTEST.updateCourseNumber(sheet);
+function validateTournamentSetup() {
+  try {
+    var ss = SpreadsheetApp.getActiveSpreadsheet();
+    GolfAlgorithmLibraryTEST.analyzeSingleTournamentMetrics(ss);
+    SpreadsheetApp.getUi().alert('Metric analysis sheet created successfully!');
+  } catch (e) {
+    SpreadsheetApp.getUi().alert('Error: ' + e.toString());
+  }
 }
 
 // ===== TOURNAMENT RESULTS =====
@@ -152,64 +126,3 @@ function fetchHistoricalTournamentResults() {
   GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResults();
 }
 
-function fetchHistoricalTournamentResultsSandbox() {
-  GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResultsSandbox();
-}
-
-// ===== SHEET MANAGEMENT =====
-function updateSheets() {
-  GolfAlgorithmLibraryTEST.updateSheets();
-}
-
-function updateDataSheets() {
-  GolfAlgorithmLibraryTEST.updateDataSheets();
-}
-
-function getCachedCourseData(maxAgeInDays) {
-  return GolfAlgorithmLibraryTEST.getCachedCourseData(maxAgeInDays);
-}
-
-// ===== DEBUG FUNCTIONS =====
-function debugCalculations() {
-  GolfAlgorithmLibraryTEST.debugCalculations();
-}
-
-function debugSpecificEventPlayer() {
-  GolfAlgorithmLibraryTEST.debugSpecificEventPlayer();
-}
-
-function debugFleetwoodValspar() {
-  GolfAlgorithmLibraryTEST.debugFleetwoodValspar();
-}
-
-function debugHistoricalDataFlow() {
-  GolfAlgorithmLibraryTEST.debugHistoricalDataFlow();
-}
-
-function removeProtections() {
-  GolfAlgorithmLibraryTEST.removeProtections();
-}
-
-// ===== API KEY MANAGEMENT =====
-function getApiKey() {
-  return GolfAlgorithmLibraryTEST.getApiKey();
-}
-
-function setApiKey() {
-  GolfAlgorithmLibraryTEST.setApiKey();
-}
-
-function hasApiKey() {
-  return GolfAlgorithmLibraryTEST.hasApiKey();
-}
-
-// ===== UTILITY FUNCTIONS =====
-function columnToLetter(column) {
-  return GolfAlgorithmLibraryTEST.columnToLetter(column);
-}
-
-function getTourSelection() {
-  return GolfAlgorithmLibraryTEST.getTourSelection();
-}
-
-/

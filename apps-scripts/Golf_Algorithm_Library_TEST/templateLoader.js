@@ -35,15 +35,60 @@ const WEIGHT_TEMPLATES = {
       "Course Management": 0.055         // Model Rank 0.33
     },
     metricWeights: {
-      "Driving Performance": [0.404, 0.123, 0.472],     // Normalized: Distance 0.370/0.915, Accuracy 0.113/0.915, OTT 0.432/0.915
-      "Approach - Short (<100)": [0.14, 0.33, 0.53],    // Fairway 0.35, SG Approach 0.51, SG OTT 0.43
-      "Approach - Mid (100-150)": [0.12, 0.32, 0.56],
-      "Approach - Long (150-200)": [0.11, 0.30, 0.59],
-      "Approach - Very Long (>200)": [0.10, 0.25, 0.65],
-      "Putting": [1.0],
-      "Around the Green": [1.0],
-      "Scoring": [0.20, 0.10, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00],
-      "Course Management": [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.404, year: 2025 },
+        "Driving Accuracy": { weight: 0.123, year: 2025 },
+        "SG OTT": { weight: 0.472, year: 2025 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.14, year: 2025 },
+        "Approach <100 SG": { weight: 0.33, year: 2025 },
+        "Approach <100 Prox": { weight: 0.53, year: 2025 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.12, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.32, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.56, year: 2025 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.11, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.30, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.59, year: 2025 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.10, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.25, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.65, year: 2025 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0, year: 2025 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0, year: 2025 }
+      },
+      "Scoring": {
+        "SG Total": { weight: 0.20, year: 2025 },
+        "Scoring Average": { weight: 0.10, year: 2025 },
+        "Birdie Chances Created": { weight: 0.10, year: 2025 },
+        "Approach <100 SG": { weight: 0.15, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.15, year: 2025 },
+        "Approach <150 Rough SG": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough SG": { weight: 0.10, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.05, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.00, year: 2025 },
+        
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.12, year: 2025 },
+        "Great Shots": { weight: 0.08, year: 2025 },
+        "Poor Shot Avoidance": { weight: 0.08, year: 2025 },
+        "Approach <100 Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 Rough Prox": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough Prox": { weight: 0.20, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.12, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.05, year: 2025 }
+      }
     }
   },
   TECHNICAL: {
@@ -61,15 +106,60 @@ const WEIGHT_TEMPLATES = {
       "Course Management": 0.069         // Model Rank 0.17
     },
     metricWeights: {
-      "Driving Performance": [0.086, 0.354, 0.560],     // Normalized: Distance 0.060/0.701, Accuracy 0.248/0.701, OTT 0.393/0.701
-      "Approach - Short (<100)": [0.09, 0.32, 0.59],
-      "Approach - Mid (100-150)": [0.09, 0.29, 0.62],
-      "Approach - Long (150-200)": [0.08, 0.27, 0.65],
-      "Approach - Very Long (>200)": [0.08, 0.22, 0.70],
-      "Putting": [1.0],
-      "Around the Green": [1.0],
-      "Scoring": [0.18, 0.12, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00],
-      "Course Management": [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.086, year: 2025 },
+        "Driving Accuracy": { weight: 0.354, year: 2025 },
+        "SG OTT": { weight: 0.560, year: 2025 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.09, year: 2025 },
+        "Approach <100 SG": { weight: 0.32, year: 2025 },
+        "Approach <100 Prox": { weight: 0.59, year: 2025 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.09, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.29, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.62, year: 2025 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.08, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.27, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.65, year: 2025 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.08, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.22, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.70, year: 2025 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0, year: 2025 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0, year: 2025 }
+      },
+      "Scoring": {
+        "SG Total": { weight: 0.18, year: 2025 },
+        "Scoring Average": { weight: 0.12, year: 2025 },
+        "Birdie Chances Created": { weight: 0.10, year: 2025 },
+        "Approach <100 SG": { weight: 0.15, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.15, year: 2025 },
+        "Approach <150 Rough SG": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough SG": { weight: 0.10, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.05, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.00, year: 2025 },
+        
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.12, year: 2025 },
+        "Great Shots": { weight: 0.08, year: 2025 },
+        "Poor Shot Avoidance": { weight: 0.08, year: 2025 },
+        "Approach <100 Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 Rough Prox": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough Prox": { weight: 0.20, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.12, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.05, year: 2025 }
+      }
     }
   },
   BALANCED: {
@@ -81,21 +171,66 @@ const WEIGHT_TEMPLATES = {
       "Approach - Mid (100-150)": 0.186, // SG Approach 0.56 (HIGHEST)
       "Approach - Long (150-200)": 0.167,
       "Approach - Very Long (>200)": 0.033,
-      "Putting": 0.119,                  // SG Putting 0.51
-      "Around the Green": 0.100,         // SG Around Green 0.20
-      "Scoring": 0.105,                  // Score 0.98
-      "Course Management": 0.052         // Model Rank 0.39
+      "Putting": 0.119,
+      "Around the Green": 0.100,
+      "Scoring": 0.105,
+      "Course Management": 0.052
     },
     metricWeights: {
-      "Driving Performance": [0.061, 0.410, 0.529],     // Normalized: Distance 0.052/0.856, Accuracy 0.351/0.856, OTT 0.453/0.856
-      "Approach - Short (<100)": [0.12, 0.34, 0.54],    // Fairway 0.29, SG Approach 0.56, SG OTT 0.45
-      "Approach - Mid (100-150)": [0.11, 0.35, 0.54],
-      "Approach - Long (150-200)": [0.10, 0.32, 0.58],
-      "Approach - Very Long (>200)": [0.09, 0.27, 0.64],
-      "Putting": [1.0],
-      "Around the Green": [1.0],
-      "Scoring": [0.19, 0.11, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00],
-      "Course Management": [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.061, year: 2025 },
+        "Driving Accuracy": { weight: 0.410, year: 2025 },
+        "SG OTT": { weight: 0.529, year: 2025 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.12, year: 2025 },
+        "Approach <100 SG": { weight: 0.34, year: 2025 },
+        "Approach <100 Prox": { weight: 0.54, year: 2025 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.11, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.35, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.54, year: 2025 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.10, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.32, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.58, year: 2025 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.09, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.27, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.64, year: 2025 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0, year: 2025 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0, year: 2025 }
+      },
+      "Scoring": {
+        "SG Total": { weight: 0.19, year: 2025 },
+        "Scoring Average": { weight: 0.11, year: 2025 },
+        "Birdie Chances Created": { weight: 0.10, year: 2025 },
+        "Approach <100 SG": { weight: 0.15, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.15, year: 2025 },
+        "Approach <150 Rough SG": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough SG": { weight: 0.10, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.05, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.00, year: 2025 },
+        
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.12, year: 2025 },
+        "Great Shots": { weight: 0.08, year: 2025 },
+        "Poor Shot Avoidance": { weight: 0.08, year: 2025 },
+        "Approach <100 Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.10, year: 2025 },
+        "Approach <150 Rough Prox": { weight: 0.15, year: 2025 },
+        "Approach >150 Rough Prox": { weight: 0.20, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.12, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.05, year: 2025 }
+      }
     }
   },
   BALANCED_PGA_WEST: {
@@ -103,26 +238,71 @@ const WEIGHT_TEMPLATES = {
     eventId: "2",
     description: "PGA West optimized: Approach distribution matches actual (15.4% <100, 25.3% 100-150, 29.3% 150-200, 30% >200)",
     groupWeights: {
-      "Driving Performance": 0.075,      // De-emphasized - low penalties, only 5 water hazards matter
-      "Approach - Short (<100)": 0.083,  // 15.4% of shots from <100
-      "Approach - Mid (100-150)": 0.137, // 25.3% of shots from 100-150
-      "Approach - Long (150-200)": 0.158, // 29.3% of shots from 150-200
-      "Approach - Very Long (>200)": 0.162, // 30% of shots from >200
-      "Putting": 0.155,                  // CRITICAL - 2nd most important, need birdie conversion
-      "Around the Green": 0.055,         // Minimized - 4th easiest on Tour, 63.8% scrambling
-      "Scoring": 0.120,                  // Elevated - birdie conversion, par-5 scoring key
-      "Course Management": 0.055         // Consistent performers, avoid water
+      "Driving Performance": 0.075,
+      "Approach - Short (<100)": 0.083,
+      "Approach - Mid (100-150)": 0.137,
+      "Approach - Long (150-200)": 0.158,
+      "Approach - Very Long (>200)": 0.162,
+      "Putting": 0.155,
+      "Around the Green": 0.055,
+      "Scoring": 0.120,
+      "Course Management": 0.055
     },
     metricWeights: {
-      "Driving Performance": [0.050, 0.400, 0.550],     // Minimize distance, slight accuracy near water
-      "Approach - Short (<100)": [0.10, 0.40, 0.50],    // Heavy SG Approach weight - wedge precision critical
-      "Approach - Mid (100-150)": [0.10, 0.42, 0.48],   // Max SG Approach - most common scoring range
-      "Approach - Long (150-200)": [0.10, 0.35, 0.55],
-      "Approach - Very Long (>200)": [0.09, 0.28, 0.63],
-      "Putting": [1.0],
-      "Around the Green": [1.0],
-      "Scoring": [0.22, 0.13, 0.12, 0.16, 0.14, 0.13, 0.07, 0.03, 0.00],  // Heavy SG T2G, BCC, birdie rates
-      "Course Management": [0.10, 0.08, 0.08, 0.12, 0.12, 0.16, 0.18, 0.11, 0.05]
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.050, year: 2025 },
+        "Driving Accuracy": { weight: 0.400, year: 2025 },
+        "SG OTT": { weight: 0.550, year: 2025 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.10, year: 2025 },
+        "Approach <100 SG": { weight: 0.40, year: 2025 },
+        "Approach <100 Prox": { weight: 0.50, year: 2025 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.10, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.42, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.48, year: 2025 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.10, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.35, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.55, year: 2025 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.09, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.28, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.63, year: 2025 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0, year: 2025 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0, year: 2025 }
+      },
+      "Scoring": {
+        "SG Total": { weight: 0.22, year: 2025 },
+        "Scoring Average": { weight: 0.12, year: 2025 },
+        "Birdie Chances Created": { weight: 0.12, year: 2025 },
+        "Approach <100 SG": { weight: 0.16, year: 2025 },
+        "Approach <150 FW SG": { weight: 0.14, year: 2025 },
+        "Approach <150 Rough SG": { weight: 0.13, year: 2025 },
+        "Approach >150 Rough SG": { weight: 0.17, year: 2025 },
+        "Approach <200 FW SG": { weight: 0.03, year: 2025 },
+        "Approach >200 FW SG": { weight: 0.00, year: 2025 },
+        
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.10, year: 2025 },
+        "Great Shots": { weight: 0.08, year: 2025 },
+        "Poor Shot Avoidance": { weight: 0.08, year: 2025 },
+        "Approach <100 Prox": { weight: 0.12, year: 2025 },
+        "Approach <150 FW Prox": { weight: 0.12, year: 2025 },
+        "Approach <150 Rough Prox": { weight: 0.16, year: 2025 },
+        "Approach >150 Rough Prox": { weight: 0.18, year: 2025 },
+        "Approach <200 FW Prox": { weight: 0.11, year: 2025 },
+        "Approach >200 FW Prox": { weight: 0.05, year: 2025 }
+      }
     }
   }
 };
