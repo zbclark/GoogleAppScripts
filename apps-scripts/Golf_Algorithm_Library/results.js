@@ -235,7 +235,7 @@ function getMetricGroups(configSheet) {
     },
     "Scoring": {
       metrics: {
-        "SG T2G": METRIC_INDICES["SG T2G"],
+        "SG Total": METRIC_INDICES["SG Total"],
         "Scoring Average": METRIC_INDICES["Scoring Average"],
         "Birdie Chances Created": METRIC_INDICES["Birdie Chances Created"],
         "Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
@@ -246,7 +246,7 @@ function getMetricGroups(configSheet) {
         "Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"]
       },
       weights: {
-        "SG T2G": configSheet.getRange("G23").getValue(),
+        "SG Total": configSheet.getRange("G23").getValue(),
         "Scoring Average": configSheet.getRange("H23").getValue(),
         "Birdies Chances Created": configSheet.getRange("I23").getValue(),
         "Approach <100 SG": configSheet.getRange("P17").getValue(),

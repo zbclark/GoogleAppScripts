@@ -13,7 +13,7 @@
  * 
  * That's it! All the real code lives in the library.
  * When you copy the sheet next week, just re-add the library reference.
- */
+ 
 
 // ===== MENU & SETUP =====
 /**
@@ -37,7 +37,7 @@ function onOpen() {
         .addItem('Fetch Current Results', 'fetchTournamentFinalResults')
         .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults')
         .addItem('Validate Current Tournament Sheet', 'validateTournamentSetup'))
-      .adddToUi();
+      .addToUi();
     
     Logger.log('Menu created successfully');
   } catch (e) {
@@ -81,32 +81,32 @@ function onOpen() {
 
 // ===== WRAPPERS NEEDED FOR MENU BUTTONS =====
 function setupSheet() {
-  GolfAlgorithm.setupSheet();
+  GolfAlgorithmLibraryTEST.setupSheet();
 }
 
 function clearConfig() {
-  GolfAlgorithm.clearConfig();
+  GolfAlgorithmLibraryTEST.clearConfig();
 }
 
 // ===== DATA / SHEET ACTIONS =====
 function loadWeightTemplate() {
-  GolfAlgorithm.loadWeightTemplate();
+  GolfAlgorithmLibraryTEST.loadWeightTemplate();
 }
 function updateTournamentsAndDropdowns() {
-  GolfAlgorithm.updateTournamentsAndDropdowns();
+  GolfAlgorithmLibraryTEST.updateTournamentsAndDropdowns();
 }
 
 function onEditInstallableTrigger(e) {
-  GolfAlgorithm.onEditInstallableTrigger(e);
+  GolfAlgorithmLibraryTEST.onEditInstallableTrigger(e);
 }
 
 // ====== MODEL EXECUTION ======
 function updateDataSheets() { 
-  GolfAlgorithm.updateDataSheets();
+  GolfAlgorithmLibraryTEST.updateDataSheets();
 }
 
 function generatePlayerRankings() {
-  GolfAlgorithm.generatePlayerRankings();
+  GolfAlgorithmLibraryTEST.generatePlayerRankings();
 }
 
 // ===== VALIDATION =====
@@ -114,7 +114,7 @@ function generatePlayerRankings() {
 function validateTournamentSetup() {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    GolfAlgorithm.analyzeSingleTournamentMetrics(ss);
+    GolfAlgorithmLibraryTEST.analyzeSingleTournamentMetrics(ss);
     SpreadsheetApp.getUi().alert('Metric analysis sheet created successfully!');
   } catch (e) {
     SpreadsheetApp.getUi().alert('Error: ' + e.toString());
@@ -123,11 +123,12 @@ function validateTournamentSetup() {
 
 // ===== TOURNAMENT RESULTS =====
 function fetchTournamentFinalResults() {
-  GolfAlgorithm.fetchTournamentFinalResults();
+  GolfAlgorithmLibraryTEST.fetchTournamentFinalResults();
 }
 
 function fetchHistoricalTournamentResults() {
-  GolfAlgorithm.fetchHistoricalTournamentResults();
+  GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResults();
 }
+
 
 */
