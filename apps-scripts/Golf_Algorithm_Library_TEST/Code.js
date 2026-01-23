@@ -96,6 +96,10 @@ function updateTournamentsAndDropdowns() {
   GolfAlgorithmLibraryTEST.updateTournamentsAndDropdowns();
 }
 
+function onEditInstallableTrigger(e) {
+  GolfAlgorithmLibraryTEST.onEditInstallableTrigger(e);
+}
+
 // ====== MODEL EXECUTION ======
 function updateDataSheets() { 
   GolfAlgorithmLibraryTEST.updateDataSheets();

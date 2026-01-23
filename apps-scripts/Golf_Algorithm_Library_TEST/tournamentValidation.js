@@ -14,7 +14,7 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
         const allMetrics = [
             "Driving Distance", "Driving Accuracy", "SG OTT", "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox",
             "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox", "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
-            "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox", "SG Putting", "SG Around Green", "SG T2G",
+            "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox", "SG Putting", "SG Around Green", "SG Total",
             "Scoring Average", "Birdie Chances Created", "Approach <100 SG", "Approach <150 FW SG", "Approach <150 Rough SG",
             "Approach >150 Rough SG", "Approach <200 FW SG", "Approach >200 FW SG", "Scrambling", "Great Shots", "Poor Shot Avoidance",
             "Approach <100 Prox", "Approach <150 FW Prox", "Approach <150 Rough Prox", "Approach >150 Rough Prox", "Approach <200 FW Prox", "Approach >200 FW Prox"
@@ -48,6 +48,12 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
                     if (headerRowLower[i] === metric.toLowerCase()) actualIdx = i;
                     if (headerRowLower[i] === (metric.toLowerCase() + ' - model')) modelIdx = i;
                 }
+                if (actualIdx === -1) {
+                    console.log(`RMSE: Skipping ${metric} (no actual column)`);
+                }
+                if (modelIdx === -1) {
+                    console.log(`RMSE: Skipping ${metric} (no model column)`);
+                }
                 if (actualIdx !== -1 && modelIdx !== -1) {
                     const predicted = [], actual = [];
                     for (let i = 5; i < resultsData.length; i++) {
@@ -61,6 +67,8 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
                     if (predicted.length > 0 && actual.length > 0) {
                         rmseByMetric[metric] = calculateRMSE(predicted, actual);
                         console.log(`RMSE for ${metric}:`, rmseByMetric[metric]);
+                    } else {
+                        console.log(`RMSE: Skipping ${metric} (not enough valid data)`);
                     }
                 }
             });
@@ -208,6 +216,7 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
  * @param {Object} rmseByMetric
  */
 function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseType, rmseByMetric) {
+    let playerDataWithDeltas = [];
     const sheetName = `${breakdown.name}_Metric Validation`.substring(0, 49);
     const sheet = ss.insertSheet(sheetName);
     sheet.appendRow([`${breakdown.name} - Metric Analysis (${courseType} Course)`]);
@@ -215,9 +224,9 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
     sheet.appendRow([`Top 10: ${breakdown.top10Count} | Total Finishers: ${breakdown.totalFinishers}`]);
     sheet.appendRow([" "]);
     sheet.appendRow([
-        "Metric", "Top 10 Avg", "Field Avg", "Delta", "% Above Field", "Correlation", "RMSE"
+        "Metric", "Top 10 Avg", "Field Avg", "Delta", "% Above Field", "Correlation", "RMSE", "Config Weight", "Template Weight", "Recommended Weight"
     ]);
-    const headerRange = sheet.getRange(4, 1, 1, 7);
+    const headerRange = sheet.getRange(4, 1, 1, 10);
     headerRange.setBackground("#70AD47").setFontColor("white").setFontWeight("bold");
     // Add all metrics sorted by % above field (descending by absolute percentage)
     const sortedMetrics = Object.keys(breakdown.metricAverages)
@@ -243,7 +252,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                 "Approach >200 FW Prox",
                 "SG Putting",
                 "SG Around Green",
-                "SG T2G",
+                "SG Total",
                 "Scoring Average",
                 "Birdie Chances Created",
                 "Approach <100 SG",
@@ -254,7 +263,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                 "Approach >200 FW SG",
                 "Scrambling",
                 "Great Shots",
-                "Poor Shot Avoidance",
+                "Poor Shots",
                 "Approach <100 Prox",
                 "Approach <150 FW Prox",
                 "Approach <150 Rough Prox",
@@ -348,34 +357,46 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
         }
 
         const correlation = m.correlation !== undefined ? m.correlation : 0;
-        const templateWeight = determineTournamentWeights(group);
        
         // Define groupName and metricName before calling determineTournamentWeights
         const groupName = getMetricGroup(m.metric);
         const metricName = m.metric;
 
-        // Fetch weights for the specific metric
+        // Fetch template weights for the specific metric
         const metricWeights = determineTournamentWeights(groupName, metricName);
         console.log(`Weights for ${m.metric}:`, metricWeights);
 
-        // Loop through all weights for the metric
-        for (const [key, weight] of Object.entries(metricWeights)) {
-            console.log(`  Sub-metric: ${key}, Weight: ${weight}`);
-            // Perform operations on each weight if needed
+        // Use a composite key for template weights: groupName|metricName
+        const compositeKey = groupName + '|' + metricName;
+        let templateWeight = 0;
+        if (metricWeights && typeof metricWeights[compositeKey] === 'number') {
+            templateWeight = metricWeights[compositeKey];
+        } else if (typeof metricWeights[m.metric] === 'number') {
+            // fallback for legacy single-key
+            templateWeight = metricWeights[m.metric];
+        } else {
+            console.error(`No numeric templateWeight found for composite key: ${compositeKey}`, metricWeights);
         }
 
         // Calculate recommended weight based on correlation strength within the metric's group
         // Formula: templateWeight * (metricCorrelation / maxCorrelationInGroup)
         let recommendedWeight = 0;
-        const metricGroup = getMetricGroup(m.metric);
-        if (metricGroup && groupMaxCorrelations[metricGroup] > 0) {
-            const maxCorr = groupMaxCorrelations[metricGroup];
+        let recommendedWeightReason = '';
+        if (groupName && groupMaxCorrelations[groupName] && groupMaxCorrelations[groupName] > 0 && typeof templateWeight === 'number' && templateWeight !== 0) {
+            const maxCorr = groupMaxCorrelations[groupName];
             const correlationRatio = Math.abs(correlation) / maxCorr;
             recommendedWeight = templateWeight * correlationRatio;
+            recommendedWeightReason = `OK: templateWeight=${templateWeight}, correlation=${correlation}, maxCorr=${maxCorr}`;
+        } else {
+            // If templateWeight is 0 or missing, recommendedWeight should be 0
+            recommendedWeight = 0;
+            if (!groupName) recommendedWeightReason = 'No groupName';
+            else if (!groupMaxCorrelations[groupName] || groupMaxCorrelations[groupName] === 0) recommendedWeightReason = 'No max correlation for group';
+            else if (typeof templateWeight !== 'number' || templateWeight === 0) recommendedWeightReason = 'No templateWeight';
         }
 
-        // Log the calculated recommended weight
-        console.log("Recommended weight calculated:", recommendedWeight);
+        // Log the calculated recommended weight and reason
+        console.log(`Recommended weight for ${m.metric}:`, recommendedWeight, recommendedWeightReason);
 
         // Find matching config weight for this metric
         // Try exact match first, then fuzzy matching
@@ -403,7 +424,12 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
 
         // Always show Template Weight and Recommended Weight for all metrics
         const templateWeightValue = templateWeight.toFixed(4);
-        const recommendedWeightValue = recommendedWeight.toFixed(4);
+        const recommendedWeightValue = (typeof recommendedWeight === 'number' && !isNaN(recommendedWeight)) ? recommendedWeight.toFixed(4) : '0.0000';
+        // Add RMSE value for this metric
+        let rmseValue = '';
+        if (rmseByMetric && typeof rmseByMetric[m.metric] === 'number') {
+            rmseValue = rmseByMetric[m.metric].toFixed(4);
+        }
 
         sheet.appendRow([
             m.metric,
@@ -412,6 +438,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
             m.delta.toFixed(3),
             pct + "%",
             correlation.toFixed(4),
+            rmseValue,
             configWeight.toFixed(4),
             templateWeightValue,
             recommendedWeightValue
@@ -427,19 +454,15 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
     });
     
     // ========== PLAYER ACCURACY DATA SECTION (DELTAS) ==========
-    // Add spacing and header
+    // Add spacing
     const metricsEndRow = sheet.getLastRow();
     sheet.appendRow([" "]);
-    sheet.appendRow(["PLAYER-LEVEL ACCURACY ANALYSIS"]);
-    sheet.getRange(metricsEndRow + 2, 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
-    
+
     // Load tournament file with actual results and model data
-    const tournamentFile = tournamentFiles[tournament.name];
-    if (tournamentFile) {
+    const tournamentSs = ss;
+    if (tournamentSs) {
         try {
-            const tournamendSs = SpreadsheetApp.open(tournamentFile);
-            const resultsSheet = tournamendSs.getSheetByName("Tournament Results");
-            
+            const resultsSheet = tournamentSs.getSheetByName("Tournament Results");
             if (resultsSheet) {
                 // Read Tournament Results to get player data with model and actual values
                 const resultsRange = resultsSheet.getDataRange();
@@ -501,7 +524,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                 console.log("Column headers around Y-AB:", headerRow.slice(24, 28));
                 
                 // Parse player data
-                const playerDataWithDeltas = [];
+                playerDataWithDeltas = [];
                 for (let i = 5; i < resultsData.length; i++) {
                     const row = resultsData[i];
                     const dgId = String(row[colMap.dgId] || "").trim();
@@ -523,7 +546,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                     // Calculate deltas for all metrics (Model - Actual)
                     const statDeltas = {
                         "SG Total": (parseFloat(row[colMap.sgTotalModel]) || 0) - (parseFloat(row[colMap.sgTotal]) || 0),
-                        "Driving Distance": (parseFloat(row[colMap.drivDistModel]) || 0) - (parseFloat(row[colMap.drivDist]) || 0),
+                        "Driving Distance": (parseFloat(row[colMap.drivDistModel]) || 0) - (parseFloat(row[colMap.sgTotal]) || 0),
                         "Driving Accuracy": (parseFloat(row[colMap.drivAccModel]) || 0) - (parseFloat(row[colMap.drivAcc]) || 0),
                         "SG T2G": (parseFloat(row[colMap.sgT2GModel]) || 0) - (parseFloat(row[colMap.sgT2G]) || 0),
                         "SG Approach": (parseFloat(row[colMap.sgApproachModel]) || 0) - (parseFloat(row[colMap.sgApproach]) || 0),
@@ -548,7 +571,19 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                 if (playerDataWithDeltas.length > 0) {
                     // Sort by model rank ascending (low to high)
                     playerDataWithDeltas.sort((a, b) => a.modelRank - b.modelRank);
-                    
+
+                    // Calculate average miss score for all players (moved here)
+                    let avgMissScore = null;
+                    if (playerDataWithDeltas.length > 0) {
+                        const totalMiss = playerDataWithDeltas.reduce((sum, p) => sum + Math.abs(p.modelRank - p.finishPos), 0);
+                        avgMissScore = (totalMiss / playerDataWithDeltas.length).toFixed(2);
+                    }
+                    const playerHeaderTitle = avgMissScore !== null
+                        ? `PLAYER-LEVEL ACCURACY ANALYSIS (Avg Miss: ${avgMissScore})`
+                        : "PLAYER-LEVEL ACCURACY ANALYSIS";
+                    sheet.appendRow([playerHeaderTitle]);
+                    sheet.getRange(sheet.getLastRow(), 1).setFontWeight("bold").setFontSize(11).setBackground("#e5e7eb");
+
                     // Build header row
                     const deltaMetrics = [
                         "SG Total Δ", "Driving Distance Δ", "Driving Accuracy Δ",
@@ -574,9 +609,9 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                         if (missScore === 0) {
                             gapAnalysis = "Perfect";
                         } else if (missScore > 0) {
-                            gapAnalysis = `Predicted ${missScore} spots too high`;
-                        } else {
                             gapAnalysis = `Predicted ${Math.abs(missScore)} spots too low`;
+                        } else {
+                            gapAnalysis = `Predicted ${Math.abs(missScore)} spots too high`;
                         }
                         
                         const rowData = [
@@ -622,7 +657,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                     
                     // Auto-resize columns
                     sheet.autoResizeColumns(1, playerHeaderRow.length);
-                    console.log(`✓ Added ${playerDataWithDeltas.length} players with delta data to ${tournament.name}`);
+                    console.log(`✓ Added ${playerDataWithDeltas.length} players with delta data to ${sheet.getName()}`);
                 }
             }
             

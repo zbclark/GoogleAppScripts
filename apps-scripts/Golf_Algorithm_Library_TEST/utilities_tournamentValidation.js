@@ -200,7 +200,7 @@ function getTournamentConfigurationWeights(ss) {
     metricWeights["SG Around Green"] = configSheet.getRange("G22").getValue() || 0;
 
     // Scoring (Row 23, Column G-O) - Context-based SG metrics
-    metricWeights["SG T2G"] = configSheet.getRange("G23").getValue() || 0;
+    metricWeights["SG Total"] = configSheet.getRange("G23").getValue() || 0;
     metricWeights["Scoring Average"] = configSheet.getRange("H23").getValue() || 0;
     metricWeights["Birdie Chances Created"] = configSheet.getRange("I23").getValue() || 0;
     metricWeights["Scoring - Approach <100 SG"] = configSheet.getRange("J23").getValue() || 0;
@@ -285,16 +285,13 @@ function getMetricGroupings() {
       "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox"
     ],
     "Approach - Mid (100-150)": [
-      "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
-      "Approach <150 Rough GIR", "Approach <150 Rough SG", "Approach <150 Rough Prox"
+      "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox"
     ],
     "Approach - Long (150-200)": [
-      "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
-      "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox"
+      "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox"
     ],
     "Approach - Very Long (>200)": [
-      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox"
+      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox"
     ],
     "Putting": [
       "SG Putting"
