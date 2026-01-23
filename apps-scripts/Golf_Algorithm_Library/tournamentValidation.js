@@ -8,6 +8,49 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
     console.log("Spreadsheet name:", ss.getName());
     console.log("Options provided:", options);
 
+    // Prompt user for year, but try to pull event ID from G9 first
+    const ui = SpreadsheetApp.getUi();
+    const yearPrompt = "Enter the Tournament Year for the validation";
+    const yearResponse = ui.prompt(yearPrompt, ui.ButtonSet.OK_CANCEL);
+    if (yearResponse.getSelectedButton() !== ui.Button.OK) {
+        console.log("User canceled year input");
+        ui.alert("Year input canceled. Aborting operation.");
+        return;
+    }
+    const year = yearResponse.getResponseText();
+    console.log("Year entered:", year);
+
+    // Try to get event ID from G9 first
+    let eventId = null;
+    const configSheet = ss.getSheetByName("Configuration Sheet");
+    if (configSheet) {
+        var rawG9 = configSheet.getRange("G9").getValue();
+        Logger.log("Raw G9 value:", rawG9);
+        eventId = getG9WithRetry(configSheet);
+        Logger.log("After getG9WithRetry, eventId:", eventId);
+        if (eventId) {
+            eventId = eventId.toString().trim();
+            Logger.log("Event ID pulled from G9:", eventId);
+        }
+    }
+   
+    // If not found, prompt user
+    if (!eventId) {
+        const eventPrompt = "Enter the Event ID (G9 is empty):";
+        const eventResponse = ui.prompt(eventPrompt, ui.ButtonSet.OK_CANCEL);
+        if (eventResponse.getSelectedButton() !== ui.Button.OK) {
+            console.log("User canceled event ID input");
+            ui.alert("Event ID input canceled. Aborting operation.");
+            return;
+        }
+        eventId = eventResponse.getResponseText();
+        Logger.log("After prompt, eventId:", eventId);
+        if (eventId) {
+            eventId = eventId.trim();
+        }
+        Logger.log("Event ID entered by user:", eventId);
+    }
+
     try {
         // Define all metrics
         console.log("Defining metrics...");
@@ -114,11 +157,15 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
         // Map player DG IDs to their metrics
         console.log("Mapping player DG IDs to metrics...");
         const playerMetricsMap = new Map();
+        if (playerHeaderMap['DG ID'] === undefined) {
+            throw new Error("DG ID column not found in Player Ranking Model");
+        }
         for (let i = 5; i < playerData.length; i++) {
             const row = playerData[i];
             if (!row || row.length === 0) continue;
             const dgId = row[playerHeaderMap['DG ID']];
             if (!dgId) continue;
+            if (i % 100 === 0) console.log(`Processing row ${i}, DG ID: ${dgId}`);
             const playerMetrics = {};
             allMetrics.forEach(metric => {
                 const colIdx = playerHeaderMap[metric];
@@ -129,6 +176,8 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
             });
             playerMetricsMap.set(dgId.toString(), playerMetrics);
         }
+        console.log("Finished mapping player DG IDs. Count:", playerMetricsMap.size);
+
         if (playerMetricsMap.size === 0) {
             throw new Error("No player metric data found");
         }
@@ -200,7 +249,8 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
             .slice(0, 10);
 
         // Write the analysis sheet for this tournament
-        createTournamentMetricSheet(ss, breakdown, tournamentMetrics, options.courseType || "BALANCED", rmseByMetric);
+        Logger.log("Event ID right before createTournamentMetricSheet call:", eventId);
+        createTournamentMetricSheet(ss, breakdown, tournamentMetrics, options.courseType || "BALANCED", rmseByMetric, eventId, year);
     } catch (error) {
         console.error("Error in analyzeSingleTournamentMetrics:", error);
         throw error;
@@ -214,19 +264,44 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
  * @param {Object} tournamentMetrics
  * @param {string} courseType
  * @param {Object} rmseByMetric
+ * @param {string|number} eventId
+ * @param {string|number} year
  */
-function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseType, rmseByMetric) {
+function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseType, rmseByMetric, eventId, year) {
     let playerDataWithDeltas = [];
+
+    Logger.log("Event ID used:", eventId);
     const sheetName = `${breakdown.name}_Metric Validation`.substring(0, 49);
     const sheet = ss.insertSheet(sheetName);
     sheet.appendRow([`${breakdown.name} - Metric Analysis (${courseType} Course)`]);
     sheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
     sheet.appendRow([`Top 10: ${breakdown.top10Count} | Total Finishers: ${breakdown.totalFinishers}`]);
+    const loaded = loadTournamentPredictions(ss);
+    Logger.log("Loaded object from loadTournamentPredictions:", loaded);
+    if (loaded.error) {
+        Logger.log(`Error Loading Predictions: ${loaded.error}`);
+        return;
+    }
+    const predictionsArray = loaded.predictions;
+    Logger.log("Loaded predictions:", predictionsArray);
+    Logger.log("Event ID:", eventId, "Year:", year);
+    const algoValidation = validatePredictions(eventId, predictionsArray, year);
+    sheet.appendRow([`Overall Model Validation`]);
+
+    Logger.log("Validation metrics:", {
+        rSquared: algoValidation.rSquared,
+        rmse: algoValidation.rmse,
+        mae: algoValidation.mae,
+        topTenAccuracy: algoValidation.topTenAccuracy
+    });
+
+    sheet.appendRow([`R²: ${(algoValidation.rSquared ?? 0).toFixed(4)} | RMSE: ${(algoValidation.rmse ?? 0).toFixed(4)} | Mean Abs Error: ${(algoValidation.mae ?? 0).toFixed(4)}`]);
+    sheet.appendRow([`Top Ten Accuracy: ${(algoValidation.topTenAccuracy ?? 0).toFixed(2)}% `]);
     sheet.appendRow([" "]);
     sheet.appendRow([
         "Metric", "Top 10 Avg", "Field Avg", "Delta", "% Above Field", "Correlation", "RMSE", "Config Weight", "Template Weight", "Recommended Weight"
     ]);
-    const headerRange = sheet.getRange(4, 1, 1, 10);
+    const headerRange = sheet.getRange(7, 1, 1, 10);
     headerRange.setBackground("#70AD47").setFontColor("white").setFontWeight("bold");
     // Add all metrics sorted by % above field (descending by absolute percentage)
     const sortedMetrics = Object.keys(breakdown.metricAverages)
@@ -444,7 +519,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
             recommendedWeightValue
         ]);
 
-        const rowIdx = idx + 5;
+        const rowIdx = idx + 8;
         const absDelta = Math.abs(m.delta);
         if (absDelta > 0.5) {
             sheet.getRange(rowIdx, 4).setBackground("#90EE90");
@@ -661,7 +736,7 @@ function createTournamentMetricSheet(ss, breakdown, tournamentMetrics, courseTyp
                 }
             }
             
-            sheet.autoResizeColumns(1, 9);
+            sheet.autoResizeColumns(1, 20);
         } catch (error) {
         console.error("Error occurred:", error);
         }

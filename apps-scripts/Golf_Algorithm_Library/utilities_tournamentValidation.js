@@ -3,10 +3,9 @@
 /**
  * Loads predictions from the active tournament workbook
  */
-function loadTournamentPredictions() {
+function loadTournamentPredictions(ss) {
   try {
     var sheetName = "Player Ranking Model";
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
     const sheet = ss.getSheetByName(sheetName);
     if (!sheet) {
       return { error: `Sheet "${sheetName}" not found` };
@@ -337,5 +336,18 @@ function getMetricGroup(metricName) {
       return groupName;
     }
   }
+  return null;
+}
+
+// Add logging inside getG9WithRetry
+function getG9WithRetry(sheet, maxAttempts = 3, delayMs = 200) {
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    let value = sheet.getRange("G9").getValue();
+    Logger.log(`getG9WithRetry attempt ${attempt}:`, value);
+    if (value !== null && value !== undefined && value !== "") {
+      return value;
+    }
+    Utilities.sleep(delayMs);
+    }
   return null;
 }

@@ -24,20 +24,21 @@ function onOpen() {
   try {
     const ui = SpreadsheetApp.getUi();
     ui.createMenu('‼️ Model Tools ‼️')
+      .addSubmenu('⚙️ Settings')
       .addItem('Setup Sheet Permissions', 'setupSheet')
       .addItem('Clear Config Settings', 'clearConfig')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('🛠️ Model Tools'))
       .addItem('Update Tournaments and Dropdowns', 'updateTournamentsAndDropdowns')
+      .addItem('⚖️ Load Weight Template', 'loadWeightTemplate')
+      .addItem('📜 Update Tournament Field, Approach, and Historical Data Sheets', 'updateDataSheets')
+      .addItem('⛳️ Run Model', 'generatePlayerRankings')
       .addSeparator()
-      .addItem('⚙️ Load Weight Template', 'loadWeightTemplate')
-      .addSeparator()
-      .addItem('Update Tournament Field, Approach, and Historical Data Sheets', 'updateDataSheets')
-      .addItem('Run Model', 'generatePlayerRankings')
-      .addSeparator()
-      .addSubMenu(ui.createMenu('📊 Tournament Results')
-        .addItem('Fetch Current Results', 'fetchTournamentFinalResults')
-        .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults')
-        .addItem('Validate Current Tournament Sheet', 'validateTournamentSetup'))
-      .adddToUi();
+      .addSubMenu(ui.createMenu('📊 Tournament Results'))
+        .addItem('🏆 Fetch Current Tournament Results', 'fetchTournamentFinalResults')
+        .addItem('📊 Fetch Historical Tournament Results', 'fetchHistoricalTournamentResults')
+        .addItem('✅ Validate Current Tournament Sheet', 'validateTournamentSetup')
+      .addToUi();
     
     Logger.log('Menu created successfully');
   } catch (e) {

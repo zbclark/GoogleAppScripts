@@ -237,10 +237,21 @@ function fetchTournamentFinalResults() {
       
       // Sort by finish position
       playerRows.sort((a, b) => {
-        // Handle "T" tied positions
-        const posA = a.position.replace("T", "");
-        const posB = b.position.replace("T", "");
-        return parseInt(posA) - parseInt(posB);
+        // Defensive: handle undefined/null/number cases for position
+        function getPositionNum(pos) {
+          if (pos === undefined || pos === null) return 999;
+          if (typeof pos === 'number') return pos;
+          if (typeof pos === 'string') {
+            // Remove 'T' and whitespace, fallback to 999 if not a number
+            const cleaned = pos.replace(/T|\s/g, '');
+            const num = parseInt(cleaned);
+            return isNaN(num) ? 999 : num;
+          }
+          return 999;
+        }
+        const numA = getPositionNum(a.position);
+        const numB = getPositionNum(b.position);
+        return numA - numB;
       });
       
       // Extract just the data rows
@@ -257,6 +268,7 @@ function fetchTournamentFinalResults() {
         // Add success message
         resultsSheet.getRange("F2").setValue("Last updated: " + new Date().toLocaleString());
         resultsSheet.getRange("F3").setValue(`Found ${sortedRows.length} players from API`);
+        resultsSheet.getRange("F4").clearContent();
         
         // NEW: Validate predictions against actual results
         try {
@@ -327,6 +339,8 @@ async function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
   }
 
   // Fetch eventId from Configuration Sheet cell G9
+  Logger.log("Active spreadsheet URL: " + ss.getUrl());
+  Logger.log("Sheet names: " + ss.getSheets().map(s => s.getName()).join(", "));
   const eventId = configSheet.getRange("G9").getValue();
   console.log("Event ID from G9:", eventId);
   
@@ -354,7 +368,7 @@ async function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
   console.log("Year entered:", year);
 
   // API parameters
-  let apiKey = PropertiesService.getScriptProperties().getProperty("DATAGOLF_API_KEY");
+  let apiKey = PropertiesService.getScriptProperties().getProperty('API_KEY');
   if (!apiKey) {
     apiKey = "764c0376abb1182965e53df33338"; // Fallback
     console.log("Using fallback API key");
@@ -367,11 +381,12 @@ async function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
     // Check if data already exists in Historical Data sheet (only in production mode)
     if (!isSandbox && historicalSheet && historicalSheet.getLastRow() > 0) {
       console.log("Checking Historical Data sheet for existing data...");
-      // Historical Data starts at column 2, so get range starting from column 2
+      // Historical Data starts at row 5, column 2 (B5), header is row 5
       const lastRow = historicalSheet.getLastRow();
       const lastCol = historicalSheet.getLastColumn();
-      if (lastCol >= 2) {
-        const allData = historicalSheet.getRange(1, 2, lastRow, lastCol - 1).getValues();
+      if (lastCol >= 2 && lastRow >= 5) {
+        // Get all data starting from header row (row 5)
+        const allData = historicalSheet.getRange(5, 2, lastRow - 4, lastCol - 1).getValues();
         const headers = allData[0];
         const eventIdIdx = headers.indexOf("event_id");
         const yearIdx = headers.indexOf("year");
@@ -553,10 +568,21 @@ async function fetchHistoricalTournamentResultsImpl(resultsSheet, isSandbox) {
       // Sort by finish position
       console.log("Sorting players by finish position...");
       playerRows.sort((a, b) => {
-        // Handle "T" tied positions
-        const posA = a.position.replace("T", "");
-        const posB = b.position.replace("T", "");
-        return parseInt(posA) - parseInt(posB);
+        // Defensive: handle undefined/null/number cases for position
+        function getPositionNum(pos) {
+          if (pos === undefined || pos === null) return 999;
+          if (typeof pos === 'number') return pos;
+          if (typeof pos === 'string') {
+            // Remove 'T' and whitespace, fallback to 999 if not a number
+            const cleaned = pos.replace(/T|\s/g, '');
+            const num = parseInt(cleaned);
+            return isNaN(num) ? 999 : num;
+          }
+          return 999;
+        }
+        const numA = getPositionNum(a.position);
+        const numB = getPositionNum(b.position);
+        return numA - numB;
       });
       
       // Extract just the data rows

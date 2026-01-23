@@ -1,3 +1,13 @@
+// Helper to robustly read G9 after async edits
+function getG9WithRetry(sheet, retries = 5, delay = 500) {
+  for (let i = 0; i < retries; i++) {
+    const value = sheet.getRange("G9").getValue();
+    if (value) return value;
+    Utilities.sleep(delay);
+  }
+  return null;
+}
+
 function setupSheet() {
   const ui = SpreadsheetApp.getUi();
   
@@ -349,8 +359,14 @@ async function onEditInstallableTrigger(e) {
       statusCell.setValue("🔄 Fetching courses...").setBackground("#FFF2CC");
       SpreadsheetApp.flush();
 
-      const eventId = sheet.getRange("G9").getValue().toString();
-            
+      // Use robust retry logic to get G9
+      const eventId = getG9WithRetry(sheet);
+      Logger.log("Event ID from G9 (with retry):", eventId);
+      if (!eventId) {
+        statusCell.setValue("❌ G9 not set").setBackground("#FFEBE6");
+        throw new Error("G9 is empty after retries");
+      }
+
       // Pass status cell to course fetcher
       const courses = getUniqueCourses(eventId);
 
