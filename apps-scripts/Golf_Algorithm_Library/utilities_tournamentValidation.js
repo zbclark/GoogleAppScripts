@@ -1,34 +1,6 @@
 // ====== UTILITIES FOR SINGLE TOURNAMENT VALIDATION ======
 
 /**
- * Loads predictions from the active tournament workbook
- */
-function loadTournamentPredictions(ss) {
-  try {
-    var sheetName = "Player Ranking Model";
-    const sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      return { error: `Sheet "${sheetName}" not found` };
-    }
-    const data = sheet.getRange("C6:D" + sheet.getLastRow()).getValues();
-    const predictions = data
-      .map((row, idx) => ({
-        rank: idx + 1,
-        dgId: String(row[0]).trim(),
-        name: String(row[1]).trim()
-      }))
-      .filter(p => p.dgId && p.dgId !== "" && p.name && p.name !== "")
-      .slice(0, 150);
-    return {
-      count: predictions.length,
-      predictions: predictions
-    };
-  } catch (e) {
-    return { error: `Error loading predictions: ${e.message}` };
-  }
-}
-
-/**
  * Loads actual results from the active tournament workbook
  */
 function loadTournamentResults() {
@@ -42,13 +14,33 @@ function loadTournamentResults() {
     const lastRow = sheet.getLastRow();
     const data = sheet.getRange("B6:E" + lastRow).getValues();
     const results = data
-      .map(row => ({
-        dgId: String(row[0]).trim(),
-        name: String(row[1]).trim(),
-        finishStr: String(row[2]).trim(),
-        finish: parseInt(row[3]) || null
-      }))
-      .filter(r => r.dgId && r.dgId !== "" && r.finish !== null)
+      .map(row => {
+        const dgId = String(row[0]).trim();
+        const name = String(row[1]).trim();
+        const modelRank = String(row[2]).trim();
+        const finishRaw = String(row[3]).trim();
+        let finishPos = null;
+        if (finishRaw === '' || finishRaw.toUpperCase() === 'CUT' || finishRaw.toUpperCase() === 'WD') {
+          finishPos = null;
+        } else if (/^T?-?\s?(\d+)/i.test(finishRaw)) {
+          // Handles 'T5', 'T-5', 'T 5', etc.
+          const tieMatch = finishRaw.match(/^T?-?\s?(\d+)/i);
+          if (tieMatch) finishPos = parseInt(tieMatch[1]);
+        } else if (/(\d+)T$/i.test(finishRaw)) {
+          // Handles '5T'
+          const tieMatch = finishRaw.match(/(\d+)T$/i);
+          if (tieMatch) finishPos = parseInt(tieMatch[1]);
+        } else if (!isNaN(parseInt(finishRaw))) {
+          finishPos = parseInt(finishRaw);
+        }
+        return {
+          dgId,
+          name,
+          modelRank,
+          finishPos
+        };
+      })
+      .filter(r => r.dgId && r.dgId !== "" && r.finishPos !== null)
       .slice(0, 200);
     return {
       count: results.length,
@@ -56,26 +48,6 @@ function loadTournamentResults() {
     };
   } catch (e) {
     return { error: `Error loading results: ${e.message}` };
-  }
-}
-
-/**
- * Loads configuration from the active tournament workbook
- */
-function loadTournamentConfig() {
-  try {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const configSheet = ss.getSheetByName("Configuration Sheet");
-    if (!configSheet) {
-      return { error: "Configuration Sheet not found" };
-    }
-    // Read config data
-    const config = {
-      eventId: configSheet.getRange("G9").getValue(),
-    };
-    return config;
-  } catch (e) {
-    return { error: `Error loading config: ${e.message}` };
   }
 }
 
@@ -107,43 +79,6 @@ function determineTournamentWeights(groupName, metricName) {
   }
 
   return metricWeights;
-}
-
-/**
- * Validates a single tournament's predictions vs actual results
- */
-function validateSingleTournament() {
-  try {
-    const config = loadTournamentConfig();
-    const predictions = loadTournamentPredictions();
-    const results = loadTournamentResults();
-    if (predictions.error || results.error) {
-      return { error: predictions.error || results.error };
-    }
-
-    // Determine tournament weights
-    const weights = determineTournamentWeights();
-
-    // Match predictions to results
-    const matchedPlayers = [];
-    predictions.predictions.forEach(pred => {
-      const result = results.results.find(r => r.dgId === pred.dgId);
-      if (result) {
-        matchedPlayers.push({
-          ...pred,
-          finish: result.finish,
-          weights: weights
-        });
-      }
-    });
-
-    return {
-      matchedPlayers,
-      weights
-    };
-  } catch (e) {
-    return { error: `Error validating tournament: ${e.message}` };
-  }
 }
 
 /**
@@ -339,15 +274,29 @@ function getMetricGroup(metricName) {
   return null;
 }
 
-// Add logging inside getG9WithRetry
-function getG9WithRetry(sheet, maxAttempts = 3, delayMs = 200) {
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    let value = sheet.getRange("G9").getValue();
-    Logger.log(`getG9WithRetry attempt ${attempt}:`, value);
-    if (value !== null && value !== undefined && value !== "") {
-      return value;
-    }
-    Utilities.sleep(delayMs);
-    }
-  return null;
+
+function setEventId(eventId) {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('EVENT_ID', eventId);
+  console.log(`Event ID set to: ${getEventId()}`);
+  return true
+}
+
+function getEventId() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  var eventId = scriptProperties.getProperty('EVENT_ID');
+  return eventId;
+}
+
+function setYear(year) {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  scriptProperties.setProperty('YEAR', year);
+  console.log(`Year set to: ${getYear()}`);
+  return true;
+}
+
+function getYear() {
+  const scriptProperties = PropertiesService.getScriptProperties();
+  const year = scriptProperties.getProperty('YEAR');
+  return year;
 }
