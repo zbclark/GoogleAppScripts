@@ -283,7 +283,9 @@ const parseConfigSheet = (filePath) => {
       weight: weightsByName[metricName] || 0
     }));
 
-    const groupWeight = Object.values(weightsByName).reduce((sum, w) => sum + (Number.isFinite(w) ? w : 0), 0);
+    // Use the group weight from column Q, not the sum of metric weights
+    const groupWeight = groupsByName[groupName]?.groupWeightFromSheet ?? 
+      Object.values(weightsByName).reduce((sum, w) => sum + (Number.isFinite(w) ? w : 0), 0);
 
     return {
       name: groupName,

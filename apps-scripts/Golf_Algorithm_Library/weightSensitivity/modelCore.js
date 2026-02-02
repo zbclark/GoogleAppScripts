@@ -2236,34 +2236,9 @@ function aggregatePlayerData(fieldDataParam, historicalData, approachData, metri
         const dgId = row.dg_id;
         if (!dgId || !players[dgId]) continue;
 
-        // Define the column order as in your CSV
-const columnOrder = [
-        'dg_id', 'player_name', 'tour', 'season', 'year', 'event_id', 'event_name', 'event_date',
-        'course_name', 'course_num', 'fin_text', 'course_par', 'round_num', 'start_hole',
-        'teetime', 'score', 'birdies', 'bogies', 'pars',  'eagles_or_better', 'doubles_or_worse',
-        'driving_acc', 'driving_dist', 'gir', 'scrambling', 'great_shots', 'poor_shots',
-        'prox_fw', 'prox_rgh', 'sg_total', 'sg_t2g', 'sg_app', 'sg_arg', 'sg_putt', 'sg_ott',
-        'sg_categories', 'traditional_stats'
-];
-
-// Convert all values to numbers and handle errors
-const safeRow = columnOrder.map((key, index) => {
-  const cell = row[key];
-  if (index === 7) return new Date(cell); // Date column (H)
-  if (index === 14) return cell; // Time column (O)
-  if (index === 10) { // Position column
-    if (typeof cell === 'string') {
-      if (cell.includes('T')) return parseInt(cell.replace('T', ''), 10);
-      if (cell === 'CUT' || cell === 'WD') return 100;
-    }
-    return cell ? Number(cell) : 100;
-  }
-  const num = Number(cell);
-  return isNaN(num) ? null : num;
-});
-            
-        const eventId = safeRow[5];
-        const roundDate = new Date(safeRow[7]);
+        // Use direct property access from row object instead of array indexing
+        const eventId = Number(row.event_id);
+        const roundDate = new Date(row.event_completed);
         const roundYear = roundDate.getFullYear();
         
         // Create year-specific event key
@@ -2281,10 +2256,10 @@ const safeRow = columnOrder.map((key, index) => {
             players[dgId].events[eventKey] = {
                 eventId: eventId, // Store eventId directly in the event object
                 year: roundYear,  // Store the year explicitly
-                position: safeRow[10], // fin_text
+                position: row.fin_text, // fin_text from CSV
                 isPuttingSpecific: eventType.isPuttingSpecific,
-                isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
-                categoryText: eventType.categoryText, // Added for clarity in debugging
+                isSimilar: eventType.isSimilar,
+                categoryText: eventType.categoryText,
                 rounds: []
             };
         }
@@ -2295,28 +2270,28 @@ const safeRow = columnOrder.map((key, index) => {
             date: roundDate,
             eventId: eventId,
             isPuttingSpecific: eventType.isPuttingSpecific,
-            isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
-            categoryText: eventType.categoryText, // Added for debugging
-            roundNum: safeRow[12],
+            isSimilar: eventType.isSimilar,
+            categoryText: eventType.categoryText,
+            roundNum: Number(row.round_num),
             metrics: {
-                scoringAverage: cleanMetricValue(safeRow[15]),
-                eagles: cleanMetricValue(safeRow[19]),
-                birdies: cleanMetricValue(safeRow[16]),
-                birdiesOrBetter: cleanMetricValue(safeRow[16]) + cleanMetricValue(safeRow[19]),
-                strokesGainedTotal: cleanMetricValue(safeRow[29]),
-                drivingDistance: cleanMetricValue(safeRow[22]),
-                drivingAccuracy: cleanMetricValue(safeRow[21], true),
-                strokesGainedT2G: cleanMetricValue(safeRow[30]),
-                strokesGainedApp: cleanMetricValue(safeRow[31]),
-                strokesGainedArg: cleanMetricValue(safeRow[32]),
-                strokesGainedOTT: cleanMetricValue(safeRow[33]),
-                strokesGainedPutt: cleanMetricValue(safeRow[34]),
-                greensInReg: cleanMetricValue(safeRow[23], true),
-                scrambling: cleanMetricValue(safeRow[24], true),
-                greatShots: cleanMetricValue(safeRow[25]),
-                poorShots: cleanMetricValue(safeRow[26]),
-                fairwayProx: cleanMetricValue(safeRow[27]),
-                roughProx: cleanMetricValue(safeRow[28])
+                scoringAverage: cleanMetricValue(row.score),
+                eagles: cleanMetricValue(row.eagles_or_better),
+                birdies: cleanMetricValue(row.birdies),
+                birdiesOrBetter: cleanMetricValue(row.eagles_or_better),
+                strokesGainedTotal: cleanMetricValue(row.sg_total),
+                drivingDistance: cleanMetricValue(row.driving_dist),
+                drivingAccuracy: cleanMetricValue(row.driving_acc, true),
+                strokesGainedT2G: cleanMetricValue(row.sg_t2g),
+                strokesGainedApp: cleanMetricValue(row.sg_app),
+                strokesGainedArg: cleanMetricValue(row.sg_arg),
+                strokesGainedOTT: cleanMetricValue(row.sg_ott),
+                strokesGainedPutt: cleanMetricValue(row.sg_putt),
+                greensInReg: cleanMetricValue(row.gir, true),
+                scrambling: cleanMetricValue(row.scrambling, true),
+                greatShots: cleanMetricValue(row.great_shots),
+                poorShots: cleanMetricValue(row.poor_shots),
+                fairwayProx: cleanMetricValue(row.prox_fw),
+                roughProx: cleanMetricValue(row.prox_rgh)
             }
         };
 
