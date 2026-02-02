@@ -2321,39 +2321,38 @@ function aggregatePlayerData(fieldDataParam, historicalData, approachData, metri
         player.puttingRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
     });
 
-    // Process approach metrics
+    // Process approach metrics - extract from CSV columns by name
     for (const row of approachData) {
-        
-        const dgId = row[0];
+        const dgId = row.dg_id;
         if (players[dgId]) {
             players[dgId].approachMetrics = {
             '<100': {
-                fwGIR: cleanMetricValue(row[16], true),  // Percentage
-                strokesGained: cleanMetricValue(row[21]),
-                shotProx: cleanMetricValue(row[20])
+                fwGIR: cleanMetricValue(row['50_100_fw_gir_rate'], true),
+                strokesGained: cleanMetricValue(row['50_100_fw_sg_per_shot']),
+                shotProx: cleanMetricValue(row['50_100_fw_proximity_per_shot'])
             },
             '<150': {
-                fwGIR: cleanMetricValue(row[2], true),   // Percentage
-                fwStrokesGained: cleanMetricValue(row[7]),
-                fwShotProx: cleanMetricValue(row[6]),
-                roughGIR: cleanMetricValue(row[37], true), // Percentage
-                roughStrokesGained: cleanMetricValue(row[42]),
-                roughShotProx: cleanMetricValue(row[41])
+                fwGIR: cleanMetricValue(row['100_150_fw_gir_rate'], true),
+                fwStrokesGained: cleanMetricValue(row['100_150_fw_sg_per_shot']),
+                fwShotProx: cleanMetricValue(row['100_150_fw_proximity_per_shot']),
+                roughGIR: cleanMetricValue(row['under_150_rgh_gir_rate'], true),
+                roughStrokesGained: cleanMetricValue(row['under_150_rgh_sg_per_shot']),
+                roughShotProx: cleanMetricValue(row['under_150_rgh_proximity_per_shot'])
             },
             '>150 - Rough': {
-                roughGIR: cleanMetricValue(row[23], true), // Percentage
-                roughStrokesGained: cleanMetricValue(row[28]),
-                roughShotProx: cleanMetricValue(row[27])
+                roughGIR: cleanMetricValue(row['over_150_rgh_gir_rate'], true),
+                roughStrokesGained: cleanMetricValue(row['over_150_rgh_sg_per_shot']),
+                roughShotProx: cleanMetricValue(row['over_150_rgh_proximity_per_shot'])
             },
             '<200': {
-                fwGIR: cleanMetricValue(row[9], true),   // Percentage
-                fwStrokesGained: cleanMetricValue(row[7]),
-                fwShotProx: cleanMetricValue(row[6])
+                fwGIR: cleanMetricValue(row['150_200_fw_gir_rate'], true),
+                fwStrokesGained: cleanMetricValue(row['150_200_fw_sg_per_shot']),
+                fwShotProx: cleanMetricValue(row['150_200_fw_proximity_per_shot'])
             },
             '>200': {
-                fwGIR: cleanMetricValue(row[30], true),  // Percentage
-                fwStrokesGained: cleanMetricValue(row[35]),
-                fwShotProx: cleanMetricValue(row[34])
+                fwGIR: cleanMetricValue(row['over_200_fw_gir_rate'], true),
+                fwStrokesGained: cleanMetricValue(row['over_200_fw_sg_per_shot']),
+                fwShotProx: cleanMetricValue(row['over_200_fw_proximity_per_shot'])
             }
             };
         }

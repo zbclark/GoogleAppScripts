@@ -1,0 +1,30 @@
+{
+  "lastUpdated": "2026-02-02",
+  "note": "Reference output from Node.js modelCore.js using CSV historical data - used for validating test parity",
+  "testDate": "CSV metric loading fix",
+  "results": [
+    {
+      "dgId": "18417",
+      "name": "Scheffler, Scottie",
+      "rank": 6,
+      "groupScores": {
+        "Driving Performance": 1.976,
+        "Approach - Short (<100)": 1.0,
+        "Approach - Mid (100-150)": 1.371,
+        "Approach - Long (150-200)": 1.925,
+        "Approach - Very Long (>200)": 2.700,
+        "Putting": 1.238,
+        "Around the Green": 0.366,
+        "Scoring": -0.071,
+        "Course Management": 3.158
+      },
+      "weightedScore (calc)": 1.538,
+      "weightedScore (model)": 0.607,
+      "refinedWeightedScore": 0.200,
+      "war": -0.265,
+      "dataCoverage": 0.289,
+      "confidenceFactor": 0.769,
+      "notes": "CSV-based reference from test with Scheffler metrics loaded from historical data CSV"
+    }
+  ]
+}
