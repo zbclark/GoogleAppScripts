@@ -16,14 +16,15 @@ function loadCsv(filePath, options = {}) {
     const content = fs.readFileSync(absPath, 'utf8');
     const lines = content.split(/\r?\n/);
     
+  // Default header row is 5 (index 4) - look for the line with actual column names
   let headerLineIdx = 4;
   if (typeof options.headerRow === 'number') {
     headerLineIdx = options.headerRow;
   } else {
-    // Fallback: auto-detect as before
+    // Auto-detect: find the line that contains 'dg_id' or other known column headers
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line && line.split(',').length > 5 && !/^\s*#/.test(line)) {
+      if (line.includes('dg_id') || line.includes('player_name')) {
         headerLineIdx = i;
         break;
       }

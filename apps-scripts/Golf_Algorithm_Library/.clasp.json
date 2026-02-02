@@ -12,5 +12,16 @@
     ".json"
   ],
   "filePushOrder": [],
-  "skipSubdirectories": false
+  "skipSubdirectories": false,
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/weightSensitivity/testModelParity.js",
+    "**/weightSensitivity/csvLoader.js",
+    "**/weightSensitivity/printSample.js",
+    "**/weightSensitivity/weightSensitivity.test.js",
+    "**/weightSensitivity/modelCore.js",
+    "**/weightSensitivity/modelRunner.js",
+    "**/weightSensitivity/phase3_WeightSensitivityScaffold.gs",
+    "**/coverage/**"
+  ]
 }

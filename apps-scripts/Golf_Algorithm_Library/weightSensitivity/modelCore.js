@@ -832,12 +832,9 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }, similarCou
  
           // Ensure non-negative values
           value = Math.max(0, value);
-        
-        // 3. Transform Scoring Average to Scoring Quality
-        } else if (metric.name === 'Scoring Average') {
-          const maxScore = METRIC_MAX_VALUES['Scoring Average'] || 74;
-          value = maxScore - value;
         }
+        // NOTE: Scoring Average NOT transformed - using raw values
+        // Lower score is better, so negative z-score means better than average
 
         const metricStats = groupStats[group.name]?.[metric.name];
         if (!metricStats) {

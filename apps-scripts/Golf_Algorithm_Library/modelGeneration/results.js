@@ -248,7 +248,7 @@ function getMetricGroups(configSheet) {
       weights: {
         "SG Total": configSheet.getRange("G23").getValue(),
         "Scoring Average": configSheet.getRange("H23").getValue(),
-        "Birdies Chances Created": configSheet.getRange("I23").getValue(),
+        "Birdie Chances Created": configSheet.getRange("I23").getValue(),
         "Approach <100 SG": configSheet.getRange("P17").getValue(),
         "Approach <150 FW SG": configSheet.getRange("P18").getValue(),
         "Approach <150 Rough SG": configSheet.getRange("P18").getValue(),
