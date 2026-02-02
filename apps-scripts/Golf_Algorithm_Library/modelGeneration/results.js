@@ -293,6 +293,19 @@ function getMetricGroups(configSheet) {
     throw new Error("Invalid configuration format");
   }
 
+  // Retrieve group-level weights from column Q (Q16-Q24 for each group)
+  const groupWeightMap = {
+    "Driving Performance": configSheet.getRange("Q16").getValue() || 0,
+    "Approach - Short (<100)": configSheet.getRange("Q17").getValue() || 0,
+    "Approach - Mid (100-150)": configSheet.getRange("Q18").getValue() || 0,
+    "Approach - Long (150-200)": configSheet.getRange("Q19").getValue() || 0,
+    "Approach - Very Long (>200)": configSheet.getRange("Q20").getValue() || 0,
+    "Putting": configSheet.getRange("Q21").getValue() || 0,
+    "Around the Green": configSheet.getRange("Q22").getValue() || 0,
+    "Scoring": configSheet.getRange("Q23").getValue() || 0,
+    "Course Management": configSheet.getRange("Q24").getValue() || 0
+  };
+
   // Convert to final format with proper error handling
   try {
     return {
@@ -305,7 +318,7 @@ function getMetricGroups(configSheet) {
             index,
             weight: groupData.weights[metricName] || 0
           })),
-          weight: Object.values(groupData.weights).reduce((sum, w) => sum + w, 0)
+          weight: groupWeightMap[groupName] || Object.values(groupData.weights).reduce((sum, w) => sum + w, 0)
         })),
       pastPerformance: configuration["Past Performance"]
     };
