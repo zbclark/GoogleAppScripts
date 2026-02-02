@@ -29,292 +29,6 @@ const METRIC_TYPES = {
   COUNT: new Set(['Great Shots', 'Birdies or Better']),
   COMPOSITE: new Set(['Birdie Chances Created'])
 };
-
-function generatePlayerRankings() {
-  const ss = SpreadsheetApp.getActiveSpreadsheet();
-  const configSheet = ss.getSheetByName("Configuration Sheet");
-  const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
-
-  // Clear previous output
-  outputSheet.clearContents().clearFormats();
-
-  // 1. Get Configuration Values
-  const metricConfig = getMetricGroups(configSheet);
-  const metricGroups = metricConfig.groups;
-  const pastPerformance = metricConfig.pastPerformance;
-
-  // Add this validation after getting metricConfig:
-  if (!metricConfig.pastPerformance.currentEventId) {
-    throw new Error("Event ID not found in G10");
-  }
-
-  const metricLabels = [
-  // Historical Metrics (17)
-  "SG Total", "Driving Distance", "Driving Accuracy",
-  "SG T2G", "SG Approach", "SG Around Green",
-  "SG OTT", "SG Putting", "Greens in Regulation",
-  "Scrambling", "Great Shots", "Poor Shots", 
-  "Scoring Average", "Birdies or Better", "Birdie Chances Created",
-  "Fairway Proximity", "Rough Proximity",
-  
-  // Approach Metrics (18)
-  "Approach <100 GIR", "Approach <100 SG", "Approach <100 Prox",
-  "Approach <150 FW GIR", "Approach <150 FW SG", "Approach <150 FW Prox",
-  "Approach <150 Rough GIR", "Approach <150 Rough SG", "Approach <150 Rough Prox",
-  "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
-  "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
-  "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox"
-  ];
-
-  // 2. Aggregate Player Data - FIXED INITIALIZATION
-  const players = aggregatePlayerData(metricGroups); // Properly declared with const
-  
-  // 3. Calculate Metrics and Apply Weights
-  const rankedPlayers = calculatePlayerMetrics(players, {
-    groups: metricGroups,
-    pastPerformance: pastPerformance
-  });
-
-  const processedData = rankedPlayers.players;
-  const groupStats = rankedPlayers.groupStats || {};
-
-  // After calculating in calculatePlayerMetrics
-  const cacheData = JSON.stringify({
-    players: processedData,
-    groupStats: groupStats,
-    timestamp: new Date().getTime()
-  });
-  PropertiesService.getScriptProperties().setProperty("playerMetricsCache", cacheData);
-
-
-  // 4. Sort and Prepare Output
-  const sortedData = prepareRankingOutput(processedData, metricLabels);
-
-  // 5. Write to Sheet
-  writeRankingOutput(outputSheet, sortedData, metricLabels, metricGroups, groupStats);
-
-  // 6. Create Debug Sheet with calculation breakdown - USE SORTED DATA WITH RANKS
-  createDebugCalculationSheet(ss, sortedData, metricGroups, groupStats);
-
-  return "Rankings generated successfully!";
-}
-
-function getMetricGroups(configSheet) {
-
-  // Read past performance configuration
-  const pastPerformanceEnabled = configSheet.getRange("F27").getValue() === "Yes";
-  const pastPerformanceWeight = configSheet.getRange("G27").getValue() || 0;
-  
-  // Get current tournament ID
-  const currentEventId = configSheet.getRange("G9").getValue();
-
-  // Master index registry - single source of truth
-  const METRIC_INDICES = {
-    // Historical Metrics (0-16)
-    "SG Total": 0,
-    "Driving Distance": 1,
-    "Driving Accuracy": 2,
-    "SG T2G": 3,
-    "SG Approach": 4,
-    "SG Around Green": 5,
-    "SG OTT": 6,
-    "SG Putting": 7,
-    "Greens in Regulation": 8,
-    "Scrambling": 9,
-    "Great Shots": 10,
-    "Poor Shots": 11,
-    "Scoring Average": 12,
-    "Birdies or Better": 13,
-    "Birdie Chances Created": 14,
-    "Fairway Proximity": 15,
-    "Rough Proximity": 16,
-    
-    // Approach Metrics (17-34)
-    "Approach <100 GIR": 17,
-    "Approach <100 SG": 18,
-    "Approach <100 Prox": 19,
-    "Approach <150 FW GIR": 20,
-    "Approach <150 FW SG": 21,
-    "Approach <150 FW Prox": 22,
-    "Approach <150 Rough GIR": 23,
-    "Approach <150 Rough SG": 24,
-    "Approach <150 Rough Prox": 25,
-    "Approach >150 Rough GIR": 26,
-    "Approach >150 Rough SG": 27,
-    "Approach >150 Rough Prox": 28,
-    "Approach <200 FW GIR": 29,
-    "Approach <200 FW SG": 30,
-    "Approach <200 FW Prox": 31,
-    "Approach >200 FW GIR": 32,
-    "Approach >200 FW SG": 33,
-    "Approach >200 FW Prox": 34
-  };
-
-  const configuration = {
-    "Driving Performance": {
-      metrics: {
-        "Driving Distance": METRIC_INDICES["Driving Distance"],
-        "Driving Accuracy": METRIC_INDICES["Driving Accuracy"],
-        "SG OTT": METRIC_INDICES["SG OTT"]
-      },
-      weights: {
-        "Driving Distance": configSheet.getRange("G16").getValue(),
-        "Driving Accuracy": configSheet.getRange("H16").getValue(),
-        "SG OTT": configSheet.getRange("I16").getValue()
-      }
-    },
-    "Approach - Short (<100)": {
-      metrics: {
-        "Approach <100 GIR": METRIC_INDICES["Approach <100 GIR"],
-        "Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
-        "Approach <100 Prox": METRIC_INDICES["Approach <100 Prox"]
-      },
-      weights: {
-        "Approach <100 GIR": configSheet.getRange("G17").getValue(),
-        "Approach <100 SG": configSheet.getRange("H17").getValue(),
-        "Approach <100 Prox": configSheet.getRange("I17").getValue()
-      }
-    },
-    "Approach - Mid (100-150)": {
-      metrics: {
-        "Approach <150 FW GIR": METRIC_INDICES["Approach <150 FW GIR"],
-        "Approach <150 FW SG": METRIC_INDICES["Approach <150 FW SG"],
-        "Approach <150 FW Prox": METRIC_INDICES["Approach <150 FW Prox"],
-        "Approach <150 Rough GIR": METRIC_INDICES["Approach <150 Rough GIR"],
-        "Approach <150 Rough SG": METRIC_INDICES["Approach <150 Rough SG"],
-        "Approach <150 Rough Prox": METRIC_INDICES["Approach <150 Rough Prox"]
-      },
-      weights: {
-        "Approach <150 FW GIR": configSheet.getRange("G18").getValue(),
-        "Approach <150 FW SG": configSheet.getRange("H18").getValue(),
-        "Approach <150 FW Prox": configSheet.getRange("I18").getValue(),
-        "Approach <150 Rough GIR": configSheet.getRange("J18").getValue(),
-        "Approach <150 Rough SG": configSheet.getRange("K18").getValue(),
-        "Approach <150 Rough Prox": configSheet.getRange("L18").getValue()
-      }
-    },
-    "Approach - Long (150-200)": {
-      metrics: {
-        "Approach <200 FW GIR": METRIC_INDICES["Approach <200 FW GIR"],
-        "Approach <200 FW SG": METRIC_INDICES["Approach <200 FW SG"],
-        "Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"]
-      },
-      weights: {
-        "Approach <200 FW GIR": configSheet.getRange("G19").getValue(),
-        "Approach <200 FW SG": configSheet.getRange("H19").getValue(),
-        "Approach <200 FW Prox": configSheet.getRange("I19").getValue()
-      }
-    },
-    "Approach - Very Long (>200)": {
-      metrics: {
-        "Approach >200 FW GIR": METRIC_INDICES["Approach >200 FW GIR"],
-        "Approach >200 FW SG": METRIC_INDICES["Approach >200 FW SG"],
-        "Approach >200 FW Prox": METRIC_INDICES["Approach >200 FW Prox"]
-      },
-      weights: {
-        "Approach >200 FW GIR": configSheet.getRange("G20").getValue(),
-        "Approach >200 FW SG": configSheet.getRange("H20").getValue(),
-        "Approach >200 FW Prox": configSheet.getRange("I20").getValue()
-      }
-    },
-    "Putting": {
-      metrics: {
-        "SG Putting": METRIC_INDICES["SG Putting"]
-      },
-      weights: {
-        "SG Putting": configSheet.getRange("G21").getValue()
-      }
-    },
-    "Around the Green": {
-      metrics: {
-        "SG Around Green": METRIC_INDICES["SG Around Green"]
-      },
-      weights: {
-        "SG Around Green": configSheet.getRange("G22").getValue()
-      }
-    },
-    "Scoring": {
-      metrics: {
-        "SG Total": METRIC_INDICES["SG Total"],
-        "Scoring Average": METRIC_INDICES["Scoring Average"],
-        "Birdie Chances Created": METRIC_INDICES["Birdie Chances Created"],
-        "Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
-        "Approach <150 FW SG": METRIC_INDICES["Approach <150 FW SG"],
-        "Approach <150 Rough SG": METRIC_INDICES["Approach <150 Rough SG"],
-        "Approach <200 FW SG": METRIC_INDICES["Approach <200 FW SG"],
-        "Approach >200 FW SG": METRIC_INDICES["Approach >200 FW SG"],
-        "Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"]
-      },
-      weights: {
-        "SG Total": configSheet.getRange("G23").getValue(),
-        "Scoring Average": configSheet.getRange("H23").getValue(),
-        "Birdies Chances Created": configSheet.getRange("I23").getValue(),
-        "Approach <100 SG": configSheet.getRange("P17").getValue(),
-        "Approach <150 FW SG": configSheet.getRange("P18").getValue(),
-        "Approach <150 Rough SG": configSheet.getRange("P18").getValue(),
-        "Approach <200 FW SG": configSheet.getRange("P19").getValue(),
-        "Approach >200 FW SG": configSheet.getRange("P20").getValue(),
-        "Approach >150 Rough SG": configSheet.getRange("P20").getValue()
-      }
-    },
-    "Course Management": {
-      metrics: {
-        "Scrambling": METRIC_INDICES["Scrambling"],
-        "Great Shots": METRIC_INDICES["Great Shots"],
-        "Poor Shots": METRIC_INDICES["Poor Shots"],
-        "Approach <100 Prox": METRIC_INDICES["Approach <100 Prox"],
-        "Approach <150 FW Prox": METRIC_INDICES["Approach <150 FW Prox"],
-        "Approach <150 Rough Prox": METRIC_INDICES["Approach <150 Rough Prox"],
-        "Approach >150 Rough Prox": METRIC_INDICES["Approach >150 Rough Prox"],
-        "Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"],
-        "Approach >200 FW Prox": METRIC_INDICES["Approach >200 FW Prox"]
-      },
-      weights: {
-        "Scrambling": configSheet.getRange("G24").getValue(),
-        "Great Shots": configSheet.getRange("H24").getValue(),
-        "Poor Shots": configSheet.getRange("I24").getValue(),
-        "Approach <100 Prox": configSheet.getRange("J24").getValue(),
-        "Approach <150 FW Prox": configSheet.getRange("K24").getValue(),
-        "Approach <150 Rough Prox": configSheet.getRange("L24").getValue(),
-        "Approach >150 Rough Prox": configSheet.getRange("M24").getValue(),
-        "Approach <200 FW Prox": configSheet.getRange("N24").getValue(),
-        "Approach >200 FW Prox": configSheet.getRange("O24").getValue()
-      }
-    },
-    "Past Performance": {
-      enabled: pastPerformanceEnabled,
-      weight: pastPerformanceWeight,
-      currentEventId: currentEventId
-    }
-  };
-
-  // Validate configuration structure
-  if (!configuration || typeof configuration !== "object") {
-    throw new Error("Invalid configuration format");
-  }
-
-  // Convert to final format with proper error handling
-  try {
-    return {
-      groups: Object.entries(configuration)
-        .filter(([key]) => key !== "Past Performance")
-        .map(([groupName, groupData]) => ({
-          name: groupName,
-          metrics: Object.entries(groupData.metrics).map(([metricName, index]) => ({
-            name: metricName,
-            index,
-            weight: groupData.weights[metricName] || 0
-          })),
-          weight: Object.values(groupData.weights).reduce((sum, w) => sum + w, 0)
-        })),
-      pastPerformance: configuration["Past Performance"]
-    };
-  } catch (e) {
-    console.error("Configuration processing failed:", e);
-    throw new Error("Invalid metric group configuration format");
-  }
-}
-
 // Helper function to convert per-shot SG values to per-round values
 function normalizeApproachSG(perShotValue) {
   // Average number of approach shots per round on PGA Tour
@@ -509,9 +223,7 @@ function applyTrends(updatedMetrics, trends, playerName) {
     const originalValue = adjustedMetrics[adjustedIndex];
     adjustedMetrics[adjustedIndex] = originalValue + trendImpact;
     
-    console.log(`${playerName}: Applied trend to ${metricName} (original idx: ${originalIndex}, adjusted idx: ${adjustedIndex}): 
-      ${originalValue.toFixed(3)} → ${adjustedMetrics[adjustedIndex].toFixed(3)} 
-      (trend: ${trends[originalIndex].toFixed(3)}, impact: ${trendImpact.toFixed(3)})`);
+    console.log(`${playerName}: Applied trend to ${metricName} (original idx: ${originalIndex}, adjusted idx: ${adjustedIndex}): ${originalValue.toFixed(3)} → ${adjustedMetrics[adjustedIndex].toFixed(3)} (trend: ${trends[originalIndex].toFixed(3)}, impact: ${trendImpact.toFixed(3)})`);
   }
   
   return adjustedMetrics;
@@ -521,7 +233,7 @@ function applyTrends(updatedMetrics, trends, playerName) {
 function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, groups) {
   let war = 0;
   
-  console.log(`${playerName}: Starting WAR calculation with ${validatedKpis.length} KPIs`);
+  //console.log(`${playerName}: Starting WAR calculation with ${validatedKpis.length} KPIs`);
   
   // First, validate all inputs to the WAR calculation
   if (!Array.isArray(adjustedMetrics) || !Array.isArray(validatedKpis)) {
@@ -591,17 +303,17 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
         war += kpiContribution;
       }
       
-      console.log(`${playerName} - KPI: ${kpi.name}, Value: ${kpiValue.toFixed(3)}, Weight: ${kpi.weight.toFixed(4)}, Contribution: ${kpiContribution.toFixed(4)}`);
+      //console.log(`${playerName} - KPI: ${kpi.name}, Value: ${kpiValue.toFixed(3)}, Weight: ${kpi.weight.toFixed(4)}, Contribution: ${kpiContribution.toFixed(4)}`);
     } catch (e) {
       console.error(`Error processing KPI for ${playerName}: ${e.message}`);
     }
   });
   
-  console.log(`${playerName}: Final WAR: ${war.toFixed(4)}`);
+  //console.log(`${playerName}: Final WAR: ${war.toFixed(4)}`);
   return war;
 }
 
-// Helper function to calculate historical impact
+// Helper function to calculate historical impact - NOT USED
 function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
   // Access globals from parent scope
   const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
@@ -612,8 +324,8 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
   // If no current event ID or no player events, return 0
   if (!CURRENT_EVENT_ID || !playerEvents) return 0;
 
-  console.log(`===== Beginning historical impact calc for ${playerName} at event ${CURRENT_EVENT_ID} =====`);
-  console.log(`===== Player events keys: ${Object.keys(playerEvents).join(', ')} =====`);
+  //console.log(`===== Beginning historical impact calc for ${playerName} at event ${CURRENT_EVENT_ID} =====`);
+  //console.log(`===== Player events keys: ${Object.keys(playerEvents).join(', ')} =====`);
   
   const currentYear = new Date().getFullYear();
   const pastEvents = [];
@@ -635,12 +347,12 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
     }
   }
 
-  console.log(`Found ${matchingEvents.length} matching historical events for event ${CURRENT_EVENT_ID}`);
+  //console.log(`Found ${matchingEvents.length} matching historical events for event ${CURRENT_EVENT_ID}`);
 
   // DUMP FULL RAW DATA FOR MATCHING EVENTS
   for (let i = 0; i < matchingEvents.length; i++) {
     const [key, event] = matchingEvents[i];
-    console.log(`\n========== EVENT #${i + 1} (${event.year}) ==========`);
+    //console.log(`\n========== EVENT #${i + 1} (${event.year}) ==========`);
     console.log(`Event key: ${key}, eventId: ${event.eventId}, year: ${event.year}, position: ${event.position}`);
 
     // Log all top-level keys in the event
@@ -813,19 +525,15 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
   return finalImpact;
 }
  
-function calculatePlayerMetrics(players, { groups, pastPerformance }) {
+function calculatePlayerMetrics(players, { groups, pastPerformance }, similarCoursesWeight, puttingCoursesWeight, courseSetupWeights) {
+    // ...existing code...
   // Define constants
   const TREND_THRESHOLD = 0.005; // Minimum trend value to consider significant
-  const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
  
   console.log(`** CURRENT_EVENT_ID = "${CURRENT_EVENT_ID}" **`);
- 
-  // Read the weights from configuration or use defaults
-  const similarCoursesWeight = configSheet.getRange("H33").getValue() || 0.7;
-  const puttingCoursesWeight = configSheet.getRange("H40").getValue() || 0.8;
 
   // Fix group weights before using them
   groups = groups.map(group => {
@@ -860,6 +568,8 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
  
   // 1. Extract Metric Values
   const allMetricValues = Object.entries(players).reduce((acc, [dgId, data]) => {
+    // ...existing code...
+
     const historicalAvgs = calculateHistoricalAverages(
       data.historicalRounds,
       data.similarRounds,
@@ -869,13 +579,19 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         puttingWeight: puttingCoursesWeight
       }
     );
-    
+
     // Calculate approach metrics
     const approachMetrics = getApproachMetrics(data.approachMetrics);
- 
+
     // Combine historical and approach metrics
     const combinedMetrics = [...historicalAvgs, ...approachMetrics];
- 
+
+    // === NEW DIAGNOSTIC LOGGING ===
+    console.log(`METRIC DIAGNOSTICS: Player ${data.name} (${dgId})`);
+    console.log('  Raw historicalAvgs:', historicalAvgs);
+    console.log('  Raw approachMetrics:', approachMetrics);
+    console.log('  Combined metrics array:', combinedMetrics);
+
     // Store the combined metrics in the accumulator
     acc[dgId] = combinedMetrics;
     return acc;
@@ -889,14 +605,6 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
   // 2. Calculate Group Statistics (Mean and Standard Deviation)
   const groupStats = {};
   const problematicMetrics = new Set(['Approach >200 FW Prox']);
-  
-  // Read course setup weights from configuration sheet
-  const courseSetupWeights = {
-    under100: configSheet.getRange("P17").getValue(),
-    from100to150: configSheet.getRange("P18").getValue(),
-    from150to200: configSheet.getRange("P19").getValue(),
-    over200: configSheet.getRange("P20").getValue()
-  };
   
   console.log("Course setup weights:", courseSetupWeights);
   
@@ -1015,16 +723,6 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
  
   const processedPlayers = Object.entries(players).map(([dgId, data]) => {
   // Get similar course event IDs from configuration
-  const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
-  const similarCourseRange = configSheet.getRange("G33:G37").getValues();
-  
-  // Process the similar course IDs
-  const similarCourseIds = similarCourseRange
-    .flat()
-    .filter(String)
-    .flatMap(cell => cell.toString().split(','))
-    .map(id => id.trim())
-    .filter(id => id);
   
   // Get ALL tournament finishes (not just similar courses) for Top 5/Top 10 counting
   const allTournamentFinishes = Object.values(data.events)
@@ -1748,522 +1446,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     };
   });
 
-  cacheGroupStats(groupStats);
-
   return {
     players: processedPlayers,
     groupStats: groupStats
   };
-}
-
-
-
-function validateKpiWeights(normalizedKpis) {
-  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + kpi.weight, 0);
-  
-  // Check if weights sum to approximately 1.0 (allowing for small floating point errors)
-  if (Math.abs(totalWeight - 1.0) > 0.01) {
-    console.warn(`KPI weights sum to ${totalWeight.toFixed(3)}, not 1.0. Normalizing weights.`);
-    
-    // Normalize the weights to ensure they sum to 1.0
-    return normalizedKpis.map(kpi => ({
-      ...kpi,
-      weight: kpi.weight / totalWeight
-    }));
-  }
-  
-  return normalizedKpis;
-}
-
-
-// Helper function to get coverage confidence level
-function getCoverageConfidence(dataCoverage) {
-  // Validate input
-  if (typeof dataCoverage !== 'number' || isNaN(dataCoverage)) {
-    console.warn(`Invalid dataCoverage value: ${dataCoverage}, using default confidence of 1.0`);
-    return 1.0;
-  }
-  
-  // Ensure coverage is between 0 and 1
-  const validCoverage = Math.max(0, Math.min(1, dataCoverage));
-  
-  // Use a simple curve where confidence increases with data coverage
-  // This gives 0.6 at 50% coverage, 0.8 at 75% coverage, 1.0 at 100% coverage
-  const confidence = Math.pow(validCoverage, 0.5);
-  
-  // Ensure we never return less than 0.5 confidence
-  const finalConfidence = 0.5 + (confidence * 0.5);
-  
-  // Final validation to ensure no NaN is returned
-  if (isNaN(finalConfidence)) {
-    console.warn(`Calculated invalid confidence from coverage ${dataCoverage}, using default 1.0`);
-    return 1.0;
-  }
-  
-  return finalConfidence;
-}
-
-function calculateMetricTrends(finishes) {
-  const TOTAL_ROUNDS = 24;
-  const LAMBDA = 0.2 // Exponential decay factor
-  const TREND_THRESHOLD = 0.005;
-  const SMOOTHING_WINDOW = 3; // Size of smoothing window
-
-  // Sort rounds by date descending
-  const sortedRounds = (finishes || []).sort((a, b) => 
-    new Date(b.date) - new Date(a.date) || b.roundNum - a.roundNum
-  );
-
-  // Get most recent valid rounds
-  const recentRounds = sortedRounds.slice(0, TOTAL_ROUNDS).filter(round => {
-    const isValid = round.metrics?.scoringAverage !== undefined;
-    if (!isValid) console.log('Filtering invalid round:', round.date);
-    return isValid;
-  });
-
-  // Return zeros if insufficient data
-  if (recentRounds.length < 15) return Array(16).fill(0);
-
-  // Complete metric mapping with all indices
-  const metricMap = {
-    0: 'strokesGainedTotal',
-    1: 'drivingDistance',
-    2: 'drivingAccuracy',
-    3: 'strokesGainedT2G',
-    4: 'strokesGainedApp',
-    5: 'strokesGainedArg',
-    6: 'strokesGainedOTT',
-    7: 'strokesGainedPutt',
-    8: 'greensInReg',
-    9: 'scrambling',
-    10: 'greatShots',
-    11: 'poorShots',
-    12: 'scoringAverage',
-    13: 'birdiesOrBetter',
-    14: 'fairwayProx',
-    15: 'roughProx'
-  };
-
-  return Array(16).fill().map((_, metricIndex) => {
-    const metricName = metricMap[metricIndex];
-    if (!metricName) return 0;
-
-    // Extract metric values in chronological order (oldest to newest)
-    const values = recentRounds
-      .slice()
-      .reverse() // Oldest first for regression calculation
-      .map(round => round.metrics[metricName])
-      .filter(value => typeof value === 'number' && !isNaN(value));
-
-    // Skip if not enough data points
-    if (values.length < 10) return 0;
-
-    // Apply smoothing before calculating trend
-    const smoothedValues = smoothData(values, SMOOTHING_WINDOW);
-    
-    // Calculate weighted linear regression with smoothed values
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumWeights = 0;
-    
-    smoothedValues.forEach((value, index) => {
-      const x = index + 1; // Time period (1 = oldest)
-      const y = value;
-      const weight = Math.exp(-LAMBDA * (smoothedValues.length - index)); // More weight to recent
-      
-      sumX += weight * x;
-      sumY += weight * y;
-      sumXY += weight * x * y;
-      sumX2 += weight * x * x;
-      sumWeights += weight;
-    });
-
-    // Calculate regression slope (trend)
-    const numerator = sumWeights * sumXY - sumX * sumY;
-    const denominator = sumWeights * sumX2 - sumX * sumX;
-    const slope = denominator !== 0 ? numerator / denominator : 0;
-    
-    // Apply significance threshold
-    const finalTrend = Math.abs(slope) > TREND_THRESHOLD 
-      ? Number(slope.toFixed(3))
-      : 0;
-
-    return finalTrend;
-  });
-}
-
-// Function to apply moving average smoothing
-function smoothData(values, windowSize) {
-  if (values.length < windowSize) return values;
-      
-    const smoothed = [];
-    for (let i = 0; i < values.length; i++) {
-      // Calculate window boundaries, handling edge cases
-      const start = Math.max(0, i - Math.floor(windowSize/2));
-      const end = Math.min(values.length, i + Math.ceil(windowSize/2));
-        
-      // Calculate mean of values in window
-      let sum = 0;
-      for (let j = start; j < end; j++) {
-        sum += values[j];
-      }
-      smoothed.push(sum / (end - start));
-    }
-  return smoothed;
-}
-
-// Helper function to extract course IDs from a range
-function getSimilarCourseIds(sheet, rangeAddress) {
-  const range = sheet.getRange(rangeAddress);
-  const values = range.getValues();
-  
-  // Extract all IDs (handle both comma-separated lists and individual cells)
-  const courseIds = [];
-  
-  for (let row = 0; row < values.length; row++) {
-    for (let col = 0; col < values[row].length; col++) {
-      const cellValue = values[row][col];
-      if (cellValue) {
-        // Handle comma-separated IDs in a single cell
-        if (typeof cellValue === 'string' && cellValue.includes(',')) {
-          const ids = cellValue.split(',').map(id => id.trim()).filter(id => id);
-          courseIds.push(...ids);
-        } else {
-          // Handle single ID
-          courseIds.push(String(cellValue).trim());
-        }
-      }
-    }
-  }
-  
-  return courseIds.filter(id => id !== '');
-}
-
-function aggregatePlayerData(metricGroups) {
-    const ss = SpreadsheetApp.getActiveSpreadsheet();
-    const players = {};
-
-    // Extract metrics from metricGroups
-    const metrics = metricGroups.flatMap(group => group.metrics);
-
-    // Tournament Field Players
-    const tournamentSheet = ss.getSheetByName("Tournament Field");
-    const tournamentPlayers = tournamentSheet.getRange("B6:C" + tournamentSheet.getLastRow())
-        .getValues()
-        .filter(row => row[0] && row[1]);
-
-     // Configuration for similar courses and putting-specific courses
-    const configSheet = ss.getSheetByName("Configuration Sheet");
-    if (!configSheet) throw new Error("Configuration Sheet not found");
-    
-    // Get similar course IDs (both regular and putting-specific)
-    const regularSimilarCourses = getSimilarCourseIds(configSheet, "G33:G37");
-    const puttingSpecificCourses = getSimilarCourseIds(configSheet, "G40:G44");
-
-    console.log(`Regular similar courses: ${regularSimilarCourses.join(", ")}`);
-    console.log(`Putting-specific courses: ${puttingSpecificCourses.join(", ")}`);
-
-    // Updated player initialization
-    tournamentPlayers.forEach(([dgId, name]) => {
-      console.log(`Processing row: dgId=${dgId}, name=${name}`); // ADDED
-      if (!dgId) {
-        console.warn(`Skipping player "${name}" because dgId is missing in "Tournament Field" sheet.`);
-        return; // Skip to the next player
-      }
-      
-      players[dgId] = {
-        name: name,
-        dgId: dgId,
-        events: {}, // Changed from 'finishes' to event-based tracking
-        historicalRounds: [], // For trend analysis
-        similarRounds: [],
-        puttingRounds: [], // For putting-specific metrics
-        approachMetrics: {}
-    };
-    });
-
-    // Modified historical data processing
-    console.log("=== STARTING HISTORICAL DATA PROCESSING ===");
-    const historicalSheet = ss.getSheetByName("Historical Data");
-    if (!historicalSheet) throw new Error("Historical Data sheet not found");
-    
-    console.log("Historical Data sheet found, getting last row...");
-    const lastRow = historicalSheet.getLastRow();
-    console.log(`Historical Data sheet has ${lastRow} rows`);
-
-    // First pass: Gather all event metadata to identify event types
-    const eventMetadata = {};
-    console.log("Starting first pass to gather event metadata...");
-    historicalSheet.getRange("B6:AL" + historicalSheet.getLastRow())
-      .getValues()
-      .forEach(row => {
-        const eventId = row[5];
-          if (!eventId) return;
-            
-          if (!eventMetadata[eventId]) {
-          // A course can be both similar and putting-specific
-            const isSimilar = regularSimilarCourses.includes(eventId);
-            const isPutting = puttingSpecificCourses.includes(eventId);
-            
-            eventMetadata[eventId] = {
-                eventId: eventId,
-                isPuttingSpecific: isPutting,
-                isSimilar: isSimilar,
-                categoryText: (isPutting && isSimilar) ? "Both" :
-                              (isPutting) ? "Putting" :
-                              (isSimilar) ? "Similar" : "Regular"
-            };
-          }
-        });
-
-      console.log(`Processed ${Object.keys(eventMetadata).length} unique events`);
-      console.log(`Found ${Object.values(eventMetadata).filter(e => e.isPuttingSpecific).length} putting-specific events`);
-      console.log(`Found ${Object.values(eventMetadata).filter(e => e.isSimilar).length} similar events`);
-      console.log(`Found ${Object.values(eventMetadata).filter(e => e.isPuttingSpecific && e.isSimilar).length} events in both categories`);
-
-    console.log("Starting second pass to process player data...");
-    let roundsProcessed = 0;
-
-
-    // Second pass: Process all data with event type awareness
-    historicalSheet.getRange("B6:AL" + historicalSheet.getLastRow())
-    .getValues()
-    .forEach(row => {
-      const dgId = row[0];
-      if (!players[dgId]) return;
-      
-      roundsProcessed++;
-      if (roundsProcessed <= 5 || roundsProcessed % 100 === 0) {
-        console.log(`Processing round ${roundsProcessed} for player ${players[dgId].name} (ID: ${dgId})`);
-      }
-
-      // Convert all values to numbers and handle errors
-      const safeRow = row.map((cell, index) => {
-     
-        if (index === 7) return new Date(cell); // Date column (H)
-        if (index === 14) return cell; // Time column (O)
-
-         // Special handling for position column (index 10)
-
-        if (index === 10) { // Position column
-          if (typeof cell === 'string') {
-            if (cell.includes('T')) {
-              return parseInt(cell.replace('T', ''), 10);
-            }
-            if (cell === 'CUT' || cell === 'WD') return 100; // Treat as bad finish
-          }
-          return cell ? Number(cell) : 100;
-        }
-
-        const num = Number(cell);
-        return isNaN(num) ? null : num;
-      });
-        
-      const eventId = safeRow[5];
-      const roundDate = new Date(safeRow[7]);
-      const roundYear = roundDate.getFullYear();
-      
-      // Create year-specific event key
-      const eventKey = `${dgId}-${eventId}-${roundYear}`;
-
-      // Check if this is from a putting-specific or regular similar course
-      const eventType = eventMetadata[eventId] || { 
-        isPuttingSpecific: false, 
-        isSimilar: false,
-        categoryText: "Regular" 
-      };
-        
-      // Initialize event if not exists
-      if (!players[dgId].events[eventKey]) {
-          players[dgId].events[eventKey] = {
-              eventId: eventId, // Store eventId directly in the event object
-              year: roundYear,  // Store the year explicitly
-              position: safeRow[10], // fin_text
-              isPuttingSpecific: eventType.isPuttingSpecific,
-              isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
-              categoryText: eventType.categoryText, // Added for clarity in debugging
-              rounds: []
-          };
-      }
-
-      // Store round-level metrics in event
-      const roundData = {
-          playerName: players[dgId].name,
-          date: roundDate,
-          eventId: eventId,
-          isPuttingSpecific: eventType.isPuttingSpecific,
-          isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
-          categoryText: eventType.categoryText, // Added for debugging
-          roundNum: safeRow[12],
-          metrics: {
-              scoringAverage: cleanMetricValue(safeRow[15]),
-              eagles: cleanMetricValue(safeRow[19]),
-              birdies: cleanMetricValue(safeRow[16]),
-              birdiesOrBetter: cleanMetricValue(safeRow[16]) + cleanMetricValue(safeRow[19]),
-              strokesGainedTotal: cleanMetricValue(safeRow[29]),
-              drivingDistance: cleanMetricValue(safeRow[22]),
-              drivingAccuracy: cleanMetricValue(safeRow[21], true),
-              strokesGainedT2G: cleanMetricValue(safeRow[30]),
-              strokesGainedApp: cleanMetricValue(safeRow[31]),
-              strokesGainedArg: cleanMetricValue(safeRow[32]),
-              strokesGainedOTT: cleanMetricValue(safeRow[33]),
-              strokesGainedPutt: cleanMetricValue(safeRow[34]),
-              greensInReg: cleanMetricValue(safeRow[23], true),
-              scrambling: cleanMetricValue(safeRow[24], true),
-              greatShots: cleanMetricValue(safeRow[25]),
-              poorShots: cleanMetricValue(safeRow[26]),
-              fairwayProx: cleanMetricValue(safeRow[27]),
-              roughProx: cleanMetricValue(safeRow[28])
-          }
-      };
-
-      // Add round to the event
-      players[dgId].events[eventKey].rounds.push(roundData);
-
-      // Add round to appropriate collection (mutually exclusive categorization)
-      if (eventType.isPuttingSpecific) {
-          players[dgId].puttingRounds.push(roundData);
-          console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
-      } 
-      else if (eventType.isSimilar) {
-          players[dgId].similarRounds.push(roundData);
-          console.log(`Added similar course round for ${players[dgId].name}, event ${eventId}`);
-      }
-      else {
-          // Only add to historicalRounds if NOT similar or putting-specific
-          players[dgId].historicalRounds.push(roundData);
-      }
-      });
-
-      console.log(`COMPLETED: Processed ${roundsProcessed} total rounds from Historical Data`);
-      
-      // Post-processing for historical averages
-      Object.values(players).forEach(player => {
-          // Sort all rounds by date (most recent first)
-          player.historicalRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
-          player.similarRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
-          player.puttingRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
-          
-          // For debugging, report on all round counts
-          console.log(`Player ${player.name}: ${player.historicalRounds.length} historical rounds, ` +
-                      `${player.similarRounds.length} similar course rounds, ` +
-                      `${player.puttingRounds.length} putting-specific rounds`);
-      });
-
-  // Approach Skill Data
-  const approachSheet = ss.getSheetByName("Approach Skill");
-
-  approachSheet.getRange("B6:AS" + approachSheet.getLastRow())
-    .getValues()
-    .forEach(row => {
-      const dgId = row[0];
-      if (players[dgId]) {
-        players[dgId].approachMetrics = {
-          '<100': {
-            fwGIR: cleanMetricValue(row[16], true),  // Percentage
-            strokesGained: cleanMetricValue(row[21]),
-            shotProx: cleanMetricValue(row[20])
-          },
-          '<150': {
-            fwGIR: cleanMetricValue(row[2], true),   // Percentage
-            fwStrokesGained: cleanMetricValue(row[7]),
-            fwShotProx: cleanMetricValue(row[6]),
-            roughGIR: cleanMetricValue(row[37], true), // Percentage
-            roughStrokesGained: cleanMetricValue(row[42]),
-            roughShotProx: cleanMetricValue(row[41])
-          },
-          '>150 - Rough': {
-            roughGIR: cleanMetricValue(row[23], true), // Percentage
-            roughStrokesGained: cleanMetricValue(row[28]),
-            roughShotProx: cleanMetricValue(row[27])
-          },
-          '<200': {
-            fwGIR: cleanMetricValue(row[9], true),   // Percentage
-            fwStrokesGained: cleanMetricValue(row[7]),
-            fwShotProx: cleanMetricValue(row[6])
-          },
-          '>200': {
-            fwGIR: cleanMetricValue(row[30], true),  // Percentage
-            fwStrokesGained: cleanMetricValue(row[35]),
-            fwShotProx: cleanMetricValue(row[34])
-          }
-        };
-      }
-    });
-  
-  return players;
-}
-
-function getApproachMetrics(approachData) {
-  // Ensure each category has default values
-  const categories = {
-    '<100': { fwGIR: 0, strokesGained: 0, shotProx: 0 },
-    '<150': { 
-      fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0,
-      roughGIR: 0, roughStrokesGained: 0, roughShotProx: 0 
-    },
-    '>150 - Rough': { roughGIR: 0, roughStrokesGained: 0, roughShotProx: 0 },
-    '<200': { fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0 },
-    '>200': { fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0 }
-  };
-  
-  const safeData = Object.fromEntries(
-    Object.entries(categories).map(([key, defaults]) => [
-      key,
-      Object.fromEntries(
-        Object.entries(defaults).map(([subKey]) => {
-          // Get raw value
-          const rawValue = approachData[key]?.[subKey] || 0;
-          
-          // Apply normalization for SG values - convert per-shot to per-round
-          if (subKey.includes('SG') || subKey.includes('strokesGained') || 
-              subKey.includes('StrokesGained')) {
-            return [subKey, normalizeApproachSG(rawValue)];
-          }
-          
-          return [subKey, rawValue];
-        })
-      )
-    ])
-  );
-  
-  // Log sample values after normalization
-  if (approachData) {
-    console.log('Approach metrics conversion example:');
-    for (const [key, category] of Object.entries(safeData)) {
-      for (const [metric, value] of Object.entries(category)) {
-        if (metric.includes('SG') || metric.includes('strokesGained') || 
-            metric.includes('StrokesGained')) {
-          const originalValue = approachData[key]?.[metric] || 0;
-          console.log(`  ${key}.${metric}: ${originalValue.toFixed(3)} → ${value.toFixed(3)}`);
-        }
-      }
-    }
-  }
-
-  return [
-    // <100 metrics
-    safeData['<100'].fwGIR,
-    safeData['<100'].strokesGained,
-    safeData['<100'].shotProx,
-    // <150 metrics
-    safeData['<150'].fwGIR,
-    safeData['<150'].fwStrokesGained,
-    safeData['<150'].fwShotProx,
-    safeData['<150'].roughGIR,
-    safeData['<150'].roughStrokesGained,
-    safeData['<150'].roughShotProx,
-    // >150 rough metrics
-    safeData['>150 - Rough'].roughGIR,
-    safeData['>150 - Rough'].roughStrokesGained,
-    safeData['>150 - Rough'].roughShotProx,
-    // <200 metrics
-    safeData['<200'].fwGIR,
-    safeData['<200'].fwStrokesGained,
-    safeData['<200'].fwShotProx,
-    // >200 metrics
-    safeData['>200'].fwGIR,
-    safeData['>200'].fwStrokesGained,
-    safeData['>200'].fwShotProx
-  ];
 }
 
 function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 20) {
@@ -2418,21 +1604,14 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
  
   // Create standardized date strings for consistent sorting
   const prepareRounds = (rounds) => {
-    return rounds
-      .filter(round => round && round.metrics)
-      .sort((a, b) => {
-        // First convert dates to ISO string format for consistent comparison
-        const dateA = new Date(a.date).toISOString();
-        const dateB = new Date(b.date).toISOString();
-        
-        // Primary sort by date (newest first)
-        if (dateA !== dateB) {
-          return dateB.localeCompare(dateA);
-        }
-        // Secondary sort by round number (if dates are identical)
-        return b.roundNum - a.roundNum;
-      });
-  }
+  return (rounds || [])
+    .filter(r => r && r.date && !isNaN(new Date(r.date))) // Only keep rounds with valid dates
+    .map(r => ({
+      ...r,
+      date: new Date(r.date)
+    }))
+    .sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
+  };
  
   // Calculate weighted average for a set of values
   const calculateWeightedAverage = (values, decayFactor = lambda) => {
@@ -2621,7 +1800,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   return results;
 }
 
-function prepareRankingOutput(processedData) {
+function prepareRankingOutput(processedData, metricLabels) {
   // Constants for ranking calculations
   const CLOSE_SCORE_THRESHOLD = 0.05; // 5% difference threshold for considering scores "close"
   const WAR_WEIGHT = 0.3; // 30% weight given to WAR in the composite score
@@ -2741,8 +1920,6 @@ function prepareRankingOutput(processedData) {
   return sortedData;
 }
 
-
-
 function calculateMetricVolatility(metrics, trends) {
   if (!metrics || !trends) return 0.5; // Default medium volatility if data missing
   
@@ -2780,376 +1957,440 @@ function calculateMetricVolatility(metrics, trends) {
   return 0.1 + (volatility * 0.8);
 }
 
+function validateKpiWeights(normalizedKpis) {
+  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  
+  // Check if weights sum to approximately 1.0 (allowing for small floating point errors)
+  if (Math.abs(totalWeight - 1.0) > 0.01) {
+    console.warn(`KPI weights sum to ${totalWeight.toFixed(3)}, not 1.0. Normalizing weights.`);
+    
+    // Normalize the weights to ensure they sum to 1.0
+    return normalizedKpis.map(kpi => ({
+      ...kpi,
+      weight: kpi.weight / totalWeight
+    }));
+  }
+  
+  return normalizedKpis;
+}
 
+// Helper function to get coverage confidence level
+function getCoverageConfidence(dataCoverage) {
+  // Validate input
+  if (typeof dataCoverage !== 'number' || isNaN(dataCoverage)) {
+    console.warn(`Invalid dataCoverage value: ${dataCoverage}, using default confidence of 1.0`);
+    return 1.0;
+  }
+  
+  // Ensure coverage is between 0 and 1
+  const validCoverage = Math.max(0, Math.min(1, dataCoverage));
+  
+  // Use a simple curve where confidence increases with data coverage
+  // This gives 0.6 at 50% coverage, 0.8 at 75% coverage, 1.0 at 100% coverage
+  const confidence = Math.pow(validCoverage, 0.5);
+  
+  // Ensure we never return less than 0.5 confidence
+  const finalConfidence = 0.5 + (confidence * 0.5);
+  
+  // Final validation to ensure no NaN is returned
+  if (isNaN(finalConfidence)) {
+    console.warn(`Calculated invalid confidence from coverage ${dataCoverage}, using default 1.0`);
+    return 1.0;
+  }
+  
+  return finalConfidence;
+}
 
-function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, groupStats) {
-  const TREND_DIRECTIONS = {
-    // Metric Index: [positiveIsGood, neutralThreshold]
-    0: [true, 0.01],    // strokesGainedTotal 
-    1: [true, 0.05],    // drivingDistance (higher better)
-    2: [true, 0.02],    // drivingAccuracy (%)
-    3: [true, 0.01],    // strokesGainedT2G
-    4: [true, 0.01],    // strokesGainedApp
-    5: [true, 0.01],    // strokesGainedArg
-    6: [true, 0.01],    // strokesGainedOTT
-    7: [true, 0.01],    // strokesGainedPutt
-    8: [true, 0.02],    // greensInReg (%)
-    9: [true, 0.02],   // scrambling (%)
-    10: [true, 0.02],   // greatShots
-    11: [false, 0.02],  // poorShots (lower better) <-- WAS INDEX 12, NOW 11
-    12: [false, 0.01],  // scoringAverage (lower better)
-    13: [true, 0.02],   // birdiesOrBetter
-    14: [true, 0.02],   // birdieChancesCreated
-    15: [false, 0.01],  // fairwayProx (yards)
-    16: [false, 0.01]   // roughProx (yards)
+function calculateMetricTrends(finishes) {
+  const TOTAL_ROUNDS = 24;
+  const LAMBDA = 0.2 // Exponential decay factor
+  const TREND_THRESHOLD = 0.005;
+  const SMOOTHING_WINDOW = 3; // Size of smoothing window
+
+  // Sort rounds by date descending
+  const sortedRounds = (finishes || []).sort((a, b) => 
+    new Date(b.date) - new Date(a.date) || b.roundNum - a.roundNum
+  );
+
+  // Get most recent valid rounds
+  const recentRounds = sortedRounds.slice(0, TOTAL_ROUNDS).filter(round => {
+    const isValid = round.metrics?.scoringAverage !== undefined;
+    if (!isValid) console.log('Filtering invalid round:', round.date);
+    return isValid;
+  });
+
+  // Return zeros if insufficient data
+  if (recentRounds.length < 15) return Array(16).fill(0);
+
+  // Complete metric mapping with all indices
+  const metricMap = {
+    0: 'strokesGainedTotal',
+    1: 'drivingDistance',
+    2: 'drivingAccuracy',
+    3: 'strokesGainedT2G',
+    4: 'strokesGainedApp',
+    5: 'strokesGainedArg',
+    6: 'strokesGainedOTT',
+    7: 'strokesGainedPutt',
+    8: 'greensInReg',
+    9: 'scrambling',
+    10: 'greatShots',
+    11: 'poorShots',
+    12: 'scoringAverage',
+    13: 'birdiesOrBetter',
+    14: 'fairwayProx',
+    15: 'roughProx'
   };
 
-  // Clear existing data and formats
-    outputSheet.clear().clearFormats();
+  return Array(16).fill().map((_, metricIndex) => {
+    const metricName = metricMap[metricIndex];
+    if (!metricName) return 0;
 
-  // Constants
-  const START_ROW = 5;
-  const START_COL = 2; // Column B
-  const NOTES_COL = START_COL -1;
-  const HISTORICAL_METRICS = 17;
-  const APPROACH_METRICS = 18;
-  const STANDARD_COLS = 6;
-  const TREND_COL_OFFSET = START_COL + STANDARD_COLS + 2;
+    // Extract metric values in chronological order (oldest to newest)
+    const values = recentRounds
+      .slice()
+      .reverse() // Oldest first for regression calculation
+      .map(round => round.metrics[metricName])
+      .filter(value => typeof value === 'number' && !isNaN(value));
 
-  // Validate metrics
-  if (metricLabels.length !== 35) throw new Error('Invalid metric labels');
+    // Skip if not enough data points
+    if (values.length < 10) return 0;
 
-  // Build headers
-  const headers = [
-    'Rank', 'DG ID', 'Player Name', 'Top 5', 'Top 10', 'Weighted Score', 'Past Perf. Mult.',
-    ...metricLabels.slice(0, HISTORICAL_METRICS).flatMap(m => [m, `${m} Trend`]),
-    ...metricLabels.slice(HISTORICAL_METRICS),
-      'WAR' // ADDED: Header for Birdie Chances Created & Wins Above Replacement (WAR)
-  ];
-
-  // Write headers
-  outputSheet.getRange(START_ROW, START_COL, 1, headers.length)
-    .setValues([headers])
-    .setFontWeight('bold')
-    .setHorizontalAlignment('center')
-    .setWrap(true);
-
-  // Write notes header
-  outputSheet.getRange(START_ROW, NOTES_COL, 1, 1)
-    .setValue("Expected Peformance Notes")
-    .setFontWeight("bold")
-    .setHorizontalAlignment("center")
-    .setWrap(true);
-
-  // In the writeRankingOutput function:
-  const notesData = [];
-  const rowData = [];
-
-  sortedData.forEach(player => {
-    // Generate notes for column A
-    notesData.push([generatePlayerNotes(player, groups, groupStats)]);
+    // Apply smoothing before calculating trend
+    const smoothedValues = smoothData(values, SMOOTHING_WINDOW);
     
-    // Validate player data and provide fallbacks if missing
-    if (!player) {
-      console.error("Invalid player data (undefined)");
-      rowData.push(Array(headers.length).fill("")); // Empty row
-      return; // Skip the rest of this iteration
-    }
+    // Calculate weighted linear regression with smoothed values
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumWeights = 0;
     
-    if (!player.metrics) {
-      console.error(`Missing metrics for player ${player.name || "unknown"}`);
-      player.metrics = Array(35).fill(0); // Default metrics array
-    }
-    
-    if (!player.trends) {
-      console.error(`Missing trends for player ${player.name || "unknown"}`);
-      player.trends = Array(17).fill(0); // Default trends array
-    }
-
-    // Base information
-    const weightedScoreValue = (typeof player.weightedScore === 'number' && !isNaN(player.weightedScore)) 
-      ? player.weightedScore.toFixed(2) 
-      : "0.00"; // Fallback if weightedScore is missing
-    
-    if (!weightedScoreValue || weightedScoreValue === "0.00") {
-      console.warn(`Missing or zero weightedScore for ${player.name}: ${player.weightedScore}`);
-    }
-    
-    const base = [
-      player.rank,
-      player.dgId,
-      player.name,
-      Number(player.top5 || 0),
-      Number(player.top10 || 0),
-      weightedScoreValue,
-      (player.pastPerformanceMultiplier || 1.0).toFixed(3) // Display the multiplier, defaulting to 1.0
-    ];
-
-    // Historical metrics with trends
-    const historical = player.metrics.slice(0, 17).flatMap((val, idx) => {
-      // For Birdie Chances Created at index 14, use a zero trend
-      if (idx === 14) {
-        return [
-          formatMetricValue(val, idx),
-          "0.000" // No trend for BCC
-        ];
-      }
+    smoothedValues.forEach((value, index) => {
+      const x = index + 1; // Time period (1 = oldest)
+      const y = value;
+      const weight = Math.exp(-LAMBDA * (smoothedValues.length - index)); // More weight to recent
       
-      // For other metrics, map to the correct trend index
-      const trendIdx = idx < 14 ? idx : idx - 1;
-      
-      // Ensure trends array exists and has valid values
-      const trendValue = (player.trends && player.trends[trendIdx] !== undefined) 
-        ? player.trends[trendIdx].toFixed(3) 
-        : "0.000";
-
-      return [
-        formatMetricValue(val, idx),
-        trendValue
-      ];
+      sumX += weight * x;
+      sumY += weight * y;
+      sumXY += weight * x * y;
+      sumX2 += weight * x * x;
+      sumWeights += weight;
     });
 
-    // Approach metrics - fixed the missing return
-    const approach = player.metrics.slice(17).map((val, idx) => 
-      formatMetricValue(val, idx + 17)
-    );
-
-    // Return WAR
-    const war = [player.war.toFixed(2)];
-
-    rowData.push([...base, ...historical, ...approach, ...war]);
-  });
-
-  // Write data
-  if (notesData.length > 0) {
-    outputSheet.getRange(START_ROW + 1, NOTES_COL, notesData.length)
-      .setValues(notesData)
-      .setHorizontalAlignment("center")
-      .setWrap(true);
-  }
-  
-  if (rowData.length > 0) {
-    outputSheet.getRange(START_ROW + 1, START_COL, rowData.length, headers.length)
-      .setValues(rowData)
-      .setHorizontalAlignment("center");
-  }
-
-  // ===== FORMATTING =====
-
-  // Set column A width
-  outputSheet.setColumnWidths(NOTES_COL, 1, 250);
-    // Set columns 1,2,4,5 to 70px
-  outputSheet.setColumnWidths(START_COL, 2, 70); // Columns 1-2
-  outputSheet.setColumnWidths(START_COL + 3, 2, 70); // Columns 4-5
-
-  // Set column 3 to 140px
-  outputSheet.setColumnWidth(START_COL + 2, 140); // Column 3
-  outputSheet.setColumnWidths(START_COL + STANDARD_COLS + 1, headers.length - STANDARD_COLS + 1, 110);
-
-    // Dynamic Range
-  const dataRange = outputSheet.getDataRange();
-  const numColumns = dataRange.getNumColumns();
-
-  // Calculate the WAR Column Number
-   const warColumn = numColumns - 1;
-   outputSheet.setColumnWidth(warColumn, 75);
-
-  // 1. Percentage columns (number formatting only)
-  const percentageColumns = [
-    13,  // L - Driving Accuracy (data column)
-    25,  // X - Greens in Regulation (data column)
-    27,  // Z - Scrambling (data column)
-    43,  // AN - Approach <100 GIR
-    46,  // AQ - Approach <150 FW GIR
-    49,  // AT - Approach <150 Rough GIR
-    52,  // AW - Approach >150 Rough GIR
-    55,  // AZ - Approach <200 FW GIR
-    58   // BC - Approach >200 FW GIR
-  ];
-
-  percentageColumns.forEach(col => {
-    outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1)
-      .setNumberFormat('0.00%')
-      .setHorizontalAlignment('center');
-  });
-
-  // 2. Whole number columns (formatting only)
-  const wholeNumberColumns = [5, 6];
-  wholeNumberColumns.forEach(col => {
-    outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1)
-      .setNumberFormat('0')
-      .setHorizontalAlignment('center');
-  });
-
-  // 3. Historical metrics (z-score background coloring)
-  const historicalColumns = Array.from({length: HISTORICAL_METRICS}, (_, i) => 
-    START_COL + STANDARD_COLS + 1 + (i * 2)
-  );
-  historicalColumns.forEach((col, metricIndex) => {
-    const range = outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1);
-    const [positiveIsGood] = TREND_DIRECTIONS[metricIndex] || [true];
+    // Calculate regression slope (trend)
+    const numerator = sumWeights * sumXY - sumX * sumY;
+    const denominator = sumWeights * sumX2 - sumX * sumX;
+    const slope = denominator !== 0 ? numerator / denominator : 0;
     
-    const rawValues = range.getValues();
-    const values = rawValues.map(row => parseFloat(row[0])).filter(v => !isNaN(v));
-    
-    if (values.length >= 5) {
-      const mean = values.reduce((a, b) => a + b) / values.length;
-      const stdDev = Math.sqrt(values.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / values.length);
+    // Apply significance threshold
+    const finalTrend = Math.abs(slope) > TREND_THRESHOLD 
+      ? Number(slope.toFixed(3))
+      : 0;
+
+    return finalTrend;
+  });
+}
+
+// Function to apply moving average smoothing
+function smoothData(values, windowSize) {
+  if (values.length < windowSize) return values;
       
-      if (stdDev > 0) {
-        const backgrounds = rawValues.map(row => {
-          const value = parseFloat(row[0]);
-          if (isNaN(value)) return ['#FFFFFF'];
-          
-          // Zero values get gray background
-          if (value === 0) return ['#D3D3D3'];
-          
-          const z = (value - mean) / stdDev;
-          const directionalZ = positiveIsGood ? z : -z;
-          
-          if (directionalZ > 2) return ['#006837'];
-          if (directionalZ > 1) return ['#31a354'];
-          if (directionalZ > 0.5) return ['#a1d99b'];
-          if (directionalZ < -2) return ['#a50f15'];
-          if (directionalZ < -1) return ['#de2d26'];
-          if (directionalZ < -0.5) return ['#fb6a4a'];
-          return ['#FFFFFF'];
-        });
-        range.setBackgrounds(backgrounds);
+    const smoothed = [];
+    for (let i = 0; i < values.length; i++) {
+      // Calculate window boundaries, handling edge cases
+      const start = Math.max(0, i - Math.floor(windowSize/2));
+      const end = Math.min(values.length, i + Math.ceil(windowSize/2));
+        
+      // Calculate mean of values in window
+      let sum = 0;
+      for (let j = start; j < end; j++) {
+        sum += values[j];
       }
+      smoothed.push(sum / (end - start));
     }
-    // Only set number format if this column is not in percentageColumns
-    if (!percentageColumns || !percentageColumns.includes(col)) {
-      range.setNumberFormat('0.000');
-    }
-  });
+  return smoothed;
+}
 
-  // 4. Approach metrics (z-score background coloring)
-  const APPROACH_DIRECTIONS = {
-    // Metric Index: [positiveIsGood, threshold] (0-17)
-    0: [true, 0.02],   // Approach <100 GIR
-    1: [true, 0.02],   // Approach <100 SG
-    2: [false, 0.01],   // Approach <100 Prox
-    3: [true, 0.02],   // Approach <150 GIR
-    4: [true, 0.02],   // Approach <150 SG
-    5: [false, 0.01],   // Approach <150 FW Prox
-    6: [true, 0.02],  // Approach <150 Rough GIR
-    7: [true, 0.02],  // Approach <150 Rough SG
-    8: [false, 0.01],   // Approach <150 Rough Prox
-    9: [true, 0.02],   // Approach >150 Rough GIR
-    10: [true, 0.02],  // Approach >150 Rough SG
-    11: [false, 0.01],  // Approach >150 Rough Prox
-    12: [true, 0.02],  // Approach <200 GIR
-    13: [true, 0.02],  // Approach <200 SG
-    14: [false, 0.01],  // Approach <200 Prox
-    15: [true, 0.02],  // Approach >200 GIR
-    16: [true, 0.02],  // Approach >200 SG
-    17: [false, 0.01]   // Approach >200 Prox
+/**
+ * Aggregates approach metrics for a player from approach data object.
+ * Returns a flat array of metrics for direct comparison.
+ * @param {Object} approachData - Player's approach metrics object
+ * @returns {Array<number>} - Array of approach metrics in fixed order
+ */
+function getApproachMetrics(approachData) {
+  // Ensure each category has default values
+  const categories = {
+    '<100': { fwGIR: 0, strokesGained: 0, shotProx: 0 },
+    '<150': { 
+      fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0,
+      roughGIR: 0, roughStrokesGained: 0, roughShotProx: 0 
+    },
+    '>150 - Rough': { roughGIR: 0, roughStrokesGained: 0, roughShotProx: 0 },
+    '<200': { fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0 },
+    '>200': { fwGIR: 0, fwStrokesGained: 0, fwShotProx: 0 }
   };
-
-  const approachStartCol = START_COL + STANDARD_COLS + 1 + (HISTORICAL_METRICS * 2);
-  const approachColumns = Array.from({length: APPROACH_METRICS}, (_, i) => approachStartCol + i);
-
-  approachColumns.forEach((col, approachIndex) => {
-    const range = outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1);
-    const [positiveIsGood] = APPROACH_DIRECTIONS[approachIndex] || [true];
-    
-    const rawValues = range.getValues();
-    // Filter to non-NaN and non-zero values only (0 means no data)
-    const values = rawValues.map(row => parseFloat(row[0])).filter(v => !isNaN(v) && v !== 0);
-    
-    if (values.length >= 5) {
-      const mean = values.reduce((a, b) => a + b) / values.length;
-      const stdDev = Math.sqrt(values.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / values.length);
-      
-      if (stdDev > 0) {
-        const backgrounds = rawValues.map(row => {
-          const value = parseFloat(row[0]);
-          if (isNaN(value)) return ['#FFFFFF'];
+  
+  const safeData = Object.fromEntries(
+    Object.entries(categories).map(([key, defaults]) => [
+      key,
+      Object.fromEntries(
+        Object.entries(defaults).map(([subKey]) => {
+          // Get raw value
+          const rawValue = approachData[key]?.[subKey] || 0;
           
-          // Zero values get gray background (no data)
-          if (value === 0) return ['#D3D3D3'];
+          // Apply normalization for SG values - convert per-shot to per-round
+          if (subKey.includes('SG') || subKey.includes('strokesGained') || 
+              subKey.includes('StrokesGained')) {
+            return [subKey, normalizeApproachSG(rawValue)];
+          }
           
-          const z = (value - mean) / stdDev;
-          const directionalZ = positiveIsGood ? z : -z;
-          
-          if (directionalZ > 2) return ['#006837'];
-          if (directionalZ > 1) return ['#31a354'];
-          if (directionalZ > 0.5) return ['#a1d99b'];
-          if (directionalZ < -2) return ['#a50f15'];
-          if (directionalZ < -1) return ['#de2d26'];
-          if (directionalZ < -0.5) return ['#fb6a4a'];
-          return ['#FFFFFF'];
-        });
-        range.setBackgrounds(backgrounds);
+          return [subKey, rawValue];
+        })
+      )
+    ])
+  );
+  
+  // Log sample values after normalization
+  if (approachData) {
+    console.log('Approach metrics conversion example:');
+    for (const [key, category] of Object.entries(safeData)) {
+      for (const [metric, value] of Object.entries(category)) {
+        if (metric.includes('SG') || metric.includes('strokesGained') || 
+            metric.includes('StrokesGained')) {
+          const originalValue = approachData[key]?.[metric] || 0;
+          console.log(`  ${key}.${metric}: ${originalValue.toFixed(3)} → ${value.toFixed(3)}`);
+        }
       }
     }
-    // Set appropriate number format
-    const isPercentage = percentageColumns.includes(col);
-    range.setNumberFormat(isPercentage ? '0.00%' : '0.000');
-  });
+  }
 
-  // ===== NEW TREND FORMATTING LOGIC =====
-  const trendColumns = Array.from({length: HISTORICAL_METRICS}, (_, i) => 
-    TREND_COL_OFFSET + (i * 2)
-  );
-
-  // Modified trend formatting section
-  trendColumns.forEach((col, metricIndex) => {
-  const [positiveIsGood, threshold] = TREND_DIRECTIONS[metricIndex] || [true, 0.01];
-  const range = outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1);
-  const values = range.getValues();
-  
-  // Convert to 2D array format
-  const backgrounds = values.map(row => {
-    const value = row[0];
-    if (value === '' || isNaN(value)) return ['#FFFFFF'];
-    
-    const absValue = Math.abs(value);
-    if (absValue < threshold) return ['#FFFFFF'];
-    
-    return [value > 0 ? 
-      (positiveIsGood ? '#E6F4EA' : '#FCE8E8') : 
-      (positiveIsGood ? '#FCE8E8' : '#E6F4EA')];
-  });
-
-  const textColors = values.map(row => {
-    const value = row[0];
-    if (value === '' || isNaN(value)) return ['#000000'];
-    
-    const absValue = Math.abs(value);
-    if (absValue < threshold) return ['#000000'];
-    
-    return [value > 0 ? 
-      (positiveIsGood ? '#137333' : '#A50E0E') : 
-      (positiveIsGood ? '#A50E0E' : '#137333')];
-  });
-
-  // Apply formatting
-  range.setBackgrounds(backgrounds)
-       .setFontColors(textColors)
-       .setNumberFormat('0.000');
-  });
-  removeProtections();
-}
-
-function formatMetricValue(value, index) {
-  // Map to 0-based metric indices (not columns)
-  const percentageIndices = [
-    2,   // Driving Accuracy
-    8,   // Greens in Regulation
-    9,   // Scrambling
-    16,  // Approach <100 GIR
-    19,  // Approach <150 FW GIR
-    22,  // Approach <150 Rough GIR
-    25,  // Approach >150 Rough GIR
-    28,  // Approach <200 FW GIR
-    31   // Approach >200 FW GIR
+  return [
+    // <100 metrics
+    safeData['<100'].fwGIR,
+    safeData['<100'].strokesGained,
+    safeData['<100'].shotProx,
+    // <150 metrics
+    safeData['<150'].fwGIR,
+    safeData['<150'].fwStrokesGained,
+    safeData['<150'].fwShotProx,
+    safeData['<150'].roughGIR,
+    safeData['<150'].roughStrokesGained,
+    safeData['<150'].roughShotProx,
+    // >150 rough metrics
+    safeData['>150 - Rough'].roughGIR,
+    safeData['>150 - Rough'].roughStrokesGained,
+    safeData['>150 - Rough'].roughShotProx,
+    // <200 metrics
+    safeData['<200'].fwGIR,
+    safeData['<200'].fwStrokesGained,
+    safeData['<200'].fwShotProx,
+    // >200 metrics
+    safeData['>200'].fwGIR,
+    safeData['>200'].fwStrokesGained,
+    safeData['>200'].fwShotProx
   ];
-
-  // Return raw numbers for percentage columns (formatting handled at sheet level)
-  return percentageIndices.includes(index) ? value : Number(value.toFixed(3));
 }
+
+/**
+ * Aggregates all player data into a single object keyed by dgId, including classified rounds and approach metrics.
+ * @param {Array} rounds - All round objects (with dgId, eventId, etc.)
+ * @param {Object} approachDataMap - Map of dgId to approach metrics object
+ * @param {Object} eventMetadata - Map of eventId to { isSimilar, isPuttingSpecific, ... }
+ * @returns {Object} players - { dgId: { name, dgId, events, historicalRounds, similarRounds, puttingRounds, approachMetrics } }
+ */
+function aggregatePlayerData(fieldDataParam, historicalData, approachData, metricGroups, similarCourseIds, puttingCourseIds) {
+  // Build players object from tournament field
+  const players = {};
+  for (const row of fieldDataParam) {
+    const dgId = row.dg_id;
+    if (!dgId) continue;
+    players[dgId] = {
+      name: row.player_name,
+      dgId,
+      events: {},
+      historicalRounds: [],
+      similarRounds: [],
+      puttingRounds: [],
+      approachMetrics: {}
+    };
+  }
+
+
+    // Extract metrics from metricGroups
+    const metrics = metricGroups.flatMap(group => group.metrics);
+
+  
+    // Build eventMetadata map using similar/putting course IDs
+    const eventMetadata = {};
+    for (const row of historicalData) {
+        const eventId = row.event_id;
+        if (!eventId) continue;
+        if (!eventMetadata[eventId]) {
+            const isSimilar = similarCourseIds.includes(eventId);
+            const isPutting = puttingCourseIds.includes(eventId);
+            eventMetadata[eventId] = {
+                eventId,
+                isPuttingSpecific: isPutting,
+                isSimilar: isSimilar,
+                categoryText: (isPutting && isSimilar) ? "Both" : (isPutting ? "Putting" : (isSimilar ? "Similar" : "Regular"))
+            };
+        }
+    }
+    
+    // Process historical rounds and classify
+    for (const row of historicalData) {
+        const dgId = row.dg_id;
+        if (!dgId || !players[dgId]) continue;
+
+        // Define the column order as in your CSV
+const columnOrder = [
+        'dg_id', 'player_name', 'tour', 'season', 'year', 'event_id', 'event_name', 'event_date',
+        'course_name', 'course_num', 'fin_text', 'course_par', 'round_num', 'start_hole',
+        'teetime', 'score', 'birdies', 'bogies', 'pars',  'eagles_or_better', 'doubles_or_worse',
+        'driving_acc', 'driving_dist', 'gir', 'scrambling', 'great_shots', 'poor_shots',
+        'prox_fw', 'prox_rgh', 'sg_total', 'sg_t2g', 'sg_app', 'sg_arg', 'sg_putt', 'sg_ott',
+        'sg_categories', 'traditional_stats'
+];
+
+// Convert all values to numbers and handle errors
+const safeRow = columnOrder.map((key, index) => {
+  const cell = row[key];
+  if (index === 7) return new Date(cell); // Date column (H)
+  if (index === 14) return cell; // Time column (O)
+  if (index === 10) { // Position column
+    if (typeof cell === 'string') {
+      if (cell.includes('T')) return parseInt(cell.replace('T', ''), 10);
+      if (cell === 'CUT' || cell === 'WD') return 100;
+    }
+    return cell ? Number(cell) : 100;
+  }
+  const num = Number(cell);
+  return isNaN(num) ? null : num;
+});
+            
+        const eventId = safeRow[5];
+        const roundDate = new Date(safeRow[7]);
+        const roundYear = roundDate.getFullYear();
+        
+        // Create year-specific event key
+        const eventKey = `${dgId}-${eventId}-${roundYear}`;
+
+        // Check if this is from a putting-specific or regular similar course
+        const eventType = eventMetadata[eventId] || { 
+            isPuttingSpecific: false, 
+            isSimilar: false,
+            categoryText: "Regular" 
+        };
+            
+        // Initialize event if not exists
+        if (!players[dgId].events[eventKey]) {
+            players[dgId].events[eventKey] = {
+                eventId: eventId, // Store eventId directly in the event object
+                year: roundYear,  // Store the year explicitly
+                position: safeRow[10], // fin_text
+                isPuttingSpecific: eventType.isPuttingSpecific,
+                isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
+                categoryText: eventType.categoryText, // Added for clarity in debugging
+                rounds: []
+            };
+        }
+
+        // Store round-level metrics in event
+        const roundData = {
+            playerName: players[dgId].name,
+            date: roundDate,
+            eventId: eventId,
+            isPuttingSpecific: eventType.isPuttingSpecific,
+            isSimilar: eventType.isSimilar, // Changed from isRegularSimilar
+            categoryText: eventType.categoryText, // Added for debugging
+            roundNum: safeRow[12],
+            metrics: {
+                scoringAverage: cleanMetricValue(safeRow[15]),
+                eagles: cleanMetricValue(safeRow[19]),
+                birdies: cleanMetricValue(safeRow[16]),
+                birdiesOrBetter: cleanMetricValue(safeRow[16]) + cleanMetricValue(safeRow[19]),
+                strokesGainedTotal: cleanMetricValue(safeRow[29]),
+                drivingDistance: cleanMetricValue(safeRow[22]),
+                drivingAccuracy: cleanMetricValue(safeRow[21], true),
+                strokesGainedT2G: cleanMetricValue(safeRow[30]),
+                strokesGainedApp: cleanMetricValue(safeRow[31]),
+                strokesGainedArg: cleanMetricValue(safeRow[32]),
+                strokesGainedOTT: cleanMetricValue(safeRow[33]),
+                strokesGainedPutt: cleanMetricValue(safeRow[34]),
+                greensInReg: cleanMetricValue(safeRow[23], true),
+                scrambling: cleanMetricValue(safeRow[24], true),
+                greatShots: cleanMetricValue(safeRow[25]),
+                poorShots: cleanMetricValue(safeRow[26]),
+                fairwayProx: cleanMetricValue(safeRow[27]),
+                roughProx: cleanMetricValue(safeRow[28])
+            }
+        };
+
+        // Add round to the event
+        players[dgId].events[eventKey].rounds.push(roundData);
+
+        // Add round to appropriate collection (mutually exclusive categorization)
+        if (eventType.isPuttingSpecific) {
+            players[dgId].puttingRounds.push(roundData);
+            console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
+        } 
+        else if (eventType.isSimilar) {
+            players[dgId].similarRounds.push(roundData);
+            console.log(`Added similar course round for ${players[dgId].name}, event ${eventId}`);
+        }
+        else {
+            // Only add to historicalRounds if NOT similar or putting-specific
+            players[dgId].historicalRounds.push(roundData);
+        }
+    };
+
+    // Post-processing for historical averages
+    Object.values(players).forEach(player => {
+        // Sort all rounds by date (most recent first)
+        player.historicalRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
+        player.similarRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
+        player.puttingRounds.sort((a, b) => b.date - a.date || b.roundNum - a.roundNum);
+    });
+
+    // Process approach metrics
+    for (const row of approachData) {
+        
+        const dgId = row[0];
+        if (players[dgId]) {
+            players[dgId].approachMetrics = {
+            '<100': {
+                fwGIR: cleanMetricValue(row[16], true),  // Percentage
+                strokesGained: cleanMetricValue(row[21]),
+                shotProx: cleanMetricValue(row[20])
+            },
+            '<150': {
+                fwGIR: cleanMetricValue(row[2], true),   // Percentage
+                fwStrokesGained: cleanMetricValue(row[7]),
+                fwShotProx: cleanMetricValue(row[6]),
+                roughGIR: cleanMetricValue(row[37], true), // Percentage
+                roughStrokesGained: cleanMetricValue(row[42]),
+                roughShotProx: cleanMetricValue(row[41])
+            },
+            '>150 - Rough': {
+                roughGIR: cleanMetricValue(row[23], true), // Percentage
+                roughStrokesGained: cleanMetricValue(row[28]),
+                roughShotProx: cleanMetricValue(row[27])
+            },
+            '<200': {
+                fwGIR: cleanMetricValue(row[9], true),   // Percentage
+                fwStrokesGained: cleanMetricValue(row[7]),
+                fwShotProx: cleanMetricValue(row[6])
+            },
+            '>200': {
+                fwGIR: cleanMetricValue(row[30], true),  // Percentage
+                fwStrokesGained: cleanMetricValue(row[35]),
+                fwShotProx: cleanMetricValue(row[34])
+            }
+            };
+        }
+    };
+  
+    return players;
+}
+
+    
 
 function cleanMetricValue(value, isPercentage = false) {
   let numericValue = typeof value === 'string' 
@@ -3180,188 +2421,48 @@ function normalizeMetricName(name) {
     .replace(/[<>]/g, ''); // Remove angle brackets
 }
 
-// Enhanced player notes function that evaluates against key performance indicators
-function generatePlayerNotes(player, groups, groupStats) {
-  const notes = [];
-  
-  // 1. WAR indicator with emoji
-  if (player.war >= 1.0) {
-    notes.push("⭐ Elite performer");
-  } else if (player.war >= 0.5) {
-    notes.push("↑ Above average");
-  } else if (player.war <= -0.5) {
-    notes.push("↓ Below field average");
-  }
-  
-  // 2. Find the most important metrics based on weights
-  // Extract all metrics across groups and sort by weight
-  const allMetrics = [];
-  groups.forEach(group => {
-    group.metrics.forEach(metric => {
-      allMetrics.push({
-        name: metric.name,
-        index: metric.index,
-        weight: metric.weight,
-        group: group.name
-      });
-    });
-  });
-  
-  // Sort by weight descending to find the most important metrics
-  const keyMetrics = allMetrics
-    .sort((a, b) => b.weight - a.weight)
-    .slice(0, 5); // Top 5 most important metrics
-  
-  // 3. Evaluate player against key metrics
-  const strengths = [];
-  const weaknesses = [];
-  
-  keyMetrics.forEach(metric => {
-    // Skip if we don't have the metric value or stats
-    if (!player.metrics || !player.metrics[metric.index] || 
-        !groupStats || !groupStats[metric.group] || 
-        !groupStats[metric.group][metric.name]) {
-      return;
-    }
-    
-    const playerValue = player.metrics[metric.index];
-    const mean = groupStats[metric.group][metric.name].mean;
-    const stdDev = groupStats[metric.group][metric.name].stdDev;
-    
-    // Calculate z-score
-    const zScore = (playerValue - mean) / (stdDev || 0.001);
-    
-    // Determine if this is a positive or negative metric
-    // For most metrics, higher is better (except these specific ones)
-    const isNegativeMetric = metric.name.includes("Poor") || 
-                           metric.name.includes("Scoring Average") ||
-                           metric.name.includes("Prox");
-    
-    // Adjust z-score direction based on metric type
-    const adjustedZScore = isNegativeMetric ? -zScore : zScore;
-    
-    // Classify as strength or weakness
-    if (adjustedZScore >= 0.75) {
-      // Simplify metric names for display
-      const displayName = metric.name
-        .replace("strokesGained", "SG")
-        .replace("drivingDistance", "Distance")
-        .replace("drivingAccuracy", "Accuracy")
-        .replace("greensInReg", "GIR")
-        .replace("birdiesOrBetter", "Birdies");
-      
-      strengths.push({
-        name: displayName,
-        score: adjustedZScore,
-        weight: metric.weight
-      });
-    } else if (adjustedZScore <= -0.75) {
-      const displayName = metric.name
-        .replace("strokesGained", "SG")
-        .replace("drivingDistance", "Distance")
-        .replace("drivingAccuracy", "Accuracy")
-        .replace("greensInReg", "GIR")
-        .replace("birdiesOrBetter", "Birdies");
-      
-      weaknesses.push({
-        name: displayName,
-        score: adjustedZScore,
-        weight: metric.weight
-      });
-    }
-  });
-  
-  // 4. Create course fit note based on alignment with key metrics
-  // Sort strengths by weighted z-score
-  strengths.sort((a, b) => (b.score * b.weight) - (a.score * a.weight));
-  
-  // Add strengths to notes
-  if (strengths.length > 0) {
-    const strengthsText = strengths
-      .slice(0, 2)
-      .map(s => s.name)
-      .join(", ");
-    notes.push(`💪 ${strengthsText}`);
-  }
-  
-  // Add note about course fit based on alignment of strengths with key metrics
-  const totalKeyWeight = keyMetrics.reduce((sum, m) => sum + m.weight, 0);
-  const playerStrengthWeight = strengths.reduce((sum, s) => {
-    const matchingKeyMetric = keyMetrics.find(km => km.name.includes(s.name) || s.name.includes(km.name));
-    return sum + (matchingKeyMetric ? matchingKeyMetric.weight : 0);
-  }, 0);
-  
-  const fitPercentage = totalKeyWeight > 0 ? (playerStrengthWeight / totalKeyWeight) * 100 : 0;
-  
-  if (fitPercentage >= 50) {
-    notes.push("✅ Strong course fit");
-  } else if (fitPercentage >= 25) {
-    notes.push("👍 Good course fit");
-  } else if (weaknesses.length > 0 && weaknesses.some(w => w.weight > 0.1)) {
-    notes.push("⚠️ Poor course fit");
-  }
-  
-  // 5. Significant trends
-  const trendMetricNames = [
-    "Total game", "Driving", "Accuracy", "Tee-to-green", 
-    "Approach", "Around green", "Off tee", "Putting",
-    "GIR", "Scrambling", "Great shots", "Poor shots", 
-    "Scoring", "Birdies"
-  ];
-  
-  // Find most significant trend
-  let strongestTrend = null;
-  let strongestValue = 0;
-  
-  player.trends?.forEach((trend, i) => {
-    if (Math.abs(trend) > Math.abs(strongestValue)) {
-      strongestValue = trend;
-      strongestTrend = {
-        metric: i,
-        value: trend
-      };
-    }
-  });
-  
-  if (strongestTrend && Math.abs(strongestTrend.value) > 0.1) {
-    const trendDirection = strongestTrend.value > 0 ? "↑" : "↓";
-    const metricName = trendMetricNames[strongestTrend.metric] || "Overall";
-    notes.push(`${trendDirection} ${metricName}`);
-  }
-  
-  // 6. Data confidence warning
-  if (player.dataCoverage < 0.75) {
-    notes.push(`⚠️ Limited data (${Math.round(player.dataCoverage*100)}%)`);
-  }
-  
-  // 7. Insufficient rounds note
-  // Check if player has fewer rounds than standard thresholds (10 for historical, 5 for similar/putting)
-  if (player.roundsCount && player.roundsCount < 10) {
-    notes.push(`📊 Only ${player.roundsCount} rounds`);
-  }
-  
-  // Return formatted notes
-  return notes.join(" | ");
-}
-
 /**
- * Caches group statistics data for later use in analysis
- * @param {Object} groupStats - Group statistics with mean and stdDev for each metric
+ * Returns an array of debug info for each player, including group scores and all key columns.
+ * @param {Array} processedPlayers - Array of player objects after scoring and ranking.
+ * @returns {Array<Object>} Array of debug info objects for each player.
  */
-function cacheGroupStats(groupStats) {
-  // Add timestamp for expiration checking
-  const cacheData = {
-    timestamp: new Date().getTime(),
-    groupStats: groupStats
-  };
-  
-  // Convert to JSON and store in script properties
-  const jsonData = JSON.stringify(cacheData);
-  PropertiesService.getScriptProperties().setProperty("groupStatsCache", jsonData);
-  console.log("Group statistics cached successfully");
+function debugGroupScores(processedPlayers) {
+  return processedPlayers.map((player, idx) => {
+    // Compose group scores string
+    const groupScores = player.groupScoresBeforeDampening
+      ? Object.entries(player.groupScoresBeforeDampening)
+          .map(([group, val]) => `${group}: ${val.toFixed(3)}`)
+          .join('; ')
+      : '';
+
+    const groupScoresAfter = player.groupScoresAfterDampening
+      ? Object.entries(player.groupScoresAfterDampening)
+          .map(([group, val]) => `${group}: ${val.toFixed(3)}`)
+          .join('; ')
+      : '';
+
+    return {
+      Rank: player.rank || idx + 1,
+      'Player Name': player.name,
+      'DG ID': player.dgId,
+      'Data Coverage %': player.dataCoverage ? (player.dataCoverage * 100).toFixed(1) : '',
+      'Dampening Applied?': player.dampeningApplied ? 'YES' : 'NO',
+      'Group Scores (Before Dampening)': groupScores,
+      'Group Scores (After Dampening if applicable)': groupScoresAfter,
+      'Weighted Score': player.weightedScore?.toFixed(3),
+      'Confidence Factor': player.confidenceFactor?.toFixed(3),
+      'Past Perf Multiplier': player.pastPerfMultiplier?.toFixed(2),
+      'Refined Weighted Score': player.refinedWeightedScore?.toFixed(3),
+      'Final WAR': player.war?.toFixed(2),
+      'Notes': player.notes || ''
+    };
+  });
 }
 
-
-
-
-
+// Add to your exports:
+module.exports = {
+  calculatePlayerMetrics,
+  aggregatePlayerData,
+  prepareRankingOutput,
+  debugGroupScores,
+};

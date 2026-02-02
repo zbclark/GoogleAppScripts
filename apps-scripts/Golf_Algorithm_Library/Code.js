@@ -13,43 +13,36 @@
  * 
  * That's it! All the real code lives in the library.
  * When you copy the sheet next week, just re-add the library reference.
- */
+ 
 
 // ===== MENU & SETUP =====
 /**
  * Creates the custom menu when the sheet opens
  * NOTE: This MUST be in the bound script (not delegated to library) for simple trigger to work
- */
+ 
 function onOpen() {
   try {
     const ui = SpreadsheetApp.getUi();
-    const modelToolsMenu = ui.createMenu('🛠️ Model Tools')
-    .addItem('Update Tournaments and Dropdowns', 'updateTournamentsAndDropdowns')
-    .addItem('⚖️ Load Weight Template', 'loadWeightTemplate')
-    .addItem('📜 Update Tournament Field, Approach, and Historical Data Sheets', 'updateDataSheets')
-    .addItem('⛳️ Run Model', 'generatePlayerRankings');
-
-  const resultsMenu = ui.createMenu('📊 Tournament Results')
-    .addItem('🏆 Fetch Current Tournament Results', 'fetchTournamentFinalResults')
-    .addItem('📊 Fetch Historical Tournament Results', 'fetchHistoricalTournamentResults')
-    .addItem('✅ Validate Current Tournament Sheet', 'validateTournamentSetup');
-
-  // Now build the main menu
-  ui.createMenu('‼️ Model Tools ‼️')
-    .addItem('⚙️ Setup Sheet Permissions', 'setupSheet')
-    .addItem('⚙️ Clear Config Settings', 'clearConfig')
-    .addSeparator()
-    .addSubMenu(modelToolsMenu)
-    .addSeparator()
-    .addSubMenu(resultsMenu)
-    .addToUi();
+    ui.createMenu('‼️ Model Tools ‼️')
+      .addItem('Setup Sheet Permissions', 'setupSheet')
+      .addItem('Clear Config Settings', 'clearConfig')
+      .addItem('Update Tournaments and Dropdowns', 'updateTournamentsAndDropdowns')
+      .addSeparator()
+      .addItem('⚙️ Load Weight Template', 'loadWeightTemplate')
+      .addSeparator()
+      .addItem('Update Tournament Field, Approach, and Historical Data Sheets', 'updateDataSheets')
+      .addItem('Run Model', 'generatePlayerRankings')
+      .addSeparator()
+      .addSubMenu(ui.createMenu('📊 Tournament Results')
+        .addItem('Fetch Current Results', 'fetchTournamentFinalResults')
+        .addItem('Historical Analysis (Production)', 'fetchHistoricalTournamentResults')
+        .addItem('Validate Current Tournament Sheet', 'validateTournamentSetup'))
+      .addToUi();
     
     Logger.log('Menu created successfully');
   } catch (e) {
     Logger.log('Error creating menu: ' + e.toString());
-    console.log('Error creating menu: ' + e.toString());
     SpreadsheetApp.getActiveSpreadsheet().toast('Error creating menu: ' + e.toString(), 'Error', 10);
-
   }
   // First check if everything is already configured
   const isConfigured = PropertiesService.getScriptProperties().getProperty('IS_CONFIGURED') === 'true';
@@ -87,45 +80,33 @@ function onOpen() {
 }
 
 // ===== WRAPPERS NEEDED FOR MENU BUTTONS =====
-function checkTriggersExist() {
-  GolfAlgorithm.checkTriggersExist();
-}
-
-function hasApiKey() {
-  GolfAlgorithm.hasApiKey();
-}
-
 function setupSheet() {
-  GolfAlgorithm.setupSheet();
+  GolfAlgorithmLibraryTEST.setupSheet();
 }
 
 function clearConfig() {
-  GolfAlgorithm.clearConfig();
+  GolfAlgorithmLibraryTEST.clearConfig();
 }
 
 // ===== DATA / SHEET ACTIONS =====
-function updateHistoricalDataFromButton() {
-  GolfAlgorithm.updateHistoricalDataFromButton();
-}
-
 function loadWeightTemplate() {
-  GolfAlgorithm.loadWeightTemplate();
+  GolfAlgorithmLibraryTEST.loadWeightTemplate();
 }
 function updateTournamentsAndDropdowns() {
-  GolfAlgorithm.updateTournamentsAndDropdowns();
+  GolfAlgorithmLibraryTEST.updateTournamentsAndDropdowns();
 }
 
 function onEditInstallableTrigger(e) {
-  GolfAlgorithm.onEditInstallableTrigger(e);
+  GolfAlgorithmLibraryTEST.onEditInstallableTrigger(e);
 }
 
 // ====== MODEL EXECUTION ======
 function updateDataSheets() { 
-  GolfAlgorithm.updateDataSheets();
+  GolfAlgorithmLibraryTEST.updateDataSheets();
 }
 
 function generatePlayerRankings() {
-  GolfAlgorithm.generatePlayerRankings();
+  GolfAlgorithmLibraryTEST.generatePlayerRankings();
 }
 
 // ===== VALIDATION =====
@@ -133,7 +114,7 @@ function generatePlayerRankings() {
 function validateTournamentSetup() {
   try {
     var ss = SpreadsheetApp.getActiveSpreadsheet();
-    GolfAlgorithm.analyzeSingleTournamentMetrics(ss);
+    GolfAlgorithmLibraryTEST.analyzeSingleTournamentMetrics(ss);
     SpreadsheetApp.getUi().alert('Metric analysis sheet created successfully!');
   } catch (e) {
     SpreadsheetApp.getUi().alert('Error: ' + e.toString());
@@ -142,9 +123,12 @@ function validateTournamentSetup() {
 
 // ===== TOURNAMENT RESULTS =====
 function fetchTournamentFinalResults() {
-  GolfAlgorithm.fetchTournamentFinalResults();
+  GolfAlgorithmLibraryTEST.fetchTournamentFinalResults();
 }
 
 function fetchHistoricalTournamentResults() {
-  GolfAlgorithm.fetchHistoricalTournamentResults();
+  GolfAlgorithmLibraryTEST.fetchHistoricalTournamentResults();
 }
+
+
+*/

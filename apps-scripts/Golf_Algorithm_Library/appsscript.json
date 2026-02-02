@@ -1,6 +1,14 @@
 {
   "timeZone": "America/New_York",
   "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "GolfAlgorithm",
+        "version": "0",
+        "libraryId": "1DnL19m56VfDfyFOMIWk2Fca_tN4VJG9arnFiXCgoChAW67W_94B_zoqk",
+        "developmentMode": true
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER",
   "runtimeVersion": "V8"
