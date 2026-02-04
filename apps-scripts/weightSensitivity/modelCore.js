@@ -598,7 +598,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
 /**
  * Calculates which metrics have actual tournament/approach data (vs. defaults)
  * Returns a Set of metric indices that have real data
- * If a player has any tournament rounds, they have data for all metrics
+ * approachMetrics should be the already-computed array (18 values) from getApproachMetrics
  */
 function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds, approachMetrics) {
   const metricsWithData = new Set();
@@ -642,40 +642,14 @@ function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds
   }
   
   // Check approach metrics (16-33)
-  // Approach metrics are stored as an array index in the order defined by getApproachMetrics
-  if (approachMetrics && typeof approachMetrics === 'object') {
-    const approachMetricMapping = {
-      16: '<100.fwGIR',
-      17: '<100.strokesGained',
-      18: '<100.shotProx',
-      19: '<150.fwGIR',
-      20: '<150.fwStrokesGained',
-      21: '<150.fwShotProx',
-      22: '<150.roughGIR',
-      23: '<150.roughStrokesGained',
-      24: '<150.roughShotProx',
-      25: '>150 - Rough.roughGIR',
-      26: '>150 - Rough.roughStrokesGained',
-      27: '>150 - Rough.roughShotProx',
-      28: '<200.fwGIR',
-      29: '<200.fwStrokesGained',
-      30: '<200.fwShotProx',
-      31: '>200.fwGIR',
-      32: '>200.fwStrokesGained',
-      33: '>200.fwShotProx'
-    };
-    
-    for (let i = 16; i <= 33; i++) {
-      const keyPath = approachMetricMapping[i];
-      if (!keyPath) continue;
-      
-      const [category, metric] = keyPath.split('.');
-      const value = approachMetrics[category]?.[metric];
-      
-      // If approach metric has non-zero value, mark as having data
-        // Approach metrics can legitimately be zero; treat numeric values as data
-        if (typeof value === 'number' && !isNaN(value)) {
-        metricsWithData.add(i);
+  // approachMetrics is an array of 18 values from getApproachMetrics function
+  // Only count as having data if the value is non-zero (zeros are default padding)
+  if (Array.isArray(approachMetrics) && approachMetrics.length >= 18) {
+    for (let i = 0; i < 18; i++) {
+      const value = approachMetrics[i];
+      // Non-zero approach metrics indicate real data was available
+      if (typeof value === 'number' && !isNaN(value) && value !== 0) {
+        metricsWithData.add(16 + i); // Approach metrics start at index 16
       }
     }
   }
@@ -984,7 +958,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
       data.historicalRounds,
       data.similarRounds,
       data.puttingRounds,
-      data.approachMetrics
+      approachMetrics  // Pass the computed array, not the raw object
     );
  
     // Create safe metrics array with exactly 34 elements
