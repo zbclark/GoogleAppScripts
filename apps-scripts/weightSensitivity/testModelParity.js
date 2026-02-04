@@ -49,6 +49,29 @@ const getCellForFilter = (row, col) => {
 };
 const currentEventIdForFilter = String(getCellForFilter(9, 7) || '2');
 
+// Helper function to parse tournament position strings like "T5" → 5, "CUT" → 100
+function parsePosition(positionValue) {
+  if (!positionValue) return 100; // No position data = treated as missed cut
+  
+  const str = String(positionValue).trim().toUpperCase();
+  
+  // Handle tied positions (e.g., "T5" or "T15")
+  if (str.includes('T')) {
+    const num = parseInt(str.replace('T', ''), 10);
+    return isNaN(num) ? 100 : num;
+  }
+  
+  // Handle missed cuts and withdrawals
+  if (str === 'CUT' || str === 'WD' || str === 'DQ') {
+    return 100;
+  }
+  
+  // Try to parse as number
+  const num = Number(str);
+  return isNaN(num) ? 100 : num;
+}
+
+
 // === 2. TRANSFORM DATA TO INTERNAL FORMAT ===
 console.log('Transforming data...');
 
@@ -95,7 +118,7 @@ roundsRawData.forEach(row => {
     eventId: row.event_id,
     date: new Date(row.event_completed || new Date()),
     roundNum: cleanMetricValue(row.round_num),
-    position: row.fin_text,
+    position: parsePosition(row.fin_text), // Parse position like "T5" → 5, "CUT" → 100
     metrics: {
       scoringAverage: row.score ? cleanMetricValue(row.score) : undefined,
       eagles: row.eagles_or_better ? cleanMetricValue(row.eagles_or_better) : undefined,
