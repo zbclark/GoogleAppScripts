@@ -1,3 +1,4 @@
+// Ported to test
 const METRIC_MAX_VALUES = {
   'Approach <100 Prox': 40,         // Avg: 16ft from <100y
   'Approach <150 FW Prox': 50,      // Avg: 23.6 ft from 125y
@@ -12,6 +13,7 @@ const METRIC_MAX_VALUES = {
   'Birdie Chances Created': 10      // Composit metric, max value estimate
 };
 
+// Ported to test
 const METRIC_TYPES = {
   LOWER_BETTER: new Set([
     'Poor Shots', 
@@ -35,20 +37,73 @@ function generatePlayerRankings() {
   const configSheet = ss.getSheetByName("Configuration Sheet");
   const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
 
-  // Clear previous output
-  outputSheet.clearContents().clearFormats();
-
-  // 1. Get Configuration Values
-  const metricConfig = getMetricGroups(configSheet);
-  const metricGroups = metricConfig.groups;
-  const pastPerformance = metricConfig.pastPerformance;
-
-  // Add this validation after getting metricConfig:
-  if (!metricConfig.pastPerformance.currentEventId) {
-    throw new Error("Event ID not found in G10");
+  // ===== DEBUG LOG CAPTURE =====
+  const debugLogSheetName = "Debug Execution Log";
+  let debugLogSheet = ss.getSheetByName(debugLogSheetName);
+  if (!debugLogSheet) {
+    debugLogSheet = ss.insertSheet(debugLogSheetName);
   }
+  debugLogSheet.clearContents();
+  debugLogSheet.getRange(1, 1, 1, 2).setValues([["Time", "Message"]]).setFontWeight("bold");
 
-  const metricLabels = [
+  const logs = [];
+  const originalLog = console.log;
+  const originalWarn = console.warn;
+  const originalError = console.error;
+
+  const logToBuffer = (level, args) => {
+    const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
+    logs.push([new Date().toLocaleTimeString(), `[${level}] ${msg}`]);
+  };
+
+  console.log = function(...args) {
+    logToBuffer('LOG', args);
+    originalLog(...args);
+  };
+  console.warn = function(...args) {
+    logToBuffer('WARN', args);
+    originalWarn(...args);
+  };
+  console.error = function(...args) {
+    logToBuffer('ERROR', args);
+    originalError(...args);
+  };
+
+  // Ensure at least one entry so the sheet is never blank
+  logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
+
+  const flushLogs = () => {
+    if (logs.length === 0) {
+      logs.push([new Date().toLocaleTimeString(), '[WARN] No console logs captured']);
+    }
+
+    const requiredRows = logs.length + 1; // +1 for header row
+    if (debugLogSheet.getMaxRows() < requiredRows) {
+      debugLogSheet.insertRowsAfter(debugLogSheet.getMaxRows(), requiredRows - debugLogSheet.getMaxRows());
+    }
+
+    debugLogSheet.getRange(2, 1, logs.length, 2).setValues(logs);
+    debugLogSheet.setColumnWidths(1, 1, 100);
+    debugLogSheet.setColumnWidth(2, 800);
+    SpreadsheetApp.flush();
+  };
+
+  try {
+    logs.push([new Date().toLocaleTimeString(), '[LOG] Starting generatePlayerRankings']);
+    // Clear previous output
+    outputSheet.clearContents().clearFormats();
+
+    // 1. Get Configuration Values
+    const metricConfig = getMetricGroups(configSheet);
+    const metricGroups = metricConfig.groups;
+    const pastPerformance = metricConfig.pastPerformance;
+
+    // Add this validation after getting metricConfig:
+    if (!metricConfig.pastPerformance.currentEventId) {
+      throw new Error("Event ID not found in G10");
+    }
+
+    const metricLabels = [
   // Historical Metrics (17)
   "SG Total", "Driving Distance", "Driving Accuracy",
   "SG T2G", "SG Approach", "SG Around Green",
@@ -78,6 +133,263 @@ function generatePlayerRankings() {
   const processedData = rankedPlayers.players;
   const groupStats = rankedPlayers.groupStats || {};
 
+  // ===== DEBUG SNAPSHOT (EXPLICIT, NOT VIA console.log) =====
+  const snapshotTime = () => new Date().toLocaleTimeString();
+  const targetName = "Scheffler, Scottie";
+  const targetPlayer = processedData.find(p => p && p.name === targetName);
+
+  logs.push([snapshotTime(), `[SNAPSHOT] Players processed: ${processedData.length}`]);
+  logs.push([snapshotTime(), `[SNAPSHOT] Target player found: ${targetPlayer ? 'YES' : 'NO'}`]);
+
+  if (targetPlayer) {
+    logs.push([snapshotTime(), `[SNAPSHOT] ${targetPlayer.name} DG ID: ${targetPlayer.dgId}`]);
+    
+    // Log round categorization details for Scheffler
+    const targetData = players[targetPlayer.dgId];
+    if (targetData) {
+      logs.push([snapshotTime(), `[SNAPSHOT] Round Categorization:`]);
+      logs.push([snapshotTime(), `[SNAPSHOT]   Putting rounds: ${targetData.puttingRounds.length}`]);
+      logs.push([snapshotTime(), `[SNAPSHOT]   Historical rounds: ${targetData.historicalRounds.length}`]);
+      logs.push([snapshotTime(), `[SNAPSHOT]   Similar rounds: ${targetData.similarRounds.length}`]);
+      
+      // Log individual putting rounds if any
+      if (targetData.puttingRounds.length > 0) {
+        targetData.puttingRounds.forEach((r, i) => {
+          logs.push([snapshotTime(), `[SNAPSHOT]     Putting Round ${i}: event=${r.eventId}, sg_putt=${r.metrics?.strokesGainedPutt}, roundNum=${r.roundNum}`]);
+        });
+      }
+      
+      // Log individual historical rounds with sg_putt values
+      if (targetData.historicalRounds.length > 0) {
+        logs.push([snapshotTime(), `[SNAPSHOT]   Historical sg_putt values:`]);
+        targetData.historicalRounds.forEach((r, i) => {
+          logs.push([snapshotTime(), `[SNAPSHOT]     Historical Round ${i}: event=${r.eventId}, sg_putt=${r.metrics?.strokesGainedPutt}, roundNum=${r.roundNum}`]);
+        });
+        
+        // Calculate what the weighted average SHOULD be
+        const sgPuttValues = targetData.historicalRounds
+          .map(r => r.metrics?.strokesGainedPutt)
+          .filter(v => typeof v === 'number' && !isNaN(v));
+        
+        if (sgPuttValues.length > 0) {
+          // Calculate weighted average with lambda=0.2
+          let sumWeighted = 0;
+          let sumWeights = 0;
+          sgPuttValues.forEach((value, i) => {
+            const weight = Math.exp(-0.2 * i);
+            sumWeighted += weight * value;
+            sumWeights += weight;
+          });
+          const weightedAvg = sumWeights > 0 ? sumWeighted / sumWeights : 0;
+          logs.push([snapshotTime(), `[SNAPSHOT]   Weighted Average SG Putt (lambda=0.2): ${weightedAvg}`]);
+          logs.push([snapshotTime(), `[SNAPSHOT]   Calculation: ${sgPuttValues.map((v, i) => `${v}*exp(-0.2*${i})`).join(' + ')} / sum(weights)`]);
+        }
+      }
+      
+      // Log approach metrics raw data
+      if (targetData.approachMetrics) {
+        logs.push([snapshotTime(), `[SNAPSHOT] Approach Metrics Raw Data:`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <100 FW GIR: ${targetData.approachMetrics['<100']?.fwGIR}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <100 SG (per-shot): ${targetData.approachMetrics['<100']?.strokesGained}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <100 Prox: ${targetData.approachMetrics['<100']?.shotProx}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <150 FW GIR: ${targetData.approachMetrics['<150']?.fwGIR}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <150 FW SG (per-shot): ${targetData.approachMetrics['<150']?.fwStrokesGained}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   <150 FW Prox: ${targetData.approachMetrics['<150']?.fwShotProx}`]);
+      }
+      
+      // Log BCC calculation components
+      if (Array.isArray(targetPlayer.metrics) && targetPlayer.metrics.length > 14) {
+        const bccValue = targetPlayer.metrics[14];
+        logs.push([snapshotTime(), `[SNAPSHOT] BCC Calculation Components:`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Driving Accuracy (metric 2): ${targetPlayer.metrics[2]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   SG Putting (metric 7): ${targetPlayer.metrics[7]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <100 GIR (metric 17): ${targetPlayer.metrics[17]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <150 FW GIR (metric 20): ${targetPlayer.metrics[20]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <150 Rough GIR (metric 23): ${targetPlayer.metrics[23]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach >150 Rough GIR (metric 26): ${targetPlayer.metrics[26]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <200 FW GIR (metric 29): ${targetPlayer.metrics[29]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach >200 FW GIR (metric 32): ${targetPlayer.metrics[32]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <100 SG (metric 18): ${targetPlayer.metrics[18]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Approach <150 FW SG (metric 21): ${targetPlayer.metrics[21]}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT]   Calculated BCC (metric 14): ${bccValue}`]);
+      }
+    }
+    
+    logs.push([snapshotTime(), `[SNAPSHOT] WeightedScore: ${targetPlayer.weightedScore}`]);
+    logs.push([snapshotTime(), `[SNAPSHOT] RefinedWeightedScore: ${targetPlayer.refinedWeightedScore}`]);
+    logs.push([snapshotTime(), `[SNAPSHOT] PastPerfMultiplier: ${targetPlayer.pastPerformanceMultiplier}`]);
+    logs.push([snapshotTime(), `[SNAPSHOT] DataCoverage: ${targetPlayer.dataCoverage} | Confidence: ${targetPlayer.confidenceFactor}`]);
+
+    if (targetPlayer.groupScores) {
+      Object.entries(targetPlayer.groupScores).forEach(([groupName, score]) => {
+        logs.push([snapshotTime(), `[SNAPSHOT] GroupScore ${groupName}: ${score}`]);
+      });
+    }
+
+    if (Array.isArray(targetPlayer.metrics)) {
+      targetPlayer.metrics.forEach((val, idx) => {
+        const label = metricLabels[idx] || `Metric ${idx}`;
+        logs.push([snapshotTime(), `[SNAPSHOT] Metric ${idx} ${label}: ${val}`]);
+      });
+    }
+
+    // Putting metric calculation detail (z-score inputs)
+    if (Array.isArray(targetPlayer.metrics)) {
+      const puttingValue = targetPlayer.metrics[7];
+      const puttingStats = groupStats?.["Putting"]?.["SG Putting"];
+      if (typeof puttingValue === 'number' && puttingStats) {
+        const puttingStdDev = puttingStats.stdDev || 0.001;
+        const puttingZ = (puttingValue - puttingStats.mean) / puttingStdDev;
+        logs.push([snapshotTime(), `[SNAPSHOT] Putting Metric Value (index 7): ${puttingValue}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT] Putting Stats mean=${puttingStats.mean}, stdDev=${puttingStdDev}`]);
+        logs.push([snapshotTime(), `[SNAPSHOT] Putting Z-Score: ${puttingZ}`]);
+      }
+    }
+
+    // Approach metrics summary (indices 17-34 in metricLabels)
+    if (Array.isArray(targetPlayer.metrics) && targetPlayer.metrics.length >= 35) {
+      for (let i = 17; i <= 34; i++) {
+        const label = metricLabels[i] || `Approach Metric ${i}`;
+        logs.push([snapshotTime(), `[SNAPSHOT] Approach Metric ${i} ${label}: ${targetPlayer.metrics[i]}`]);
+      }
+    }
+
+    // Derived metric: Birdie Chances Created is index 14
+    if (Array.isArray(targetPlayer.metrics) && targetPlayer.metrics.length > 14) {
+      logs.push([snapshotTime(), `[SNAPSHOT] Derived Metric BCC (index 14): ${targetPlayer.metrics[14]}`]);
+    }
+
+    // Detailed Group Score Calculation for Scoring and Course Management
+    if (Array.isArray(targetPlayer.metrics)) {
+      // Find Scoring and Course Management groups
+      const scoringGroup = metricGroups.find(g => g.name === 'Scoring');
+      const courseManagementGroup = metricGroups.find(g => g.name === 'Course Management');
+      const puttingGroup = metricGroups.find(g => g.name === 'Putting');
+      
+      // Log Putting group calculation (simple, one metric)
+      if (puttingGroup) {
+        logs.push([snapshotTime(), `[SNAPSHOT] === PUTTING GROUP SCORE CALCULATION ===`]);
+        let puttingGroupScore = 0;
+        let puttingTotalWeight = 0;
+        
+        puttingGroup.metrics.forEach(metric => {
+          const rawValue = targetPlayer.metrics[metric.index];
+          const stats = groupStats?.["Putting"]?.[metric.name];
+          if (stats) {
+            const zScore = (rawValue - stats.mean) / (stats.stdDev || 0.001);
+            const contribution = zScore * metric.weight;
+            logs.push([snapshotTime(), `[SNAPSHOT]   ${metric.name}: raw=${rawValue}, z=${zScore.toFixed(4)}, weight=${metric.weight}, contrib=${contribution.toFixed(4)}`]);
+            puttingGroupScore += contribution;
+            puttingTotalWeight += metric.weight;
+          }
+        });
+        
+        const finalPuttingScore = puttingTotalWeight > 0 ? puttingGroupScore / puttingTotalWeight : 0;
+        logs.push([snapshotTime(), `[SNAPSHOT]   Total: ${puttingGroupScore.toFixed(4)} / ${puttingTotalWeight} = ${finalPuttingScore.toFixed(4)}`]);
+      }
+      
+      // Log Scoring group calculation
+      if (scoringGroup) {
+        logs.push([snapshotTime(), `[SNAPSHOT] === SCORING GROUP SCORE CALCULATION ===`]);
+        let scoringGroupScore = 0;
+        let scoringTotalWeight = 0;
+        
+        scoringGroup.metrics.forEach(metric => {
+          let rawValue = targetPlayer.metrics[metric.index];
+          
+          // Apply transformations
+          let transformedValue = rawValue;
+          if (metric.name === 'Scoring Average') {
+            const maxScore = 74;
+            transformedValue = maxScore - rawValue;
+          }
+          
+          const stats = groupStats?.["Scoring"]?.[metric.name];
+          if (stats) {
+            const zScore = (transformedValue - stats.mean) / (stats.stdDev || 0.001);
+            const contribution = zScore * metric.weight;
+            logs.push([snapshotTime(), `[SNAPSHOT]   ${metric.name}: raw=${rawValue}, transformed=${transformedValue.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight}, contrib=${contribution.toFixed(4)}`]);
+            scoringGroupScore += contribution;
+            scoringTotalWeight += metric.weight;
+          }
+        });
+        
+        const finalScoringScore = scoringTotalWeight > 0 ? scoringGroupScore / scoringTotalWeight : 0;
+        logs.push([snapshotTime(), `[SNAPSHOT]   Total: ${scoringGroupScore.toFixed(4)} / ${scoringTotalWeight} = ${finalScoringScore.toFixed(4)}`]);
+      }
+      
+      // Log Course Management group calculation
+      if (courseManagementGroup) {
+        logs.push([snapshotTime(), `[SNAPSHOT] === COURSE MANAGEMENT GROUP SCORE CALCULATION ===`]);
+        let cmGroupScore = 0;
+        let cmTotalWeight = 0;
+        
+        courseManagementGroup.metrics.forEach(metric => {
+          let rawValue = targetPlayer.metrics[metric.index];
+          
+          // Apply transformations for proximity metrics
+          let transformedValue = rawValue;
+          if (metric.name.includes('Prox')) {
+            const maxProxValue = metric.name.includes('Fairway') ? 60 : 
+                                 metric.name.includes('Rough') ? 80 : 60;
+            transformedValue = Math.max(0, maxProxValue - rawValue);
+          }
+          
+          const stats = groupStats?.["Course Management"]?.[metric.name];
+          if (stats) {
+            const zScore = (transformedValue - stats.mean) / (stats.stdDev || 0.001);
+            const contribution = zScore * metric.weight;
+            logs.push([snapshotTime(), `[SNAPSHOT]   ${metric.name}: raw=${rawValue}, transformed=${transformedValue.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight}, contrib=${contribution.toFixed(4)}`]);
+            cmGroupScore += contribution;
+            cmTotalWeight += metric.weight;
+          }
+        });
+        
+        const finalCMScore = cmTotalWeight > 0 ? cmGroupScore / cmTotalWeight : 0;
+        logs.push([snapshotTime(), `[SNAPSHOT]   Total: ${cmGroupScore.toFixed(4)} / ${cmTotalWeight} = ${finalCMScore.toFixed(4)}`]);
+      }
+    }
+
+    // Trend calculations (historical metrics only)
+    if (Array.isArray(targetPlayer.trends)) {
+      const trendLabels = [
+        'SG Total', 'Driving Distance', 'Driving Accuracy', 'SG T2G',
+        'SG Approach', 'SG Around Green', 'SG OTT', 'SG Putting',
+        'Greens in Regulation', 'Scrambling', 'Great Shots', 'Poor Shots',
+        'Scoring Average', 'Birdies or Better', 'Fairway Proximity', 'Rough Proximity'
+      ];
+      targetPlayer.trends.forEach((trendVal, idx) => {
+        const label = trendLabels[idx] || `Trend ${idx}`;
+        logs.push([snapshotTime(), `[SNAPSHOT] Trend ${idx} ${label}: ${trendVal}`]);
+      });
+    }
+
+    // Group score dampening details if present
+    if (targetPlayer.groupScoresBeforeDampening) {
+      logs.push([snapshotTime(), `[SNAPSHOT] GroupScores Before Dampening: ${JSON.stringify(targetPlayer.groupScoresBeforeDampening)}`]);
+    }
+    if (targetPlayer.groupScoresAfterDampening) {
+      logs.push([snapshotTime(), `[SNAPSHOT] GroupScores After Dampening: ${JSON.stringify(targetPlayer.groupScoresAfterDampening)}`]);
+    }
+  }
+
+  // Log groupStats for key metrics (mean/stdDev)
+  const statsFocus = new Set([
+    'Scoring Average',
+    'Birdie Chances Created',
+    'SG T2G',
+    'SG Putting',
+    'SG Around Green'
+  ]);
+
+  Object.entries(groupStats).forEach(([groupName, metrics]) => {
+    Object.entries(metrics).forEach(([metricName, stats]) => {
+      if (metricName.includes('Approach') || metricName.includes('Prox') || statsFocus.has(metricName)) {
+        logs.push([snapshotTime(), `[SNAPSHOT] Stats ${groupName} -> ${metricName}: mean=${stats.mean}, stdDev=${stats.stdDev}`]);
+      }
+    });
+  });
+
   // After calculating in calculatePlayerMetrics
   const cacheData = JSON.stringify({
     players: processedData,
@@ -96,9 +408,20 @@ function generatePlayerRankings() {
   // 6. Create Debug Sheet with calculation breakdown - USE SORTED DATA WITH RANKS
   createDebugCalculationSheet(ss, sortedData, metricGroups, groupStats);
 
-  return "Rankings generated successfully!";
+    logs.push([new Date().toLocaleTimeString(), '[LOG] generatePlayerRankings completed successfully']);
+    return "Rankings generated successfully!";
+  } catch (error) {
+    console.log(`ERROR: ${error && error.message ? error.message : error}`);
+    throw error;
+  } finally {
+    flushLogs();
+    console.log = originalLog;
+    console.warn = originalWarn;
+    console.error = originalError;
+  }
 }
 
+// Ported to test
 function getMetricGroups(configSheet) {
 
   // Read past performance configuration
@@ -188,21 +511,27 @@ function getMetricGroups(configSheet) {
         "Approach <150 FW GIR": configSheet.getRange("G18").getValue(),
         "Approach <150 FW SG": configSheet.getRange("H18").getValue(),
         "Approach <150 FW Prox": configSheet.getRange("I18").getValue(),
-        "Approach <150 Rough GIR": configSheet.getRange("J18").getValue(),
-        "Approach <150 Rough SG": configSheet.getRange("K18").getValue(),
-        "Approach <150 Rough Prox": configSheet.getRange("L18").getValue()
+        "Approach <150 Rough GIR": configSheet.getRange("G18").getValue(),
+        "Approach <150 Rough SG": configSheet.getRange("H18").getValue(),
+        "Approach <150 Rough Prox": configSheet.getRange("I18").getValue()
       }
     },
     "Approach - Long (150-200)": {
       metrics: {
         "Approach <200 FW GIR": METRIC_INDICES["Approach <200 FW GIR"],
         "Approach <200 FW SG": METRIC_INDICES["Approach <200 FW SG"],
-        "Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"]
+        "Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"],
+        "Approach >150 Rough GIR": METRIC_INDICES["Approach >150 Rough GIR"],
+        "Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"],
+        "Approach >150 Rough Prox": METRIC_INDICES["Approach >150 Rough Prox"]
       },
       weights: {
         "Approach <200 FW GIR": configSheet.getRange("G19").getValue(),
         "Approach <200 FW SG": configSheet.getRange("H19").getValue(),
-        "Approach <200 FW Prox": configSheet.getRange("I19").getValue()
+        "Approach <200 FW Prox": configSheet.getRange("I19").getValue(),
+        "Approach >150 Rough GIR": configSheet.getRange("G19").getValue(),
+        "Approach >150 Rough SG": configSheet.getRange("H19").getValue(),
+        "Approach >150 Rough Prox": configSheet.getRange("I19").getValue()
       }
     },
     "Approach - Very Long (>200)": {
@@ -235,26 +564,26 @@ function getMetricGroups(configSheet) {
     },
     "Scoring": {
       metrics: {
-        "SG Total": METRIC_INDICES["SG Total"],
+        "SG T2G": METRIC_INDICES["SG T2G"],
         "Scoring Average": METRIC_INDICES["Scoring Average"],
         "Birdie Chances Created": METRIC_INDICES["Birdie Chances Created"],
-        "Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
-        "Approach <150 FW SG": METRIC_INDICES["Approach <150 FW SG"],
-        "Approach <150 Rough SG": METRIC_INDICES["Approach <150 Rough SG"],
-        "Approach <200 FW SG": METRIC_INDICES["Approach <200 FW SG"],
-        "Approach >200 FW SG": METRIC_INDICES["Approach >200 FW SG"],
-        "Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"]
+        "Scoring: Approach <100 SG": METRIC_INDICES["Approach <100 SG"],
+        "Scoring: Approach <150 FW SG": METRIC_INDICES["Approach <150 FW SG"],
+        "Scoring: Approach <150 Rough SG": METRIC_INDICES["Approach <150 Rough SG"],
+        "Scoring: Approach <200 FW SG": METRIC_INDICES["Approach <200 FW SG"],
+        "Scoring: Approach >200 FW SG": METRIC_INDICES["Approach >200 FW SG"],
+        "Scoring: Approach >150 Rough SG": METRIC_INDICES["Approach >150 Rough SG"]
       },
       weights: {
-        "SG Total": configSheet.getRange("G23").getValue(),
+        "SG T2G": configSheet.getRange("G23").getValue(),
         "Scoring Average": configSheet.getRange("H23").getValue(),
         "Birdie Chances Created": configSheet.getRange("I23").getValue(),
-        "Approach <100 SG": configSheet.getRange("P17").getValue(),
-        "Approach <150 FW SG": configSheet.getRange("P18").getValue(),
-        "Approach <150 Rough SG": configSheet.getRange("P18").getValue(),
-        "Approach <200 FW SG": configSheet.getRange("P19").getValue(),
-        "Approach >200 FW SG": configSheet.getRange("P20").getValue(),
-        "Approach >150 Rough SG": configSheet.getRange("P20").getValue()
+        "Scoring: Approach <100 SG": configSheet.getRange("P17").getValue(),
+        "Scoring: Approach <150 FW SG": configSheet.getRange("P18").getValue(),
+        "Scoring: Approach <150 Rough SG": configSheet.getRange("P18").getValue(),
+        "Scoring: Approach <200 FW SG": configSheet.getRange("P19").getValue(),
+        "Scoring: Approach >200 FW SG": configSheet.getRange("P20").getValue(),
+        "Scoring: Approach >150 Rough SG": configSheet.getRange("P20").getValue()
       }
     },
     "Course Management": {
@@ -262,23 +591,23 @@ function getMetricGroups(configSheet) {
         "Scrambling": METRIC_INDICES["Scrambling"],
         "Great Shots": METRIC_INDICES["Great Shots"],
         "Poor Shots": METRIC_INDICES["Poor Shots"],
-        "Approach <100 Prox": METRIC_INDICES["Approach <100 Prox"],
-        "Approach <150 FW Prox": METRIC_INDICES["Approach <150 FW Prox"],
-        "Approach <150 Rough Prox": METRIC_INDICES["Approach <150 Rough Prox"],
-        "Approach >150 Rough Prox": METRIC_INDICES["Approach >150 Rough Prox"],
-        "Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"],
-        "Approach >200 FW Prox": METRIC_INDICES["Approach >200 FW Prox"]
+        "Course Management: Approach <100 Prox": METRIC_INDICES["Approach <100 Prox"],
+        "Course Management: Approach <150 FW Prox": METRIC_INDICES["Approach <150 FW Prox"],
+        "Course Management: Approach <150 Rough Prox": METRIC_INDICES["Approach <150 Rough Prox"],
+        "Course Management: Approach >150 Rough Prox": METRIC_INDICES["Approach >150 Rough Prox"],
+        "Course Management: Approach <200 FW Prox": METRIC_INDICES["Approach <200 FW Prox"],
+        "Course Management: Approach >200 FW Prox": METRIC_INDICES["Approach >200 FW Prox"]
       },
       weights: {
         "Scrambling": configSheet.getRange("G24").getValue(),
         "Great Shots": configSheet.getRange("H24").getValue(),
         "Poor Shots": configSheet.getRange("I24").getValue(),
-        "Approach <100 Prox": configSheet.getRange("J24").getValue(),
-        "Approach <150 FW Prox": configSheet.getRange("K24").getValue(),
-        "Approach <150 Rough Prox": configSheet.getRange("L24").getValue(),
-        "Approach >150 Rough Prox": configSheet.getRange("M24").getValue(),
-        "Approach <200 FW Prox": configSheet.getRange("N24").getValue(),
-        "Approach >200 FW Prox": configSheet.getRange("O24").getValue()
+        "Course Management: Approach <100 Prox": configSheet.getRange("J24").getValue(),
+        "Course Management: Approach <150 FW Prox": configSheet.getRange("K24").getValue(),
+        "Course Management: Approach <150 Rough Prox": configSheet.getRange("L24").getValue(),
+        "Course Management: Approach >150 Rough Prox": configSheet.getRange("M24").getValue(),
+        "Course Management: Approach <200 FW Prox": configSheet.getRange("N24").getValue(),
+        "Course Management: Approach >200 FW Prox": configSheet.getRange("O24").getValue()
       }
     },
     "Past Performance": {
@@ -329,6 +658,7 @@ function getMetricGroups(configSheet) {
 }
 
 // Helper function to convert per-shot SG values to per-round values
+// Ported to test
 function normalizeApproachSG(perShotValue) {
   // Average number of approach shots per round on PGA Tour
   const AVG_APPROACH_SHOTS_PER_ROUND = 18;
@@ -338,6 +668,7 @@ function normalizeApproachSG(perShotValue) {
 }
 
 // Helper function to calculate Birdie Chances Created using clean metrics
+// Ported to test
 function calculateBCC(metrics, courseSetupWeights) {
   // Define metric indices for easier reference (BEFORE BCC insertion)
   const DRIVING_ACCURACY_INDEX = 2;    // Driving accuracy percentage
@@ -459,6 +790,7 @@ function calculateBCC(metrics, courseSetupWeights) {
 }
 
 // Helper function to apply trends to metrics with proper index mapping
+// Ported to test
 function applyTrends(updatedMetrics, trends, playerName) {
   // Define constants
   const TREND_WEIGHT = 0.30; // How much trends influence the overall score
@@ -531,6 +863,7 @@ function applyTrends(updatedMetrics, trends, playerName) {
 }
 
 // Helper function to calculate WAR without index adjustments
+// Ported to test
 function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, groups) {
   let war = 0;
   
@@ -566,6 +899,24 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
         kpiValue = 0;
       }
       
+      // APPLY TRANSFORMATIONS (same as group score calculation)
+      // Transform "lower is better" metrics to "higher is better" for consistent z-score interpretation
+      if (kpi.name === 'Poor Shots') {
+        const maxPoorShots = METRIC_MAX_VALUES['Poor Shots'] || 12;
+        kpiValue = maxPoorShots - kpiValue;
+      } else if (kpi.name.includes('Prox') ||
+                 kpi.name === 'Fairway Proximity' ||
+                 kpi.name === 'Rough Proximity') {
+        const maxProxValue = METRIC_MAX_VALUES[kpi.name] ||
+                             (kpi.name === 'Fairway Proximity' ? 60 :
+                             kpi.name === 'Rough Proximity' ? 80 : 60);
+        kpiValue = maxProxValue - kpiValue;
+        kpiValue = Math.max(0, kpiValue);
+      } else if (kpi.name === 'Scoring Average') {
+        const maxScore = METRIC_MAX_VALUES['Scoring Average'] || 74;
+        kpiValue = maxScore - kpiValue;
+      }
+      
       // Find the group for this KPI
       let kpiGroup = null;
       for (const group of groups) {
@@ -590,7 +941,7 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
       const mean = typeof kpiStats.mean === 'number' ? kpiStats.mean : 0;
       const stdDev = typeof kpiStats.stdDev === 'number' && kpiStats.stdDev > 0 ? kpiStats.stdDev : 0.0001;
       
-      // Calculate z-score safely
+      // Calculate z-score safely (now using transformed value)
       let zScore = (kpiValue - mean) / stdDev;
       
       // Apply transformation safely
@@ -825,7 +1176,8 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
 
   return finalImpact;
 }
- 
+
+// Ported to test
 function calculatePlayerMetrics(players, { groups, pastPerformance }) {
   // Define constants
   const TREND_THRESHOLD = 0.005; // Minimum trend value to consider significant
@@ -950,15 +1302,35 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       const isProblematicMetric = problematicMetrics.has(metric.name);
       
       Object.entries(players).forEach(([dgId, player]) => {
-        const value = metricsWithBCC[dgId]?.[metric.index];
+        const rawValue = metricsWithBCC[dgId]?.[metric.index];
         
         if (isProblematicMetric) {
-          console.log(`  ${player.name}: value=${value}, type=${typeof value}, isNaN=${isNaN(value)}`);
+          console.log(`  ${player.name}: value=${rawValue}, type=${typeof rawValue}, isNaN=${isNaN(rawValue)}`);
         }
         
         // Exclude zero values for clean statistics - they're missing data not actual performance
-        if (typeof value === 'number' && !isNaN(value) && value !== 0) {
-          metricValues.push(value);
+        if (typeof rawValue === 'number' && !isNaN(rawValue) && rawValue !== 0) {
+          // APPLY TRANSFORM for correct field statistics
+          let transformedValue = rawValue;
+          
+          // Apply same transforms as later in z-score calculation
+          if (metric.name === 'Poor Shots') {
+            const maxPoorShots = METRIC_MAX_VALUES['Poor Shots'] || 12;
+            transformedValue = maxPoorShots - rawValue;
+          } else if (metric.name.includes('Prox') ||
+                     metric.name === 'Fairway Proximity' ||
+                     metric.name === 'Rough Proximity') {
+            const maxProxValue = METRIC_MAX_VALUES[metric.name] ||
+                                 (metric.name === 'Fairway Proximity' ? 60 :
+                                 metric.name === 'Rough Proximity' ? 80 : 60);
+            transformedValue = maxProxValue - rawValue;
+            transformedValue = Math.max(0, transformedValue);
+          } else if (metric.name === 'Scoring Average') {
+            const maxScore = METRIC_MAX_VALUES['Scoring Average'] || 74;
+            transformedValue = maxScore - rawValue;
+          }
+          
+          metricValues.push(transformedValue);
         }
       });
  
@@ -1770,7 +2142,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
 }
 
 
-
+// Ported to test
 function validateKpiWeights(normalizedKpis) {
   const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + kpi.weight, 0);
   
@@ -1790,6 +2162,7 @@ function validateKpiWeights(normalizedKpis) {
 
 
 // Helper function to get coverage confidence level
+// Ported to test
 function getCoverageConfidence(dataCoverage) {
   // Validate input
   if (typeof dataCoverage !== 'number' || isNaN(dataCoverage)) {
@@ -1816,6 +2189,7 @@ function getCoverageConfidence(dataCoverage) {
   return finalConfidence;
 }
 
+// Ported to test
 function calculateMetricTrends(finishes) {
   const TOTAL_ROUNDS = 24;
   const LAMBDA = 0.2 // Exponential decay factor
@@ -1904,6 +2278,7 @@ function calculateMetricTrends(finishes) {
 }
 
 // Function to apply moving average smoothing
+// Ported to test
 function smoothData(values, windowSize) {
   if (values.length < windowSize) return values;
       
@@ -1924,6 +2299,7 @@ function smoothData(values, windowSize) {
 }
 
 // Helper function to extract course IDs from a range
+// Ported to test
 function getSimilarCourseIds(sheet, rangeAddress) {
   const range = sheet.getRange(rangeAddress);
   const values = range.getValues();
@@ -1950,6 +2326,7 @@ function getSimilarCourseIds(sheet, rangeAddress) {
   return courseIds.filter(id => id !== '');
 }
 
+// Ported to test
 function aggregatePlayerData(metricGroups) {
     const ss = SpreadsheetApp.getActiveSpreadsheet();
     const players = {};
@@ -1970,6 +2347,7 @@ function aggregatePlayerData(metricGroups) {
     // Get similar course IDs (both regular and putting-specific)
     const regularSimilarCourses = getSimilarCourseIds(configSheet, "G33:G37");
     const puttingSpecificCourses = getSimilarCourseIds(configSheet, "G40:G44");
+    const currentEventId = String(configSheet.getRange("G9").getValue() || "");
 
     console.log(`Regular similar courses: ${regularSimilarCourses.join(", ")}`);
     console.log(`Putting-specific courses: ${puttingSpecificCourses.join(", ")}`);
@@ -2073,6 +2451,11 @@ function aggregatePlayerData(metricGroups) {
       const eventId = safeRow[5];
       const roundDate = new Date(safeRow[7]);
       const roundYear = roundDate.getFullYear();
+
+      // Exclude only current event rounds from the current year
+      if (roundYear === 2026 && String(eventId) === currentEventId) {
+        return;
+      }
       
       // Create year-specific event key
       const eventKey = `${dgId}-${eventId}-${roundYear}`;
@@ -2135,6 +2518,11 @@ function aggregatePlayerData(metricGroups) {
       if (eventType.isPuttingSpecific) {
           players[dgId].puttingRounds.push(roundData);
           console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
+          
+          // Log Scheffler's putting rounds details
+          if (players[dgId].name === 'Scheffler, Scottie') {
+            console.log(`[SNAPSHOT] GAS Scheffler putting round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
+          }
       } 
       else if (eventType.isSimilar) {
           players[dgId].similarRounds.push(roundData);
@@ -2143,6 +2531,11 @@ function aggregatePlayerData(metricGroups) {
       else {
           // Only add to historicalRounds if NOT similar or putting-specific
           players[dgId].historicalRounds.push(roundData);
+          
+          // Log Scheffler's historical rounds details
+          if (players[dgId].name === 'Scheffler, Scottie') {
+            console.log(`[SNAPSHOT] GAS Scheffler historical round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
+          }
       }
       });
 
@@ -2190,8 +2583,8 @@ function aggregatePlayerData(metricGroups) {
           },
           '<200': {
             fwGIR: cleanMetricValue(row[9], true),   // Percentage
-            fwStrokesGained: cleanMetricValue(row[7]),
-            fwShotProx: cleanMetricValue(row[6])
+            fwStrokesGained: cleanMetricValue(row[14]),
+            fwShotProx: cleanMetricValue(row[13])
           },
           '>200': {
             fwGIR: cleanMetricValue(row[30], true),  // Percentage
@@ -2205,6 +2598,7 @@ function aggregatePlayerData(metricGroups) {
   return players;
 }
 
+// Ported to test
 function getApproachMetrics(approachData) {
   // Ensure each category has default values
   const categories = {
@@ -2279,6 +2673,7 @@ function getApproachMetrics(approachData) {
   ];
 }
 
+// Ported to test
 function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 20) {
   // Scale weight based on amount of data available
   if (dataPoints <= minPoints) return baseWeight * 0.8; // Reduce weight if minimum data
@@ -2294,6 +2689,7 @@ function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 2
  * Returns a Set of metric indices that have real data
  * If a player has any tournament rounds, they have data for all metrics
  */
+// Ported to test
 function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds, approachMetrics) {
   const metricsWithData = new Set();
   
@@ -2375,6 +2771,7 @@ function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds
   return metricsWithData;
 }
 
+// Ported to test
 function calculateHistoricalAverages(historicalRounds, similarRounds = [], puttingRounds = [], options = {}) {
   // Default options
   const {
@@ -2534,6 +2931,21 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       minPuttingPoints
     ) : null;
     
+    // Add detailed logging for Scheffler's putting metric calculation
+    if (playerName === 'Scheffler, Scottie' && isPuttingMetric) {
+      console.log(`[SNAPSHOT] GAS SCHEFFLER ${metricKey} RAW DATA:`);
+      console.log(`[SNAPSHOT]   Putting rounds: ${sortedPutting.length}`);
+      sortedPutting.forEach((r, i) => {
+        console.log(`[SNAPSHOT]     Round ${i}: ${metricKey}=${r.metrics?.[metricKey]}, date=${r.date}, event=${r.eventId}, roundNum=${r.roundNum}`);
+      });
+      console.log(`[SNAPSHOT]   Historical rounds: ${sortedHistorical.length}`);
+      const histValues = sortedHistorical.map(r => r.metrics?.[metricKey]).filter(v => typeof v === 'number' && !isNaN(v));
+      console.log(`[SNAPSHOT]     Valid ${metricKey} count: ${histValues.length}`);
+      console.log(`[SNAPSHOT]     Valid ${metricKey} values: [${histValues.join(', ')}]`);
+      console.log(`[SNAPSHOT]   Calculated puttingAvg: ${puttingAvg}`);
+      console.log(`[SNAPSHOT]   Calculated historicalAvg: ${historicalAvg}`);
+    }
+    
     // Log what data we have available
     console.log(`${playerName} - Metric ${metricKey}: ` + 
       `Historical=${historicalAvg !== null ? historicalAvg.toFixed(3) : 'n/a'}, ` +
@@ -2558,6 +2970,20 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
         console.log(`${playerName} - ${metricKey}: BLENDED PUTTING ${puttingAvg.toFixed(3)} × weight ${dynamicPuttingWeight.toFixed(2)} = ${(puttingAvg * dynamicPuttingWeight).toFixed(3)}
           Historical: ${historicalAvg.toFixed(3)} × weight ${(1-dynamicPuttingWeight).toFixed(2)} = ${(historicalAvg * (1-dynamicPuttingWeight)).toFixed(3)}
           Final value: ${finalValue.toFixed(3)}`);
+        
+        // Add detailed logging for Scheffler
+        if (playerName === 'Scheffler, Scottie') {
+          console.log(`[SNAPSHOT] SCHEFFLER PUTTING BLEND DETAIL:`);
+          console.log(`[SNAPSHOT]   Putting rounds: ${sortedPutting.length}`);
+          console.log(`[SNAPSHOT]   Historical rounds: ${sortedHistorical.length}`);
+          console.log(`[SNAPSHOT]   Base putting weight: ${puttingWeight}`);
+          console.log(`[SNAPSHOT]   Dynamic putting weight: ${dynamicPuttingWeight.toFixed(4)}`);
+          console.log(`[SNAPSHOT]   Putting avg: ${puttingAvg.toFixed(6)}`);
+          console.log(`[SNAPSHOT]   Historical avg: ${historicalAvg.toFixed(6)}`);
+          console.log(`[SNAPSHOT]   Putting component: ${(puttingAvg * dynamicPuttingWeight).toFixed(6)}`);
+          console.log(`[SNAPSHOT]   Historical component: ${(historicalAvg * (1-dynamicPuttingWeight)).toFixed(6)}`);
+          console.log(`[SNAPSHOT]   Final blended metric 7: ${finalValue.toFixed(6)}`);
+        }
         
         metricSources.blended++;
       } else {
@@ -2634,6 +3060,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   return results;
 }
 
+// Ported to test
 function prepareRankingOutput(processedData) {
   // Constants for ranking calculations
   const CLOSE_SCORE_THRESHOLD = 0.05; // 5% difference threshold for considering scores "close"
@@ -2754,8 +3181,7 @@ function prepareRankingOutput(processedData) {
   return sortedData;
 }
 
-
-
+// Ported to test
 function calculateMetricVolatility(metrics, trends) {
   if (!metrics || !trends) return 0.5; // Default medium volatility if data missing
   
@@ -2792,7 +3218,6 @@ function calculateMetricVolatility(metrics, trends) {
   // Return a value from 0.1 to 0.9 (never completely certain or uncertain)
   return 0.1 + (volatility * 0.8);
 }
-
 
 
 function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, groupStats) {
@@ -3164,6 +3589,7 @@ function formatMetricValue(value, index) {
   return percentageIndices.includes(index) ? value : Number(value.toFixed(3));
 }
 
+// Ported to test
 function cleanMetricValue(value, isPercentage = false) {
   let numericValue = typeof value === 'string' 
     ? parseFloat(value.replace(/[^0-9.]/g, '')) 
@@ -3182,6 +3608,7 @@ function cleanMetricValue(value, isPercentage = false) {
 }
 
 // Helper function to normalize metric names for comparison
+// Ported to test
 function normalizeMetricName(name) {
   return String(name).toLowerCase()
     .replace(/\s+/g, '') // Remove all spaces
@@ -3194,6 +3621,7 @@ function normalizeMetricName(name) {
 }
 
 // Enhanced player notes function that evaluates against key performance indicators
+// Ported to test
 function generatePlayerNotes(player, groups, groupStats) {
   const notes = [];
   
@@ -3361,6 +3789,8 @@ function generatePlayerNotes(player, groups, groupStats) {
  * Caches group statistics data for later use in analysis
  * @param {Object} groupStats - Group statistics with mean and stdDev for each metric
  */
+
+// Ported to test
 function cacheGroupStats(groupStats) {
   // Add timestamp for expiration checking
   const cacheData = {
