@@ -2002,7 +2002,7 @@ function getCoverageConfidence(dataCoverage) {
 function calculateMetricTrends(finishes) {
   const TOTAL_ROUNDS = 24;
   const LAMBDA = 0.2 // Exponential decay factor
-  const TREND_THRESHOLD = 0.005;
+  const TREND_THRESHOLD = 0.003; // Lowered from 0.005 to detect more subtle trends
   const SMOOTHING_WINDOW = 3; // Size of smoothing window
 
   // Sort rounds by date descending
@@ -2013,12 +2013,11 @@ function calculateMetricTrends(finishes) {
   // Get most recent valid rounds
   const recentRounds = sortedRounds.slice(0, TOTAL_ROUNDS).filter(round => {
     const isValid = round.metrics?.scoringAverage !== undefined;
-    if (!isValid) console.log('Filtering invalid round:', round.date);
     return isValid;
   });
 
-  // Return zeros if insufficient data
-  if (recentRounds.length < 15) return Array(16).fill(0);
+  // Return zeros if insufficient data - lowered from 15 to 8 rounds (more achievable)
+  if (recentRounds.length < 8) return Array(16).fill(0);
 
   // Complete metric mapping with all indices
   const metricMap = {
@@ -2051,8 +2050,8 @@ function calculateMetricTrends(finishes) {
       .map(round => round.metrics[metricName])
       .filter(value => typeof value === 'number' && !isNaN(value));
 
-    // Skip if not enough data points
-    if (values.length < 10) return 0;
+    // Skip if not enough data points - need 8+ rounds for meaningful trend (2+ weeks)
+    if (values.length < 8) return 0;
 
     // Apply smoothing before calculating trend
     const smoothedValues = smoothData(values, SMOOTHING_WINDOW);
