@@ -813,8 +813,11 @@ function applyTrends(updatedMetrics, trends, playerName) {
   // Create a copy of metrics
   const adjustedMetrics = [...updatedMetrics];
   
-  // Log for debugging
-  console.log(`${playerName}: Trends array length: ${trends.length}, Metrics array length: ${updatedMetrics.length}`);
+  // Log Scheffler's trend application
+  if (playerName === 'Scheffler, Scottie') {
+    console.log(`\n🔄 TREND ADJUSTMENTS FOR ${playerName}:`);
+    console.log(`Before trends applied: driving distance [1] = ${adjustedMetrics[1].toFixed(4)} yards`);
+  }
   
   // Process each trend in the original trends array
   for (let originalIndex = 0; originalIndex < trends.length; originalIndex++) {
@@ -829,7 +832,6 @@ function applyTrends(updatedMetrics, trends, playerName) {
     
     // Skip if adjusted index is out of bounds (shouldn't happen, but safety check)
     if (adjustedIndex >= updatedMetrics.length) {
-      console.warn(`${playerName}: Skipping trend at adjusted index ${adjustedIndex} (out of bounds)`);
       continue;
     }
     
@@ -869,9 +871,21 @@ function applyTrends(updatedMetrics, trends, playerName) {
     const originalValue = adjustedMetrics[adjustedIndex];
     adjustedMetrics[adjustedIndex] = originalValue * safeTrendFactor;
     
-    console.log(`${playerName}: Applied trend to ${metricName} (original idx: ${originalIndex}, adjusted idx: ${adjustedIndex}): 
-      ${originalValue.toFixed(3)} → ${adjustedMetrics[adjustedIndex].toFixed(3)} 
-      (trend: ${trends[originalIndex].toFixed(3)}, impact: ${trendImpact.toFixed(3)}, factor: ${safeTrendFactor.toFixed(3)})`);
+    // Detailed logging for Scheffler's driving distance
+    if (playerName === 'Scheffler, Scottie' && originalIndex === 1) {
+      console.log(`\n  Metric: ${metricName} (index ${originalIndex})`);
+      console.log(`  Trend Value: ${trends[originalIndex].toFixed(6)} (fractional per-round change)`);
+      console.log(`  Trend Weight: ${TREND_WEIGHT} (weight of trend in final adjustment)`);
+      console.log(`  Trend Impact: ${trends[originalIndex].toFixed(6)} × ${TREND_WEIGHT} = ${trendImpact.toFixed(6)}`);
+      console.log(`  Trend Factor: 1 + ${trendImpact.toFixed(6)} = ${safeTrendFactor.toFixed(6)}`);
+      console.log(`  Value Before Trend: ${originalValue.toFixed(4)} yards`);
+      console.log(`  Value After Trend: ${adjustedMetrics[adjustedIndex].toFixed(4)} yards`);
+      console.log(`  Change: ${(adjustedMetrics[adjustedIndex] - originalValue).toFixed(4)} yards (${((adjustedMetrics[adjustedIndex] / originalValue - 1) * 100).toFixed(2)}%)\n`);
+    }
+  }
+  
+  if (playerName === 'Scheffler, Scottie') {
+    console.log(`After trends applied: driving distance [1] = ${adjustedMetrics[1].toFixed(4)} yards\n`);
   }
   
   return adjustedMetrics;
@@ -1577,6 +1591,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         const stdDev = metricStats.stdDev || 0.001; // Ensure non-zero
         let zScore = (value - metricStats.mean) / stdDev;
         
+        if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && data.name === 'Scheffler, Scottie') {
+          console.log(`  [METRIC] ${metric.name}: raw=${adjustedMetrics[metric.index]?.toFixed(4)}, trans=${value.toFixed(4)}, mean=${metricStats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight.toFixed(6)}`);
+        }
+        
         // Apply scoring differential penalties for scoring related metrics
         if (metric.name.includes('Score') || 
             metric.name.includes('Birdie') || 
@@ -1604,6 +1622,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       // Normalize by total weight if available
       if (totalWeight > 0) {
         groupScore = groupScore / totalWeight;
+      }
+      
+      if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && data.name === 'Scheffler, Scottie') {
+        console.log(`[DEBUG Scheffler] ${group.name}: metricsProcessed=${metricsProcessed}, metricsSkipped=${metricsSkipped}, groupScore=${groupScore.toFixed(4)}, totalWeight=${totalWeight.toFixed(4)}`);
       }
       
       // Store the group score
@@ -2076,9 +2098,16 @@ function calculateMetricTrends(finishes) {
     const denominator = sumWeights * sumX2 - sumX * sumX;
     const slope = denominator !== 0 ? numerator / denominator : 0;
     
+    // CRITICAL FIX: Scale trend by the metric baseline value
+    // The slope is in absolute units (e.g., yards per round for driving distance)
+    // But we need to express it as a fractional change (e.g., 0.01 = 1% per round)
+    // Calculate the average metric value for this player to normalize
+    const avgValue = values.reduce((a, b) => a + b, 0) / values.length;
+    const scaledSlope = avgValue !== 0 ? slope / avgValue : 0;
+    
     // Apply significance threshold
-    const finalTrend = Math.abs(slope) > TREND_THRESHOLD 
-      ? Number(slope.toFixed(3))
+    const finalTrend = Math.abs(scaledSlope) > TREND_THRESHOLD 
+      ? Number(scaledSlope.toFixed(3))
       : 0;
 
     return finalTrend;
@@ -2642,11 +2671,35 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
     let sumWeighted = 0;
     let sumWeights = 0;
     
+    // For Scheffler's driving distance, show detailed lambda application
+    const showDetail = playerName === 'Scheffler, Scottie' && values.length > 0 && values[0] > 200 && values[0] < 350;
+    
+    if (showDetail) {
+      console.log(`\n📐 EXPONENTIAL DECAY WEIGHTING (λ=${decayFactor}):`);
+      console.log(`\nRound Details (newest → oldest, index 0 = most recent):`);
+      console.log(`Index | Distance | Weight Factor | Weighted Value | Weight %`);
+      console.log(`─────────────────────────────────────────────────────────────`);
+    }
+    
     values.forEach((value, i) => {
       const weight = Math.exp(-decayFactor * i); // Newest first
       sumWeighted += weight * value;
       sumWeights += weight;
+      
+      if (showDetail && i < 16) { // Show first 16 rounds
+        const weightedVal = weight * value;
+        const weightPct = (weight / sumWeights * 100).toFixed(1);
+        console.log(`  ${i.toString().padEnd(2)} | ${value.toFixed(1).padEnd(8)} | ${weight.toFixed(6).padEnd(13)} | ${weightedVal.toFixed(2).padEnd(14)} | ${weightPct}%`);
+      }
     });
+    
+    if (showDetail) {
+      console.log(`─────────────────────────────────────────────────────────────`);
+      console.log(`Total rounds: ${values.length}`);
+      console.log(`Sum of weights: ${sumWeights.toFixed(6)}`);
+      console.log(`Sum of weighted values: ${sumWeighted.toFixed(2)}`);
+      console.log(`Weighted Average = ${sumWeighted.toFixed(2)} / ${sumWeights.toFixed(6)} = ${(sumWeighted / sumWeights).toFixed(4)} yards\n`);
+    }
     
     return sumWeights > 0 ? sumWeighted / sumWeights : null;
   };
@@ -2690,6 +2743,23 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   // Log the number of rounds for each category
   const playerName = sortedHistorical.length > 0 ? sortedHistorical[0].playerName : 'Unknown';
   console.log(`${playerName}: Prepared ${sortedHistorical.length} historical, ${sortedSimilar.length} similar, and ${sortedPutting.length} putting rounds`);
+  
+  // Log Scheffler's individual rounds
+  if (playerName === 'Scheffler, Scottie') {
+    console.log(`\n🎯 SCHEFFLER ROUND DETAILS:\n`);
+    console.log(`Historical Rounds (events 2, 60, 464, 478):`);
+    sortedHistorical.forEach((round, idx) => {
+      if (round.metrics.drivingDistance) {
+        console.log(`  Round ${idx + 1}: ${round.metrics.drivingDistance.toFixed(1)} yards (${round.eventName || 'event ' + round.eventId})`);
+      }
+    });
+    console.log(`Similar Rounds (events 3, 7, 12, 23, 28):`);
+    sortedSimilar.forEach((round, idx) => {
+      if (round.metrics.drivingDistance) {
+        console.log(`  Round ${idx + 1}: ${round.metrics.drivingDistance.toFixed(1)} yards (${round.eventName || 'event ' + round.eventId})`);
+      }
+    });
+  }
  
   // Initialize results array
   const results = Array(16).fill(0);
@@ -2796,6 +2866,23 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
         
         // Blend similar with historical data
         finalValue = (similarAvg * dynamicSimilarWeight) + (historicalAvg * (1 - dynamicSimilarWeight));
+        
+        if (playerName === 'Scheffler, Scottie' && metricKey === 'drivingDistance') {
+          console.log(`\n📊 DETAILED BLENDING FOR ${playerName} - ${metricKey}:`);
+          console.log(`  Similar Courses (events 3,7,12,23,28):`);
+          console.log(`    - Rounds: ${sortedSimilar.length}`);
+          console.log(`    - Weighted Average: ${similarAvg.toFixed(4)} yards`);
+          console.log(`  Historical Courses (events 2,60,464,478):`);
+          console.log(`    - Rounds: ${sortedHistorical.length}`);
+          console.log(`    - Weighted Average: ${historicalAvg.toFixed(4)} yards`);
+          console.log(`  Dynamic Weight (based on ${sortedSimilar.length} similar rounds):`);
+          console.log(`    - Similar Weight: ${dynamicSimilarWeight.toFixed(4)} (${(dynamicSimilarWeight * 100).toFixed(1)}%)`);
+          console.log(`    - Historical Weight: ${(1 - dynamicSimilarWeight).toFixed(4)} (${((1 - dynamicSimilarWeight) * 100).toFixed(1)}%)`);
+          console.log(`  BLENDING CALCULATION:`);
+          console.log(`    ${similarAvg.toFixed(4)} × ${dynamicSimilarWeight.toFixed(4)} = ${(similarAvg * dynamicSimilarWeight).toFixed(4)}`);
+          console.log(`    ${historicalAvg.toFixed(4)} × ${(1 - dynamicSimilarWeight).toFixed(4)} = ${(historicalAvg * (1 - dynamicSimilarWeight)).toFixed(4)}`);
+          console.log(`    BLENDED RESULT: ${finalValue.toFixed(4)} yards\n`);
+        }
         
         console.log(`${playerName} - ${metricKey}: BLENDED: ${similarAvg.toFixed(3)} × weight ${dynamicSimilarWeight.toFixed(2)} = ${(similarAvg * dynamicSimilarWeight).toFixed(3)}
           Historical: ${historicalAvg.toFixed(3)} × weight ${(1-dynamicSimilarWeight).toFixed(2)} = ${(historicalAvg * (1-dynamicSimilarWeight)).toFixed(3)}
