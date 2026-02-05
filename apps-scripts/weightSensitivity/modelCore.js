@@ -2367,8 +2367,8 @@ function aggregatePlayerData(players = {}, historicalData = [], approachData = {
     // Add to event
     aggregatedPlayers[dgId].events[eventKey].rounds.push(roundData);
 
-    // Add to appropriate collections (rounds can be in multiple categories)
-    // Categorization is no longer mutually exclusive - a round can be similar AND putting-specific
+    // Add to appropriate collections
+    // A round can be in BOTH similar and putting if the event is in both ranges
     if (eventType.isPuttingSpecific) {
       aggregatedPlayers[dgId].puttingRounds.push(roundData);
     }

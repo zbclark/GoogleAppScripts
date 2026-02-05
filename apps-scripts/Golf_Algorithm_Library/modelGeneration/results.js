@@ -2324,8 +2324,8 @@ function aggregatePlayerData(metricGroups) {
       // Add round to the event
       players[dgId].events[eventKey].rounds.push(roundData);
 
-      // Add round to appropriate collections (rounds can be in multiple categories)
-      // Categorization is no longer mutually exclusive - a round can be similar AND putting-specific
+      // Add round to appropriate collections
+      // A round can be in BOTH similar and putting if the event is in both ranges
       if (eventType.isPuttingSpecific) {
           players[dgId].puttingRounds.push(roundData);
           console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
