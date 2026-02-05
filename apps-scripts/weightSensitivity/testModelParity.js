@@ -429,17 +429,17 @@ try {
   const scheffler = result.players.find(p => p.dgId === '18417');
   if (scheffler) {
     console.log('Expected (GAS):');
-    console.log('  Driving Performance: 2.3829');
-    console.log('  Approach - Short (<100): 1.3911');
-    console.log('  Approach - Mid (100-150): 1.3457231093497062');
-    console.log('  Approach - Long (150-200): 1.9482755792614541');
-    console.log('  Approach - Very Long (>200): 1.7493');
-    console.log('  Putting: 1.2916');
-    console.log('  Around the Green: -1.0366');
-    console.log('  Scoring: 2.0739');
-    console.log('  Course Management: 1.4298');
-    console.log('  Weighted Score: 1.5412895260226627');
-    console.log('  Refined Score: 1.6755923497584515');
+    console.log('  Driving Performance: 1.353');
+    console.log('  Approach - Short (<100): 0.636');
+    console.log('  Approach - Mid (100-150): 0.502');
+    console.log('  Approach - Long (150-200): 0.754');
+    console.log('  Approach - Very Long (>200): 0.435');
+    console.log('  Putting: 1.476');
+    console.log('  Around the Green: -0.470');
+    console.log('  Scoring: 1.970');
+    console.log('  Course Management: 0.214');
+    console.log('  Weighted Score: 0.716');
+    console.log('  Refined Score: 0.708');
     
     console.log('\nActual (Node.js):');
     Object.entries(scheffler.groupScores || {}).forEach(([groupName, score]) => {
