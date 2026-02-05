@@ -2199,8 +2199,10 @@ function aggregatePlayerData(metricGroups) {
             
           if (!eventMetadata[eventId]) {
           // A course can be both similar and putting-specific
-            const isSimilar = regularSimilarCourses.includes(eventId);
-            const isPutting = puttingSpecificCourses.includes(eventId);
+          // Convert eventId to string for comparison since similar/putting course IDs are strings
+            const eventIdStr = String(eventId);
+            const isSimilar = regularSimilarCourses.includes(eventIdStr);
+            const isPutting = puttingSpecificCourses.includes(eventIdStr);
             
             eventMetadata[eventId] = {
                 eventId: eventId,

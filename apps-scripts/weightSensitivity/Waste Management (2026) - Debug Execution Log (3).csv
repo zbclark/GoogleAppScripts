@@ -1,0 +1,224 @@
+Time,Message
+10:36:51 AM,[LOG] Debug log capture initialized
+10:36:52 AM,[LOG] Starting generatePlayerRankings
+10:39:33 AM,[SNAPSHOT] Players processed: 123
+10:39:33 AM,[SNAPSHOT] Target player found: YES
+10:39:33 AM,"[SNAPSHOT] Scheffler, Scottie DG ID: 18417"
+10:39:33 AM,[SNAPSHOT] Round Categorization:
+10:39:33 AM,[SNAPSHOT]   Putting rounds: 28
+10:39:33 AM,[SNAPSHOT]   Historical rounds: 16
+10:39:33 AM,[SNAPSHOT]   Similar rounds: 60
+10:39:33 AM,"[SNAPSHOT]     Putting Round 0: event=3, sg_putt=0.673, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 1: event=3, sg_putt=3.471, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 2: event=3, sg_putt=-0.252, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 3: event=3, sg_putt=-1.807, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 4: event=3, sg_putt=-1.77, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 5: event=3, sg_putt=0.949, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 6: event=3, sg_putt=0.635, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 7: event=3, sg_putt=0.612, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 8: event=3, sg_putt=3.162, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 9: event=3, sg_putt=3.162, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 10: event=3, sg_putt=0.05, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 11: event=3, sg_putt=0.05, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 12: event=3, sg_putt=1.197, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 13: event=3, sg_putt=1.197, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 14: event=3, sg_putt=-0.252, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 15: event=3, sg_putt=-0.252, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 16: event=3, sg_putt=1.06, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 17: event=3, sg_putt=2.798, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 18: event=3, sg_putt=1.735, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 19: event=3, sg_putt=0.901, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 20: event=475, sg_putt=-0.602, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 21: event=475, sg_putt=1.284, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 22: event=475, sg_putt=0.344, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 23: event=475, sg_putt=-0.83, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 24: event=3, sg_putt=-1.664, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 25: event=3, sg_putt=2.55, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 26: event=3, sg_putt=1.989, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Putting Round 27: event=3, sg_putt=2.232, roundNum=1"
+10:39:33 AM,[SNAPSHOT]   Historical sg_putt values:
+10:39:33 AM,"[SNAPSHOT]     Historical Round 0: event=2, sg_putt=0.116, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 1: event=2, sg_putt=1.843, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 2: event=2, sg_putt=0, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 3: event=2, sg_putt=0, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 4: event=478, sg_putt=-1.499, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 5: event=478, sg_putt=3.012, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 6: event=478, sg_putt=0.549, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 7: event=478, sg_putt=2.672, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 8: event=464, sg_putt=-0.839, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 9: event=464, sg_putt=3.002, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 10: event=464, sg_putt=0.898, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 11: event=464, sg_putt=-1.388, roundNum=1"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 12: event=60, sg_putt=0.196, roundNum=4"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 13: event=60, sg_putt=-2.575, roundNum=3"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 14: event=60, sg_putt=-0.052, roundNum=2"
+10:39:33 AM,"[SNAPSHOT]     Historical Round 15: event=60, sg_putt=2.897, roundNum=1"
+10:39:33 AM,[SNAPSHOT]   Weighted Average SG Putt (lambda=0.2): 0.5944803468078294
+10:39:33 AM,[SNAPSHOT]   Calculation: 0.116*exp(-0.2*0) + 1.843*exp(-0.2*1) + 0*exp(-0.2*2) + 0*exp(-0.2*3) + -1.499*exp(-0.2*4) + 3.012*exp(-0.2*5) + 0.549*exp(-0.2*6) + 2.672*exp(-0.2*7) + -0.839*exp(-0.2*8) + 3.002*exp(-0.2*9) + 0.898*exp(-0.2*10) + -1.388*exp(-0.2*11) + 0.196*exp(-0.2*12) + -2.575*exp(-0.2*13) + -0.052*exp(-0.2*14) + 2.897*exp(-0.2*15) / sum(weights)
+10:39:33 AM,[SNAPSHOT] Approach Metrics Raw Data:
+10:39:33 AM,[SNAPSHOT]   <100 FW GIR: 0.861
+10:39:33 AM,[SNAPSHOT]   <100 SG (per-shot): 0.079
+10:39:33 AM,[SNAPSHOT]   <100 Prox: 14.973
+10:39:33 AM,[SNAPSHOT]   <150 FW GIR: 0.86
+10:39:33 AM,[SNAPSHOT]   <150 FW SG (per-shot): 0.059
+10:39:33 AM,[SNAPSHOT]   <150 FW Prox: 18.241
+10:39:33 AM,[SNAPSHOT] BCC Calculation Components:
+10:39:33 AM,[SNAPSHOT]   Driving Accuracy (metric 2): 0.6456703742118732
+10:39:33 AM,[SNAPSHOT]   SG Putting (metric 7): 0.6974551251507698
+10:39:33 AM,[SNAPSHOT]   Approach <100 GIR (metric 17): 0.861
+10:39:33 AM,[SNAPSHOT]   Approach <150 FW GIR (metric 20): 0.86
+10:39:33 AM,[SNAPSHOT]   Approach <150 Rough GIR (metric 23): 0.565
+10:39:33 AM,[SNAPSHOT]   Approach >150 Rough GIR (metric 26): 0.387
+10:39:33 AM,[SNAPSHOT]   Approach <200 FW GIR (metric 29): 0.759
+10:39:33 AM,[SNAPSHOT]   Approach >200 FW GIR (metric 32): 0.512
+10:39:33 AM,[SNAPSHOT]   Approach <100 SG (metric 18): 1.422
+10:39:33 AM,[SNAPSHOT]   Approach <150 FW SG (metric 21): 1.0619999999999998
+10:39:33 AM,[SNAPSHOT]   Calculated BCC (metric 14): 7.607816533128647
+10:39:33 AM,[SNAPSHOT] WeightedScore: -0.10195953562690876
+10:39:33 AM,[SNAPSHOT] RefinedWeightedScore: -0.10070058161441829
+10:39:33 AM,[SNAPSHOT] PastPerfMultiplier: 1.2434041384361838
+10:39:33 AM,[SNAPSHOT] DataCoverage: 0.9512195121951219 | Confidence: 0.9876524151983465
+10:39:33 AM,[SNAPSHOT] GroupScore Driving Performance: -4.905823944605397
+10:39:33 AM,[SNAPSHOT] GroupScore Approach - Short (<100): 0.6363396708325593
+10:39:33 AM,[SNAPSHOT] GroupScore Approach - Mid (100-150): 0.5018791009798553
+10:39:33 AM,[SNAPSHOT] GroupScore Approach - Long (150-200): 0.7539196407683701
+10:39:33 AM,[SNAPSHOT] GroupScore Approach - Very Long (>200): 0.4351429630111072
+10:39:33 AM,[SNAPSHOT] GroupScore Putting: 1.470187269346149
+10:39:33 AM,[SNAPSHOT] GroupScore Around the Green: -0.44337631363715907
+10:39:33 AM,[SNAPSHOT] GroupScore Scoring: 1.9003878687138915
+10:39:33 AM,[SNAPSHOT] GroupScore Course Management: 0.20004126797904176
+10:39:33 AM,[SNAPSHOT] Metric 0 SG Total: 1.8369278493543613
+10:39:33 AM,[SNAPSHOT] Metric 1 Driving Distance: 274.75531762584
+10:39:33 AM,[SNAPSHOT] Metric 2 Driving Accuracy: 0.6456703742118732
+10:39:33 AM,[SNAPSHOT] Metric 3 SG T2G: 1.2608018716733786
+10:39:33 AM,[SNAPSHOT] Metric 4 SG Approach: 0.737586854767448
+10:39:33 AM,[SNAPSHOT] Metric 5 SG Around Green: -0.23622834027028514
+10:39:33 AM,[SNAPSHOT] Metric 6 SG OTT: 0.7594983247596722
+10:39:33 AM,[SNAPSHOT] Metric 7 SG Putting: 0.6974551251507698
+10:39:33 AM,[SNAPSHOT] Metric 8 Greens in Regulation: 0.6676625039280304
+10:39:33 AM,[SNAPSHOT] Metric 9 Scrambling: 0.6839795269750122
+10:39:33 AM,[SNAPSHOT] Metric 10 Great Shots: 3.4552055114611298
+10:39:33 AM,[SNAPSHOT] Metric 11 Poor Shots: 2.848190774913625
+10:39:33 AM,[SNAPSHOT] Metric 12 Scoring Average: 67.63161747428201
+10:39:33 AM,[SNAPSHOT] Metric 13 Birdies or Better: 5.6415759927393925
+10:39:33 AM,[SNAPSHOT] Metric 14 Birdie Chances Created: 7.607816533128647
+10:39:33 AM,[SNAPSHOT] Metric 15 Fairway Proximity: 25.902105633977005
+10:39:33 AM,[SNAPSHOT] Metric 16 Rough Proximity: 46.77281009920242
+10:39:33 AM,[SNAPSHOT] Metric 17 Approach <100 GIR: 0.861
+10:39:33 AM,[SNAPSHOT] Metric 18 Approach <100 SG: 1.422
+10:39:33 AM,[SNAPSHOT] Metric 19 Approach <100 Prox: 14.973
+10:39:33 AM,[SNAPSHOT] Metric 20 Approach <150 FW GIR: 0.86
+10:39:33 AM,[SNAPSHOT] Metric 21 Approach <150 FW SG: 1.0619999999999998
+10:39:33 AM,[SNAPSHOT] Metric 22 Approach <150 FW Prox: 18.241
+10:39:33 AM,[SNAPSHOT] Metric 23 Approach <150 Rough GIR: 0.565
+10:39:33 AM,[SNAPSHOT] Metric 24 Approach <150 Rough SG: 0.882
+10:39:33 AM,[SNAPSHOT] Metric 25 Approach <150 Rough Prox: 38.286
+10:39:33 AM,[SNAPSHOT] Metric 26 Approach >150 Rough GIR: 0.387
+10:39:33 AM,[SNAPSHOT] Metric 27 Approach >150 Rough SG: 1.908
+10:39:33 AM,[SNAPSHOT] Metric 28 Approach >150 Rough Prox: 56.203
+10:39:33 AM,[SNAPSHOT] Metric 29 Approach <200 FW GIR: 0.759
+10:39:33 AM,[SNAPSHOT] Metric 30 Approach <200 FW SG: 1.134
+10:39:33 AM,[SNAPSHOT] Metric 31 Approach <200 FW Prox: 26.266
+10:39:33 AM,[SNAPSHOT] Metric 32 Approach >200 FW GIR: 0.512
+10:39:33 AM,[SNAPSHOT] Metric 33 Approach >200 FW SG: 1.3679999999999999
+10:39:33 AM,[SNAPSHOT] Metric 34 Approach >200 FW Prox: 38.36
+10:39:33 AM,[SNAPSHOT] Putting Metric Value (index 7): 0.6974551251507698
+10:39:33 AM,"[SNAPSHOT] Putting Stats mean=-0.08268245136574692, stdDev=0.5331999878770303"
+10:39:33 AM,[SNAPSHOT] Putting Z-Score: 1.4631237701686457
+10:39:33 AM,[SNAPSHOT] Approach Metric 17 Approach <100 GIR: 0.861
+10:39:33 AM,[SNAPSHOT] Approach Metric 18 Approach <100 SG: 1.422
+10:39:33 AM,[SNAPSHOT] Approach Metric 19 Approach <100 Prox: 14.973
+10:39:33 AM,[SNAPSHOT] Approach Metric 20 Approach <150 FW GIR: 0.86
+10:39:33 AM,[SNAPSHOT] Approach Metric 21 Approach <150 FW SG: 1.0619999999999998
+10:39:33 AM,[SNAPSHOT] Approach Metric 22 Approach <150 FW Prox: 18.241
+10:39:33 AM,[SNAPSHOT] Approach Metric 23 Approach <150 Rough GIR: 0.565
+10:39:33 AM,[SNAPSHOT] Approach Metric 24 Approach <150 Rough SG: 0.882
+10:39:33 AM,[SNAPSHOT] Approach Metric 25 Approach <150 Rough Prox: 38.286
+10:39:33 AM,[SNAPSHOT] Approach Metric 26 Approach >150 Rough GIR: 0.387
+10:39:33 AM,[SNAPSHOT] Approach Metric 27 Approach >150 Rough SG: 1.908
+10:39:33 AM,[SNAPSHOT] Approach Metric 28 Approach >150 Rough Prox: 56.203
+10:39:33 AM,[SNAPSHOT] Approach Metric 29 Approach <200 FW GIR: 0.759
+10:39:33 AM,[SNAPSHOT] Approach Metric 30 Approach <200 FW SG: 1.134
+10:39:33 AM,[SNAPSHOT] Approach Metric 31 Approach <200 FW Prox: 26.266
+10:39:33 AM,[SNAPSHOT] Approach Metric 32 Approach >200 FW GIR: 0.512
+10:39:33 AM,[SNAPSHOT] Approach Metric 33 Approach >200 FW SG: 1.3679999999999999
+10:39:33 AM,[SNAPSHOT] Approach Metric 34 Approach >200 FW Prox: 38.36
+10:39:33 AM,[SNAPSHOT] Derived Metric BCC (index 14): 7.607816533128647
+10:39:33 AM,[SNAPSHOT] === PUTTING GROUP SCORE CALCULATION ===
+10:39:33 AM,"[SNAPSHOT]   SG Putting: raw=0.6974551251507698, transformed=0.6975, z=1.4631, weight=1, contrib=1.4631"
+10:39:33 AM,[SNAPSHOT]   Total: 1.4631 / 1 = 1.4631
+10:39:33 AM,[SNAPSHOT] === SCORING GROUP SCORE CALCULATION ===
+10:39:33 AM,"[SNAPSHOT]   SG T2G: raw=1.2608018716733786, transformed=1.2608, z=1.8294, weight=0.2, contrib=0.3659"
+10:39:33 AM,"[SNAPSHOT]   Scoring Average: raw=67.63161747428201, transformed=6.3684, z=2.0626, weight=0.1, contrib=0.2063"
+10:39:33 AM,"[SNAPSHOT]   Birdie Chances Created: raw=7.607816533128647, transformed=7.6078, z=3.1769, weight=0.1, contrib=0.3177"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach <100 SG: raw=1.422, transformed=1.4220, z=1.5983, weight=0.075, contrib=0.1199"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach <150 FW SG: raw=1.0619999999999998, transformed=1.0620, z=2.1330, weight=0.276, contrib=0.5887"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach <150 Rough SG: raw=0.882, transformed=0.8820, z=0.9853, weight=0.276, contrib=0.2719"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach <200 FW SG: raw=1.134, transformed=1.1340, z=1.8345, weight=0.405, contrib=0.7430"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach >200 FW SG: raw=1.3679999999999999, transformed=1.3680, z=1.7896, weight=0.244, contrib=0.4367"
+10:39:33 AM,"[SNAPSHOT]   Scoring: Approach >150 Rough SG: raw=1.908, transformed=1.9080, z=2.4680, weight=0.244, contrib=0.6022"
+10:39:33 AM,[SNAPSHOT]   Total: 3.6522 / 1.9200000000000002 = 1.9022
+10:39:33 AM,[SNAPSHOT] === COURSE MANAGEMENT GROUP SCORE CALCULATION ===
+10:39:33 AM,"[SNAPSHOT]   Scrambling: raw=0.6839795269750122, transformed=0.6840, z=1.1562, weight=0.12, contrib=0.1387"
+10:39:33 AM,"[SNAPSHOT]   Great Shots: raw=3.4552055114611298, transformed=3.4552, z=1.1228, weight=0.08, contrib=0.0898"
+10:39:33 AM,"[SNAPSHOT]   Poor Shots: raw=2.848190774913625, transformed=2.8482, z=-8.0490, weight=0.08, contrib=-0.6439"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach <100 Prox: raw=14.973, transformed=25.0270, z=0.0953, weight=0.054000000000000006, contrib=0.0051"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach <150 FW Prox: raw=18.241, transformed=31.7590, z=-0.0443, weight=0.09936000000000002, contrib=-0.0044"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach <150 Rough Prox: raw=38.286, transformed=21.7140, z=-0.1709, weight=0.09936000000000002, contrib=-0.0170"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach >150 Rough Prox: raw=56.203, transformed=18.7970, z=-0.0194, weight=0.2916, contrib=-0.0057"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach <200 FW Prox: raw=26.266, transformed=38.7340, z=0.1294, weight=0.08784000000000002, contrib=0.0114"
+10:39:33 AM,"[SNAPSHOT]   Course Management: Approach >200 FW Prox: raw=38.36, transformed=51.6400, z=-0.1071, weight=0.08784000000000002, contrib=-0.0094"
+10:39:33 AM,[SNAPSHOT]   Total: -0.4353 / 1.0000000000000002 = -0.4353
+10:39:33 AM,[SNAPSHOT] Trend 0 SG Total: 0.093
+10:39:33 AM,[SNAPSHOT] Trend 1 Driving Distance: -7.987
+10:39:33 AM,[SNAPSHOT] Trend 2 Driving Accuracy: -0.02
+10:39:33 AM,[SNAPSHOT] Trend 3 SG T2G: -0.022
+10:39:33 AM,[SNAPSHOT] Trend 4 SG Approach: -0.103
+10:39:33 AM,[SNAPSHOT] Trend 5 SG Around Green: 0.037
+10:39:33 AM,[SNAPSHOT] Trend 6 SG OTT: 0.043
+10:39:33 AM,[SNAPSHOT] Trend 7 SG Putting: 0.018
+10:39:33 AM,[SNAPSHOT] Trend 8 Greens in Regulation: -0.022
+10:39:33 AM,[SNAPSHOT] Trend 9 Scrambling: -0.008
+10:39:33 AM,[SNAPSHOT] Trend 10 Great Shots: -0.126
+10:39:33 AM,[SNAPSHOT] Trend 11 Poor Shots: -0.089
+10:39:33 AM,[SNAPSHOT] Trend 12 Scoring Average: -0.079
+10:39:33 AM,[SNAPSHOT] Trend 13 Birdies or Better: 0.142
+10:39:33 AM,[SNAPSHOT] Trend 14 Fairway Proximity: 0.112
+10:39:33 AM,[SNAPSHOT] Trend 15 Rough Proximity: -2.282
+10:39:33 AM,"[SNAPSHOT] GroupScores Before Dampening: {""Driving Performance"":-4.905823944605397,""Approach - Short (<100)"":0.6363396708325593,""Approach - Mid (100-150)"":0.5018791009798553,""Approach - Long (150-200)"":0.7539196407683701,""Approach - Very Long (>200)"":0.4351429630111072,""Putting"":1.470187269346149,""Around the Green"":-0.44337631363715907,""Scoring"":1.9003878687138915,""Course Management"":0.20004126797904176}"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Short (<100) -> Approach <100 GIR: mean=0.7511056910569105, stdDev=0.26335147034820117"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Short (<100) -> Approach <100 SG: mean=-0.09395121951219514, stdDev=0.9484875782663414"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Short (<100) -> Approach <100 Prox: mean=24.489333333333335, stdDev=5.644447260784834"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 FW GIR: mean=0.6590487804878049, stdDev=0.30191147474808927"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 FW SG: mean=0.007317073170731701, stdDev=0.4944609801952281"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 FW Prox: mean=32.12486178861789, stdDev=8.26168605060576"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 Rough GIR: mean=0.5102520325203249, stdDev=0.14115423453146161"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 Rough SG: mean=-0.029268292682926817, stdDev=0.9249038326010851"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Mid (100-150) -> Approach <150 Rough Prox: mean=23.37594308943089, stdDev=9.725243123347099"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach <200 FW GIR: mean=0.6240406504065045, stdDev=0.2013577844295899"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach <200 FW SG: mean=0.14063414634146346, stdDev=0.541484923549149"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach <200 FW Prox: mean=37.59484552845528, stdDev=8.803701886261964"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach >150 Rough GIR: mean=0.30226829268292665, stdDev=0.11874646315152126"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach >150 Rough SG: mean=0.09014634146341464, stdDev=0.73657537963473"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Long (150-200) -> Approach >150 Rough Prox: mean=19.200747967479675, stdDev=20.76428757115443"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Very Long (>200) -> Approach >200 FW GIR: mean=0.40751219512195125, stdDev=0.18223239377746"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Very Long (>200) -> Approach >200 FW SG: mean=0.1344878048780487, stdDev=0.6892807056950763"
+10:39:33 AM,"[SNAPSHOT] Stats Approach - Very Long (>200) -> Approach >200 FW Prox: mean=53.35376422764227, stdDev=16.0082483723908"
+10:39:33 AM,"[SNAPSHOT] Stats Putting -> SG Putting: mean=-0.08268245136574692, stdDev=0.5331999878770303"
+10:39:33 AM,"[SNAPSHOT] Stats Around the Green -> SG Around Green: mean=-0.07167735962543895, stdDev=0.37704566094311914"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> SG T2G: mean=-0.16633339313630555, stdDev=0.7801100200372852"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring Average: mean=3.8845334813073773, stdDev=1.2042039242095042"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Birdie Chances Created: mean=0.32632651593596074, stdDev=2.2920006784726352"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach <100 SG: mean=-0.09395121951219514, stdDev=0.9484875782663414"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach <150 FW SG: mean=0.007317073170731701, stdDev=0.4944609801952281"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach <150 Rough SG: mean=-0.029268292682926817, stdDev=0.9249038326010851"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach <200 FW SG: mean=0.14063414634146346, stdDev=0.541484923549149"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach >200 FW SG: mean=0.1344878048780487, stdDev=0.6892807056950763"
+10:39:33 AM,"[SNAPSHOT] Stats Scoring -> Scoring: Approach >150 Rough SG: mean=0.09014634146341464, stdDev=0.73657537963473"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach <100 Prox: mean=24.489333333333335, stdDev=5.644447260784834"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach <150 FW Prox: mean=32.12486178861789, stdDev=8.26168605060576"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach <150 Rough Prox: mean=23.37594308943089, stdDev=9.725243123347099"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach >150 Rough Prox: mean=19.200747967479675, stdDev=20.76428757115443"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach <200 FW Prox: mean=37.59484552845528, stdDev=8.803701886261964"
+10:39:33 AM,"[SNAPSHOT] Stats Course Management -> Course Management: Approach >200 FW Prox: mean=53.35376422764227, stdDev=16.0082483723908"
+10:40:24 AM,[LOG] generatePlayerRankings completed successfully
