@@ -2294,8 +2294,10 @@ function aggregatePlayerData(players = {}, historicalData = [], approachData = {
     if (!eventId) return;
     
     if (!eventMetadata[eventId]) {
-      const isSimilar = similarCourseIds.includes(eventId);
-      const isPutting = puttingCourseIds.includes(eventId);
+      // Convert eventId to string for comparison with course ID arrays
+      const eventIdStr = String(eventId);
+      const isSimilar = similarCourseIds.includes(eventIdStr);
+      const isPutting = puttingCourseIds.includes(eventIdStr);
       
       eventMetadata[eventId] = {
         eventId: eventId,
@@ -2365,14 +2367,18 @@ function aggregatePlayerData(players = {}, historicalData = [], approachData = {
     // Add to event
     aggregatedPlayers[dgId].events[eventKey].rounds.push(roundData);
 
-    // Add to appropriate collection
+    // Add to appropriate collections (rounds can be in multiple categories)
+    // Categorization is no longer mutually exclusive - a round can be similar AND putting-specific
     if (eventType.isPuttingSpecific) {
       aggregatedPlayers[dgId].puttingRounds.push(roundData);
-    } 
-    else if (eventType.isSimilar) {
+    }
+    
+    if (eventType.isSimilar) {
       aggregatedPlayers[dgId].similarRounds.push(roundData);
     }
-    else {
+    
+    // Add to historicalRounds if NOT similar AND NOT putting-specific
+    if (!eventType.isSimilar && !eventType.isPuttingSpecific) {
       aggregatedPlayers[dgId].historicalRounds.push(roundData);
     }
   });

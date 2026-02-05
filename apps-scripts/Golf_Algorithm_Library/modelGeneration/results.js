@@ -2322,7 +2322,8 @@ function aggregatePlayerData(metricGroups) {
       // Add round to the event
       players[dgId].events[eventKey].rounds.push(roundData);
 
-      // Add round to appropriate collection (mutually exclusive categorization)
+      // Add round to appropriate collections (rounds can be in multiple categories)
+      // Categorization is no longer mutually exclusive - a round can be similar AND putting-specific
       if (eventType.isPuttingSpecific) {
           players[dgId].puttingRounds.push(roundData);
           console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
@@ -2331,13 +2332,15 @@ function aggregatePlayerData(metricGroups) {
           if (players[dgId].name === 'Scheffler, Scottie') {
             console.log(`[SNAPSHOT] GAS Scheffler putting round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
           }
-      } 
-      else if (eventType.isSimilar) {
+      }
+      
+      if (eventType.isSimilar) {
           players[dgId].similarRounds.push(roundData);
           console.log(`Added similar course round for ${players[dgId].name}, event ${eventId}`);
       }
-      else {
-          // Only add to historicalRounds if NOT similar or putting-specific
+      
+      // Add to historicalRounds if NOT similar AND NOT putting-specific
+      if (!eventType.isSimilar && !eventType.isPuttingSpecific) {
           players[dgId].historicalRounds.push(roundData);
           
           // Log Scheffler's historical rounds details

@@ -23,10 +23,10 @@ if (!fs.existsSync(OUTPUT_DIR)) {
 
 // === 1. LOAD DATA ===
 console.log('Loading CSV data...');
-const fieldCsvPath = path.resolve(DATA_DIR, 'American Express (2026) - Tournament Field.csv');
-const roundsCsvPath = path.resolve(DATA_DIR, 'American Express (2026) - Historical Data (1).csv');
-const approachCsvPath = path.resolve(DATA_DIR, 'American Express (2026) - Approach Skill.csv');
-const configCsvPath = path.resolve(DATA_DIR, 'American Express (2026) - Configuration Sheet.csv');
+const fieldCsvPath = path.resolve(DATA_DIR, 'Waste Management (2026) - Tournament Field.csv');
+const roundsCsvPath = path.resolve(DATA_DIR, 'Waste Management (2026) - Historical Data.csv');
+const approachCsvPath = path.resolve(DATA_DIR, 'Waste Management (2026) - Approach Skill.csv');
+const configCsvPath = path.resolve(DATA_DIR, 'Waste Management (2026) - Configuration Sheet.csv');
 
 const fieldData = loadCsv(fieldCsvPath, { skipFirstColumn: true });
 const roundsRawData = loadCsv(roundsCsvPath, { skipFirstColumn: true });
@@ -37,7 +37,7 @@ console.log(`  Loaded ${roundsRawData.length} historical rounds`);
 console.log(`  Loaded ${approachRawData.length} approach records`);
 
 // Read config once for current event filter
-const configRawPath = path.resolve(DATA_DIR, 'American Express (2026) - Configuration Sheet.csv');
+const configRawPath = path.resolve(DATA_DIR, 'Waste Management (2026) - Configuration Sheet.csv');
 const configRawContent = fs.readFileSync(configRawPath, 'utf8');
 const configCellsForFilter = parse(configRawContent, {
   skip_empty_lines: false,
