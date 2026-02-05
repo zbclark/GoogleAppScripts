@@ -1546,7 +1546,9 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     for (const group of groups) {
       let groupScore = 0;
       let totalWeight = 0;
- 
+      let metricsProcessed = 0;
+      let metricsSkipped = 0;
+
       for (const metric of group.metrics) {
         let value = adjustedMetrics[metric.index];
  
@@ -1583,10 +1585,13 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
 
         const metricStats = groupStats[group.name]?.[metric.name];
         if (!metricStats) {
+          metricsSkipped++;
           console.error(`Metric stats missing for ${group.name} -> ${metric.name}`);
           console.error("Available groups:", Object.keys(groupStats));
           continue; // Skip this metric
         }
+        
+        metricsProcessed++;
         
         const stdDev = metricStats.stdDev || 0.001; // Ensure non-zero
         let zScore = (value - metricStats.mean) / stdDev;
