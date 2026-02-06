@@ -1,0 +1,121 @@
+const { cleanMetricValue } = require('../modelCore');
+
+const parsePosition = (positionValue) => {
+  if (!positionValue) return 100;
+
+  const str = String(positionValue).trim().toUpperCase();
+
+  if (str.includes('T')) {
+    const num = parseInt(str.replace('T', ''), 10);
+    return Number.isNaN(num) ? 100 : num;
+  }
+
+  if (str === 'CUT' || str === 'WD' || str === 'DQ') {
+    return 100;
+  }
+
+  const num = Number(str);
+  return Number.isNaN(num) ? 100 : num;
+};
+
+const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEventId }) => {
+  const players = {};
+  fieldData.forEach(row => {
+    const dgId = row.dg_id || row['dg_id'];
+    const name = row.player_name || row['player_name'];
+    if (dgId && name) {
+      players[dgId] = {
+        name,
+        dgId,
+        events: {},
+        historicalRounds: [],
+        similarRounds: [],
+        puttingRounds: [],
+        approachMetrics: {}
+      };
+    }
+  });
+
+  const historicalData = [];
+  roundsRawData.forEach(row => {
+    if (!row.dg_id) return;
+
+    const tournamentYear = row.year || row.season;
+    if ((tournamentYear === 2026 || tournamentYear === '2026') && String(row.event_id) === String(currentEventId)) {
+      return;
+    }
+
+    historicalData.push({
+      dgId: row.dg_id,
+      eventId: row.event_id,
+      date: new Date(row.event_completed || new Date()),
+      roundNum: cleanMetricValue(row.round_num),
+      position: parsePosition(row.fin_text),
+      metrics: {
+        scoringAverage: row.score ? cleanMetricValue(row.score) : undefined,
+        eagles: row.eagles_or_better ? cleanMetricValue(row.eagles_or_better) : undefined,
+        birdies: row.birdies ? cleanMetricValue(row.birdies) : undefined,
+        birdiesOrBetter: (row.birdies || row.eagles_or_better) ?
+          cleanMetricValue(row.birdies) + cleanMetricValue(row.eagles_or_better) : undefined,
+        strokesGainedTotal: row.sg_total ? cleanMetricValue(row.sg_total) : undefined,
+        drivingDistance: row.driving_dist ? cleanMetricValue(row.driving_dist) : undefined,
+        drivingAccuracy: row.driving_acc ? cleanMetricValue(row.driving_acc, true) : undefined,
+        strokesGainedT2G: row.sg_t2g ? cleanMetricValue(row.sg_t2g) : undefined,
+        strokesGainedApp: row.sg_app ? cleanMetricValue(row.sg_app) : undefined,
+        strokesGainedArg: row.sg_arg ? cleanMetricValue(row.sg_arg) : undefined,
+        strokesGainedOTT: row.sg_ott ? cleanMetricValue(row.sg_ott) : undefined,
+        strokesGainedPutt: row.sg_putt ? cleanMetricValue(row.sg_putt) : undefined,
+        greensInReg: row.gir ? cleanMetricValue(row.gir, true) : undefined,
+        scrambling: row.scrambling ? cleanMetricValue(row.scrambling, true) : undefined,
+        greatShots: row.great_shots ? cleanMetricValue(row.great_shots) : undefined,
+        poorShots: row.poor_shots ? cleanMetricValue(row.poor_shots) : undefined,
+        fairwayProx: row.prox_fw ? cleanMetricValue(row.prox_fw) : undefined,
+        roughProx: row.prox_rgh ? cleanMetricValue(row.prox_rgh) : undefined
+      }
+    });
+  });
+
+  const approachData = {};
+  approachRawData.forEach(row => {
+    const dgId = row.dg_id ? String(row.dg_id).split('.')[0] : null;
+    if (!dgId) return;
+
+    approachData[dgId] = {
+      '<100': {
+        fwGIR: cleanMetricValue(row['50_100_fw_gir_rate'], true),
+        strokesGained: cleanMetricValue(row['50_100_fw_sg_per_shot']),
+        shotProx: cleanMetricValue(row['50_100_fw_proximity_per_shot'])
+      },
+      '<150': {
+        fwGIR: cleanMetricValue(row['100_150_fw_gir_rate'], true),
+        fwStrokesGained: cleanMetricValue(row['100_150_fw_sg_per_shot']),
+        fwShotProx: cleanMetricValue(row['100_150_fw_proximity_per_shot']),
+        roughGIR: cleanMetricValue(row['under_150_rgh_gir_rate'], true),
+        roughStrokesGained: cleanMetricValue(row['under_150_rgh_sg_per_shot']),
+        roughShotProx: cleanMetricValue(row['under_150_rgh_proximity_per_shot'])
+      },
+      '>150 - Rough': {
+        roughGIR: cleanMetricValue(row['over_150_rgh_gir_rate'], true),
+        roughStrokesGained: cleanMetricValue(row['over_150_rgh_sg_per_shot']),
+        roughShotProx: cleanMetricValue(row['over_150_rgh_proximity_per_shot'])
+      },
+      '<200': {
+        fwGIR: cleanMetricValue(row['150_200_fw_gir_rate'], true),
+        fwStrokesGained: cleanMetricValue(row['150_200_fw_sg_per_shot']),
+        fwShotProx: cleanMetricValue(row['150_200_fw_proximity_per_shot'])
+      },
+      '>200': {
+        fwGIR: cleanMetricValue(row['over_200_fw_gir_rate'], true),
+        fwStrokesGained: cleanMetricValue(row['over_200_fw_sg_per_shot']),
+        fwShotProx: cleanMetricValue(row['over_200_fw_proximity_per_shot'])
+      }
+    };
+  });
+
+  return { players, historicalData, approachData };
+};
+
+module.exports = {
+  buildPlayerData,
+  parsePosition
+};

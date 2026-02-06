@@ -4,6 +4,16 @@
  * The ONLY difference is data loading (CSV vs Google Sheets API)
  */
 
+// Toggle verbose logging for model calculations
+const DEBUG_LOGGING = false;
+const console = DEBUG_LOGGING
+  ? globalThis.console
+  : {
+      log: () => {},
+      warn: () => {},
+      error: () => {}
+    };
+
 // Constants from results.js
 const METRIC_MAX_VALUES = {
   'Approach <100 Prox': 40,         // Avg: 16ft from <100y
