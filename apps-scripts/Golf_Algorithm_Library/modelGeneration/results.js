@@ -343,9 +343,16 @@ function generatePlayerRankings() {
               baseMetricName = metric.name.split(':')[1].trim();
             }
             const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
-                                 (metric.name.includes('Fairway') ? 60 :
-                                 metric.name.includes('Rough') ? 80 : 60);
-            transformedValue = Math.max(0, maxProxValue - rawValue);
+                                 (baseMetricName === 'Fairway Proximity' ? 60 :
+                                 baseMetricName === 'Rough Proximity' ? 80 :
+                                 baseMetricName === 'Approach <100 Prox' ? 40 :
+                                 baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                                 baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                                 baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                                 baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                                 baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
+            transformedValue = maxProxValue - rawValue;
+            transformedValue = Math.max(0, transformedValue);
           }
           
           const stats = groupStats?.["Course Management"]?.[metric.name];
@@ -809,7 +816,7 @@ function applyTrends(updatedMetrics, trends, playerName) {
   const TREND_WEIGHT = 0.30; // How much trends influence the overall score
   const TREND_THRESHOLD = 0.005; // Minimum trend value to consider significant
   const BCC_INDEX = 14; // Index where BCC was inserted
- 
+  
   // Create a copy of metrics
   const adjustedMetrics = [...updatedMetrics];
   
@@ -936,9 +943,22 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
       } else if (kpi.name.includes('Prox') ||
                  kpi.name === 'Fairway Proximity' ||
                  kpi.name === 'Rough Proximity') {
-        const maxProxValue = METRIC_MAX_VALUES[kpi.name] ||
-                             (kpi.name === 'Fairway Proximity' ? 60 :
-                             kpi.name === 'Rough Proximity' ? 80 : 60);
+        // Strip group prefix to find correct METRIC_MAX_VALUES entry
+        let baseKpiName = kpi.name;
+        if (baseKpiName.includes(':')) {
+          baseKpiName = baseKpiName.split(':')[1].trim();
+        }
+        // Get the appropriate max value for this proximity type
+        const maxProxValue = METRIC_MAX_VALUES[baseKpiName] ||
+                             (baseKpiName === 'Fairway Proximity' ? 60 :
+                              baseKpiName === 'Rough Proximity' ? 80 :
+                              baseKpiName === 'Approach <100 Prox' ? 40 :
+                              baseKpiName === 'Approach <150 FW Prox' ? 50 :
+                              baseKpiName === 'Approach <150 Rough Prox' ? 60 :
+                              baseKpiName === 'Approach >150 Rough Prox' ? 75 :
+                              baseKpiName === 'Approach <200 FW Prox' ? 65 :
+                              baseKpiName === 'Approach >200 FW Prox' ? 90 : 60);
+                             
         kpiValue = maxProxValue - kpiValue;
         kpiValue = Math.max(0, kpiValue);
       } else if (kpi.name === 'Scoring Average') {
@@ -946,14 +966,8 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
         kpiValue = maxScore - kpiValue;
       }
       
-      // Find the group for this KPI
-      let kpiGroup = null;
-      for (const group of groups) {
-        if (group.metrics.some(m => m.name === kpi.name)) {
-          kpiGroup = group.name;
-          break;
-        }
-      }
+      // Find the group for this KPI (now stored in the KPI object)
+      const kpiGroup = kpi.groupName;
       
       if (!kpiGroup) {
         console.warn(`${playerName}: Could not find group for KPI: ${kpi.name}`);
@@ -961,9 +975,9 @@ function calculateWAR(adjustedMetrics, validatedKpis, groupStats, playerName, gr
       }
       
       // Get and validate the stats
-      const kpiStats = groupStats[kpiGroup]?.[kpi.name];
+      const kpiStats = groupStats[kpiGroup]?.[kpi.fullName];
       if (!kpiStats) {
-        console.warn(`${playerName}: Stats not found for ${kpiGroup} -> ${kpi.name}`);
+        console.warn(`${playerName}: Stats not found for ${kpiGroup} -> ${kpi.fullName}`);
         return;
       }
       
@@ -1372,7 +1386,13 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
             }
             const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
                                  (baseMetricName === 'Fairway Proximity' ? 60 :
-                                 baseMetricName === 'Rough Proximity' ? 80 : 60);
+                                 baseMetricName === 'Rough Proximity' ? 80 :
+                                 baseMetricName === 'Approach <100 Prox' ? 40 :
+                                 baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                                 baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                                 baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                                 baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                                 baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
             transformedValue = maxProxValue - rawValue;
             transformedValue = Math.max(0, transformedValue);
           } else if (metric.name === 'Scoring Average') {
@@ -1395,6 +1415,12 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       if (metricValues.length === 0) {
         console.error(`No valid values for ${metric.name} in ${group.name}`);
         
+        // Parse metric name for consistent baseline lookups (strip group prefix)
+        let baseMetricName = metric.name;
+        if (metric.name.includes(':')) {
+          baseMetricName = metric.name.split(':')[1].trim();
+        }
+        
         // Use baseline standard deviations for known metrics
         const baselineStdDevs = {
           'Approach <100 Prox': 5.0,
@@ -1409,21 +1435,21 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
           // Add more baselines as needed
         };
         
-        if (baselineStdDevs[metric.name]) {
-          groupStats[group.name][metric.name].stdDev = baselineStdDevs[metric.name];
+        if (baselineStdDevs[baseMetricName]) {
+          groupStats[group.name][metric.name].stdDev = baselineStdDevs[baseMetricName];
           
           // Use more appropriate default means for different metric types
-          if (metric.name.includes('Prox')) {
+          if (baseMetricName.includes('Prox')) {
             groupStats[group.name][metric.name].mean = 30; // Proximity in feet
-          } else if (metric.name === 'Birdie Chances Created') {
+          } else if (baseMetricName === 'Birdie Chances Created') {
             groupStats[group.name][metric.name].mean = 4.0; // Typical value
-          } else if (metric.name.includes('SG')) {
+          } else if (baseMetricName.includes('SG')) {
             groupStats[group.name][metric.name].mean = 0.0; // Strokes Gained baseline
           } else {
             groupStats[group.name][metric.name].mean = 0.5; // Generic default
           }
           
-          console.log(`Using baseline values for ${metric.name}: mean=${groupStats[group.name][metric.name].mean}, stdDev=${baselineStdDevs[metric.name]}`);
+          console.log(`Using baseline values for ${metric.name}: mean=${groupStats[group.name][metric.name].mean}, stdDev=${baselineStdDevs[baseMetricName]}`);
         }
         
         continue;
@@ -1569,7 +1595,13 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
           // Get the appropriate max value for this proximity type
           const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
                                (baseMetricName === 'Fairway Proximity' ? 60 :
-                               baseMetricName === 'Rough Proximity' ? 80 : 60);
+                                baseMetricName === 'Rough Proximity' ? 80 :
+                                baseMetricName === 'Approach <100 Prox' ? 40 :
+                                baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                                baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                                baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                                baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                                baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
  
           // Transform to "approach quality" where higher is better
           value = maxProxValue - value;
@@ -1745,7 +1777,13 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
             }
             const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
                                  (baseMetricName === 'Fairway Proximity' ? 60 :
-                                 baseMetricName === 'Rough Proximity' ? 80 : 60);
+                                 baseMetricName === 'Rough Proximity' ? 80 :
+                                 baseMetricName === 'Approach <100 Prox' ? 40 :
+                                 baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                                 baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                                 baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                                 baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                                 baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
             value = maxProxValue - value;
             value = Math.max(0, value);
           } else if (metric.name === 'Scoring Average') {
@@ -1906,11 +1944,20 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
 
     // Extract KPI names and weights from metric groups
     const kpis = groups.flatMap(group =>
-        group.metrics.map(metric => ({
-            name: metric.name,
-            index: metric.index,
-            weight: group.weight * metric.weight
-        }))
+        group.metrics.map(metric => {
+            // Parse metric name to strip group prefix if present (e.g., "Course Management: Fairway Proximity" -> "Fairway Proximity")
+            let baseMetricName = metric.name;
+            if (metric.name.includes(':')) {
+                baseMetricName = metric.name.split(':')[1].trim();
+            }
+            return {
+                name: baseMetricName,  // Use parsed base name for consistent KPI identification
+                fullName: metric.name, // Store full name for groupStats lookup
+                groupName: group.name, // Store group name for WAR calculation
+                index: metric.index,
+                weight: group.weight * metric.weight
+            };
+        })
     );
 
     // Normalize KPI weights
@@ -2537,7 +2584,7 @@ function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 2
  * approachMetrics should be the already-computed array (18 values) from getApproachMetrics
  */
 // Ported to test
-function calculateMetricsWithData(historicalRounds, similarRounds, puttingRounds, approachMetrics) {
+function calculateMetricsWithData(historicalRounds, similarRounds = [], puttingRounds = [], approachMetrics) {
   const metricsWithData = new Set();
   
   // Map of metric indices to their corresponding metric keys in round.metrics
@@ -3080,7 +3127,7 @@ function calculateMetricVolatility(metrics, trends) {
   
   let stdDev = 0;
   if (metricValues.length > 0) {
-    const mean = metricValues.reduce((sum, val) => sum + val, 0) / metricValues.length;
+    const mean = metricValues.reduce((a, b) => a + b, 0) / metricValues.length;
     const squaredDiffs = metricValues.map(val => Math.pow(val - mean, 2));
     const variance = squaredDiffs.reduce((sum, val) => sum + val, 0) / metricValues.length;
     stdDev = Math.sqrt(variance);
