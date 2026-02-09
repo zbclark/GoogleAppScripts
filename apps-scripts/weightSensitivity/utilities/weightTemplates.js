@@ -236,8 +236,8 @@ const WEIGHT_TEMPLATES = {
       }
     }
   },
-  TECHNICAL_WAIALAE_COUNTRY_CLUB: {
-    name: "TECHNICAL_WAIALAE_COUNTRY_CLUB",
+  WAIALAE_COUNTRY_CLUB: {
+    name: "WAIALAE_COUNTRY_CLUB",
     eventId: "6",
     description: "Sony Open 2026 Optimized: Data-driven from actual results (0.1066 correlation, 35% Top-20 accuracy, 5.7x improvement)",
     groupWeights: {

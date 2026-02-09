@@ -21,6 +21,29 @@ const getCell = (cells, row, col) => {
   return cells[row - 1][col - 1] || null;
 };
 
+const normalizeCourseName = value => {
+  if (!value) return null;
+  const raw = String(value).split('·')[0].trim();
+  const stripped = raw.replace(/\(.*?\)/g, '').trim();
+  if (!stripped) return null;
+  return stripped
+    .toUpperCase()
+    .replace(/[^A-Z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+};
+
+const findCourseName = cells => {
+  for (let row = 0; row < cells.length; row++) {
+    const rowValues = cells[row] || [];
+    for (let col = 0; col < rowValues.length; col++) {
+      if (String(rowValues[col] || '').trim() === '✅ Course') {
+        return rowValues[col + 1] || null;
+      }
+    }
+  }
+  return null;
+};
+
 const parseEventIds = (value) => String(value || '')
   .split(',')
   .map(id => id.trim())
@@ -57,6 +80,9 @@ const getSharedConfig = (configCsvPath) => {
   const pastPerformanceEnabled = String(readCell(27, 6)).trim() === 'Yes';
   const pastPerformanceWeight = cleanNumber(readCell(27, 7), 0);
 
+  const courseNameRaw = findCourseName(cells);
+  const courseNameKey = normalizeCourseName(courseNameRaw);
+
   return {
     cells,
     getCell: readCell,
@@ -67,7 +93,9 @@ const getSharedConfig = (configCsvPath) => {
     puttingCoursesWeight,
     courseSetupWeights,
     pastPerformanceEnabled,
-    pastPerformanceWeight
+    pastPerformanceWeight,
+    courseNameRaw,
+    courseNameKey
   };
 };
 
@@ -77,5 +105,7 @@ module.exports = {
   getCell,
   parseEventIds,
   collectEventIds,
-  getSharedConfig
+  getSharedConfig,
+  normalizeCourseName,
+  findCourseName
 };

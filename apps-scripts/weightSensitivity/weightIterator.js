@@ -90,6 +90,17 @@ function calculatePearsonCorrelation(xValues, yValues) {
   return numerator / denom;
 }
 
+function isLowerBetterMetricLabel(metricLabel) {
+  return metricLabel.includes('Prox') ||
+    metricLabel.includes('Scoring Average') ||
+    metricLabel.includes('Score') ||
+    metricLabel.includes('Poor Shots');
+}
+
+function shouldInvertMetricLabel(metricLabel, correlation) {
+  return isLowerBetterMetricLabel(metricLabel) && correlation < 0;
+}
+
 function normalizeWeights(weights) {
   const total = Object.values(weights).reduce((sum, w) => sum + (w || 0), 0);
   if (total <= 0) return weights;
@@ -258,9 +269,20 @@ async function iterateWeights() {
   }
 
   const correlationData = JSON.parse(fs.readFileSync(correlationPath, 'utf8'));
-  const invertedMetrics = correlationData.invertedMetrics || [];
+  let invertedMetrics = correlationData.invertedMetrics || [];
+  let inversionSource = 'full-field';
 
-  console.log(`\n📊 Identified ${invertedMetrics.length} inverted metrics (negative correlation):`);
+  if (Array.isArray(correlationData.top20SignalCorrelations) && correlationData.top20SignalCorrelations.length > 0) {
+    const top20Inverted = correlationData.top20SignalCorrelations
+      .filter(entry => shouldInvertMetricLabel(entry.label, entry.correlation))
+      .map(entry => entry.label);
+    if (top20Inverted.length > 0) {
+      invertedMetrics = top20Inverted;
+      inversionSource = 'top20-signal';
+    }
+  }
+
+  console.log(`\n📊 Identified ${invertedMetrics.length} inverted metrics (negative correlation, source=${inversionSource}):`);
   invertedMetrics.forEach(m => console.log(`  ⚠️ ${m}`));
 
   // Load tournament data
@@ -336,6 +358,7 @@ async function iterateWeights() {
   // Save results
   const output = {
     timestamp: new Date().toISOString(),
+    inversionSource,
     invertedMetrics,
     baselineResults,
     message: 'Weight iteration with metric inversion complete. Inverted metrics have been negated before ranking.'

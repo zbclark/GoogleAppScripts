@@ -18,7 +18,7 @@ const parsePosition = (positionValue) => {
   return Number.isNaN(num) ? 100 : num;
 };
 
-const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEventId }) => {
+const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEventId, currentSeason = null, includeCurrentEventRounds = false }) => {
   const players = {};
   fieldData.forEach(row => {
     const dgId = row.dg_id || row['dg_id'];
@@ -41,8 +41,14 @@ const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEve
     if (!row.dg_id) return;
 
     const tournamentYear = row.year || row.season;
-    if ((tournamentYear === 2026 || tournamentYear === '2026') && String(row.event_id) === String(currentEventId)) {
-      return;
+    if (!includeCurrentEventRounds) {
+      const seasonMatch = currentSeason !== null && currentSeason !== undefined
+        ? String(tournamentYear) === String(currentSeason)
+        : false;
+      const eventMatch = String(row.event_id) === String(currentEventId);
+      if (seasonMatch && eventMatch) {
+        return;
+      }
     }
 
     historicalData.push({

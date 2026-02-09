@@ -88,6 +88,17 @@ function calculatePearsonCorrelation(xValues, yValues) {
   return numerator / denom;
 }
 
+function isLowerBetterMetricLabel(metricLabel) {
+  return metricLabel.includes('Prox') ||
+    metricLabel.includes('Scoring Average') ||
+    metricLabel.includes('Score') ||
+    metricLabel.includes('Poor Shots');
+}
+
+function shouldInvertMetricLabel(metricLabel, correlation) {
+  return isLowerBetterMetricLabel(metricLabel) && correlation < 0;
+}
+
 function normalizeWeights(weights) {
   const total = Object.values(weights).reduce((sum, w) => sum + (w || 0), 0);
   if (total <= 0) return weights;
@@ -253,10 +264,20 @@ async function testConfigurations() {
   // Load correlation analysis for inverted metrics
   const correlationPath = path.resolve(OUTPUT_DIR, 'correlation_analysis.json');
   let invertedMetrics = [];
+  let inversionSource = 'full-field';
   if (fs.existsSync(correlationPath)) {
     const correlationData = JSON.parse(fs.readFileSync(correlationPath, 'utf8'));
     invertedMetrics = correlationData.invertedMetrics || [];
-    console.log(`\n⚠️ Using ${invertedMetrics.length} inverted metrics from correlation analysis`);
+    if (Array.isArray(correlationData.top20SignalCorrelations) && correlationData.top20SignalCorrelations.length > 0) {
+      const top20Inverted = correlationData.top20SignalCorrelations
+        .filter(entry => shouldInvertMetricLabel(entry.label, entry.correlation))
+        .map(entry => entry.label);
+      if (top20Inverted.length > 0) {
+        invertedMetrics = top20Inverted;
+        inversionSource = 'top20-signal';
+      }
+    }
+    console.log(`\n⚠️ Using ${invertedMetrics.length} inverted metrics from correlation analysis (source=${inversionSource})`);
   } else {
     console.log('\n⚠️ No correlation analysis found. Testing without metric inversion.');
   }
@@ -395,6 +416,7 @@ async function testConfigurations() {
   // Save results
   const output = {
     timestamp: new Date().toISOString(),
+    inversionSource,
     invertedMetricsUsed: invertedMetrics.length,
     totalConfigurations: results.length,
     results,

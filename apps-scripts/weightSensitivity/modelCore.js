@@ -6,6 +6,8 @@
 
 // Toggle verbose logging for model calculations
 const DEBUG_LOGGING = false;
+const DEBUG_SNAPSHOT = String(process.env.DEBUG_SNAPSHOT || '').toLowerCase() === 'true';
+const snapshotLog = DEBUG_SNAPSHOT ? globalThis.console.log.bind(globalThis.console) : () => {};
 const console = DEBUG_LOGGING
   ? globalThis.console
   : {
@@ -916,7 +918,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
       // Initialize metric in groupStats
       groupStats[group.name][metric.name] = { 
         mean: 0, 
-        stdDev: 0.001 // Minimum stdDev to avoid division by zero
+        stdDev: 0.001, // Minimum stdDev to avoid division by zero
+        count: 0,
+        min: null,
+        max: null
       };
  
       console.log(`Found ${metricValues.length} valid values for ${metric.name}`);
@@ -957,6 +962,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
           } else {
             groupStats[group.name][metric.name].mean = 0.5; // Generic default
           }
+
+          groupStats[group.name][metric.name].count = 0;
+          groupStats[group.name][metric.name].min = null;
+          groupStats[group.name][metric.name].max = null;
           
           console.log(`Using baseline values for ${metric.name}: mean=${groupStats[group.name][metric.name].mean}, stdDev=${baselineStdDevs[baseMetricName]}`);
         }
@@ -972,7 +981,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
       // Update groupStats with calculated values
       groupStats[group.name][metric.name] = {
         mean: metricMean,
-        stdDev: metricStdDev || 0.001 // Ensure non-zero stdDev
+        stdDev: metricStdDev || 0.001, // Ensure non-zero stdDev
+        count: metricValues.length,
+        min: metricValues.length ? Math.min(...metricValues) : null,
+        max: metricValues.length ? Math.max(...metricValues) : null
       };
  
       console.log(`Group: ${group.name}, Metric: ${metric.name}`, {
@@ -1518,6 +1530,53 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   });
 
   cacheGroupStats(groupStats);
+
+  if (DEBUG_SNAPSHOT) {
+    const snapshotPlayers = Object.keys(metricsWithBCC).slice(0, 3);
+    snapshotLog('\n=== DEBUG SNAPSHOT: metric stats + z-scores (first 3 players) ===');
+    snapshotPlayers.forEach(dgId => {
+      const player = players[dgId];
+      const metrics = metricsWithBCC[dgId];
+      if (!player || !metrics) return;
+      snapshotLog(`\nPlayer: ${player.name} (${dgId})`);
+      groups.forEach(group => {
+        group.metrics.forEach(metric => {
+          let value = metrics[metric.index];
+          if (metric.name === 'Poor Shots') {
+            const maxPoorShots = METRIC_MAX_VALUES['Poor Shots'] || 12;
+            value = maxPoorShots - value;
+          } else if (metric.name.includes('Prox') ||
+                     metric.name === 'Fairway Proximity' ||
+                     metric.name === 'Rough Proximity') {
+            let baseMetricName = metric.name;
+            if (metric.name.includes(':')) {
+              baseMetricName = metric.name.split(':')[1].trim();
+            }
+            const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
+                                 (baseMetricName === 'Fairway Proximity' ? 60 :
+                                 baseMetricName === 'Rough Proximity' ? 80 :
+                                 baseMetricName === 'Approach <100 Prox' ? 40 :
+                                 baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                                 baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                                 baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                                 baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                                 baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
+            value = Math.max(0, maxProxValue - value);
+          } else if (metric.name === 'Scoring Average') {
+            const maxScore = METRIC_MAX_VALUES['Scoring Average'] || 74;
+            value = maxScore - value;
+          }
+
+          const stats = groupStats[group.name]?.[metric.name];
+          if (!stats) return;
+          const stdDev = stats.stdDev || 0.001;
+          const zScore = (value - stats.mean) / stdDev;
+          snapshotLog(`  ${group.name} :: ${metric.name} | raw=${metrics[metric.index]?.toFixed?.(4)}, trans=${value?.toFixed?.(4)}, mean=${stats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}`);
+        });
+      });
+    });
+    snapshotLog('=== END DEBUG SNAPSHOT ===\n');
+  }
 
   return {
     players: processedPlayers,

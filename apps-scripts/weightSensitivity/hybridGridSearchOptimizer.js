@@ -188,6 +188,12 @@ function loadInvertedMetrics(outputDir) {
   if (!fs.existsSync(correlationPath)) return [];
   try {
     const correlationData = JSON.parse(fs.readFileSync(correlationPath, 'utf8'));
+    if (Array.isArray(correlationData.top20SignalCorrelations) && correlationData.top20SignalCorrelations.length > 0) {
+      const top20Inverted = correlationData.top20SignalCorrelations
+        .filter(entry => shouldInvertMetric(entry.label, entry.correlation))
+        .map(entry => entry.label);
+      if (top20Inverted.length > 0) return top20Inverted;
+    }
     return correlationData.invertedMetrics || [];
   } catch (error) {
     console.warn(`⚠️  Unable to read correlation_analysis.json: ${error.message}`);

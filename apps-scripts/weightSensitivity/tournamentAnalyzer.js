@@ -114,6 +114,220 @@ function calculatePearsonCorrelation(xValues, yValues) {
   return numerator / denom;
 }
 
+function sigmoid(value) {
+  if (value < -50) return 0;
+  if (value > 50) return 1;
+  return 1 / (1 + Math.exp(-value));
+}
+
+function isLowerBetterMetric(metricName) {
+  return metricName.includes('Prox') || metricName === 'Scoring Average' || metricName === 'Poor Shots';
+}
+
+function resolveMetricValue(metrics, metricName) {
+  switch (metricName) {
+    case 'SG Total':
+      return metrics.sgTotal;
+    case 'SG T2G':
+      return metrics.sgT2g;
+    case 'SG Approach':
+      return metrics.sgApp;
+    case 'SG Around Green':
+      return metrics.sgArg;
+    case 'SG OTT':
+      return metrics.sgOtt;
+    case 'SG Putting':
+      return metrics.sgPutt;
+    case 'Driving Distance':
+      return metrics.drivingDist;
+    case 'Driving Accuracy':
+      return metrics.drivingAcc;
+    case 'Greens in Regulation':
+    case 'GIR':
+      return metrics.gir;
+    case 'Scrambling':
+      return metrics.scrambling;
+    case 'Great Shots':
+      return metrics.greatShots;
+    case 'Poor Shots':
+      return metrics.poorShots;
+    case 'Scoring Average':
+      return metrics.score;
+    case 'Birdies':
+      return metrics.birdies;
+    case 'Eagles or Better':
+      return metrics.eaglesOrBetter;
+    case 'Birdies or Better':
+      return (metrics.birdies || 0) + (metrics.eaglesOrBetter || 0);
+    case 'Birdie Chances Created':
+      return metrics.birdieChancesCreated ?? 0;
+    case 'Fairway Proximity':
+      return metrics.proxFw;
+    case 'Rough Proximity':
+      return metrics.proxRgh;
+    case 'Approach <100 GIR':
+      return metrics.approach_50_100_gir;
+    case 'Approach <100 SG':
+      return metrics.approach_50_100_sg;
+    case 'Approach <100 Prox':
+      return metrics.approach_50_100_prox;
+    case 'Approach <150 FW GIR':
+      return metrics.approach_100_150_gir;
+    case 'Approach <150 FW SG':
+      return metrics.approach_100_150_sg;
+    case 'Approach <150 FW Prox':
+      return metrics.approach_100_150_prox;
+    case 'Approach <150 Rough GIR':
+      return metrics.approach_under_150_rgh_gir;
+    case 'Approach <150 Rough SG':
+      return metrics.approach_under_150_rgh_sg;
+    case 'Approach <150 Rough Prox':
+      return metrics.approach_under_150_rgh_prox;
+    case 'Approach >150 Rough GIR':
+      return metrics.approach_over_150_rgh_gir;
+    case 'Approach >150 Rough SG':
+      return metrics.approach_over_150_rgh_sg;
+    case 'Approach >150 Rough Prox':
+      return metrics.approach_over_150_rgh_prox;
+    case 'Approach <200 FW GIR':
+      return metrics.approach_150_200_gir;
+    case 'Approach <200 FW SG':
+      return metrics.approach_150_200_sg;
+    case 'Approach <200 FW Prox':
+      return metrics.approach_150_200_prox;
+    case 'Approach >200 FW GIR':
+      return metrics.approach_over_200_gir;
+    case 'Approach >200 FW SG':
+      return metrics.approach_over_200_sg;
+    case 'Approach >200 FW Prox':
+      return metrics.approach_over_200_prox;
+    default:
+      return null;
+  }
+}
+
+function computeTopNMetricCorrelations(rankedPlayers, actualResults, metricSchema, topN = 20) {
+  const actualMap = new Map(actualResults.map(r => [String(r.dgId), r.finishPosition]));
+  return metricSchema.map((schemaEntry, index) => {
+    const metricValues = [];
+    const outcomes = [];
+
+    rankedPlayers.forEach(player => {
+      const finishPosition = actualMap.get(String(player.dgId));
+      if (!finishPosition) return;
+      const rawValue = player.metrics[index];
+      if (typeof rawValue !== 'number' || Number.isNaN(rawValue) || !isFinite(rawValue)) return;
+      const adjustedValue = isLowerBetterMetric(schemaEntry.metricName) ? -rawValue : rawValue;
+      metricValues.push(adjustedValue);
+      outcomes.push(finishPosition <= topN ? 1 : 0);
+    });
+
+    return {
+      label: `${schemaEntry.groupName}::${schemaEntry.metricName}`,
+      correlation: metricValues.length >= 3 ? calculatePearsonCorrelation(metricValues, outcomes) : 0,
+      sampleSize: metricValues.length
+    };
+  });
+}
+
+function trainTopNLogisticModel(rankedPlayers, actualResults, metricSchema, topN = 20, options = {}) {
+  const { iterations = 400, learningRate = 0.15, l2 = 0.01 } = options;
+  const actualMap = new Map(actualResults.map(r => [String(r.dgId), r.finishPosition]));
+
+  const rows = [];
+  const labels = [];
+
+  rankedPlayers.forEach(player => {
+    const finishPosition = actualMap.get(String(player.dgId));
+    if (!finishPosition) return;
+    const row = [];
+    for (let i = 0; i < metricSchema.length; i++) {
+      const rawValue = player.metrics[i];
+      if (typeof rawValue !== 'number' || Number.isNaN(rawValue) || !isFinite(rawValue)) return;
+      const adjustedValue = isLowerBetterMetric(metricSchema[i].metricName) ? -rawValue : rawValue;
+      row.push(adjustedValue);
+    }
+    rows.push(row);
+    labels.push(finishPosition <= topN ? 1 : 0);
+  });
+
+  if (rows.length < 10) {
+    return { success: false, message: 'Not enough samples for logistic model', samples: rows.length };
+  }
+
+  const featureCount = metricSchema.length;
+  const means = Array(featureCount).fill(0);
+  const stds = Array(featureCount).fill(0);
+
+  rows.forEach(row => {
+    row.forEach((value, idx) => {
+      means[idx] += value;
+    });
+  });
+  for (let i = 0; i < featureCount; i++) means[i] /= rows.length;
+  rows.forEach(row => {
+    row.forEach((value, idx) => {
+      const diff = value - means[idx];
+      stds[idx] += diff * diff;
+    });
+  });
+  for (let i = 0; i < featureCount; i++) {
+    stds[i] = Math.sqrt(stds[i] / rows.length) || 1;
+  }
+
+  const normalizedRows = rows.map(row => row.map((value, idx) => (value - means[idx]) / stds[idx]));
+  let weights = Array(featureCount).fill(0);
+  let bias = 0;
+
+  for (let iter = 0; iter < iterations; iter++) {
+    const grad = Array(featureCount).fill(0);
+    let gradBias = 0;
+    for (let i = 0; i < normalizedRows.length; i++) {
+      const row = normalizedRows[i];
+      const linear = row.reduce((sum, value, idx) => sum + value * weights[idx], bias);
+      const pred = sigmoid(linear);
+      const error = pred - labels[i];
+      for (let j = 0; j < featureCount; j++) {
+        grad[j] += error * row[j];
+      }
+      gradBias += error;
+    }
+    const n = normalizedRows.length;
+    for (let j = 0; j < featureCount; j++) {
+      grad[j] = grad[j] / n + l2 * weights[j];
+      weights[j] -= learningRate * grad[j];
+    }
+    bias -= learningRate * (gradBias / n);
+  }
+
+  const predictions = normalizedRows.map(row => sigmoid(row.reduce((sum, value, idx) => sum + value * weights[idx], bias)));
+  const predictedClass = predictions.map(p => (p >= 0.5 ? 1 : 0));
+  const accuracy = predictedClass.filter((pred, idx) => pred === labels[idx]).length / labels.length;
+  const logLoss = predictions.reduce((sum, p, idx) => {
+    const y = labels[idx];
+    return sum - (y * Math.log(p + 1e-9) + (1 - y) * Math.log(1 - p + 1e-9));
+  }, 0) / labels.length;
+
+  const weightRanking = weights
+    .map((weight, idx) => ({
+      label: `${metricSchema[idx].groupName}::${metricSchema[idx].metricName}`,
+      weight,
+      absWeight: Math.abs(weight)
+    }))
+    .sort((a, b) => b.absWeight - a.absWeight)
+    .slice(0, 10);
+
+  return {
+    success: true,
+    samples: rows.length,
+    accuracy,
+    logLoss,
+    bias,
+    weights,
+    topWeights: weightRanking
+  };
+}
+
 function analyzeMetricCorrelations(rankedPlayers, actualResults, metricConfig, analysisName = 'Metric Analysis') {
   const correlations = [];
 
@@ -345,6 +559,9 @@ async function analyzeCorrelations() {
       greatShots: parseFloat(row['great_shots']) || 0,
       poorShots: parseFloat(row['poor_shots']) || 0,
       score: parseFloat(row['score']) || 72, // Use actual score as scoring average
+      birdies: parseFloat(row['birdies']) || 0,
+      eaglesOrBetter: parseFloat(row['eagles_or_better']) || 0,
+      birdieChancesCreated: null,
       proxFw: parseFloat(row['prox_fw']) || 0,
       proxRgh: parseFloat(row['prox_rgh']) || 0,
       // Approach metrics from approach data
@@ -400,47 +617,17 @@ async function analyzeCorrelations() {
   // Use historical metrics directly for correlation analysis
   console.log('🔄 Analyzing correlations with historical metrics...');
 
-  // Convert currentFieldHistoricalMetrics to the format expected by correlation analysis
+  const metricSchema = [];
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      metricSchema.push({ groupName: group.name, metricName: metric.name });
+    });
+  });
+
   const rankedPlayers = Object.values(currentFieldHistoricalMetrics).map(pm => ({
     dgId: pm.dgId,
     name: pm.playerName,
-    metrics: [
-      pm.metrics.drivingDist,     // 0: Driving Distance
-      pm.metrics.drivingAcc,      // 1: Driving Accuracy
-      pm.metrics.sgOtt,           // 2: SG OTT
-      pm.metrics.sgTotal,         // 3: SG Total
-      pm.metrics.sgT2g,           // 4: SG T2G
-      pm.metrics.sgApp,           // 5: SG Approach
-      pm.metrics.sgArg,           // 6: SG Around Green
-      pm.metrics.sgPutt,          // 7: SG Putting
-      pm.metrics.gir,             // 8: GIR
-      pm.metrics.scrambling,      // 9: Scrambling
-      pm.metrics.greatShots,      // 10: Great Shots
-      pm.metrics.poorShots,       // 11: Poor Shots
-      pm.metrics.score,      // 12: Scoring Average
-      0,                          // 13: Birdie Chances Created (placeholder)
-      pm.metrics.proxFw,          // 14: Fairway Proximity
-      pm.metrics.proxRgh,         // 15: Rough Proximity
-      // Approach metrics from approach data (matching METRIC_INDICES)
-      pm.metrics.approach_50_100_gir,     // 16: Approach <100 GIR
-      pm.metrics.approach_50_100_sg,      // 17: Approach <100 SG
-      pm.metrics.approach_50_100_prox,    // 18: Approach <100 Prox
-      pm.metrics.approach_100_150_gir,    // 19: Approach <150 FW GIR
-      pm.metrics.approach_100_150_sg,     // 20: Approach <150 FW SG
-      pm.metrics.approach_100_150_prox,   // 21: Approach <150 FW Prox (also Course Management)
-      pm.metrics.approach_under_150_rgh_gir,  // 22: Approach <150 Rough GIR
-      pm.metrics.approach_under_150_rgh_sg,   // 23: Approach <150 Rough SG
-      pm.metrics.approach_under_150_rgh_prox, // 24: Approach <150 Rough Prox (also Course Management)
-      pm.metrics.approach_over_150_rgh_gir,   // 25: Approach >150 Rough GIR
-      pm.metrics.approach_over_150_rgh_sg,    // 26: Approach >150 Rough SG
-      pm.metrics.approach_over_150_rgh_prox,  // 27: Approach >150 Rough Prox (also Course Management)
-      pm.metrics.approach_150_200_gir,    // 28: Approach <200 FW GIR
-      pm.metrics.approach_150_200_sg,     // 29: Approach <200 FW SG
-      pm.metrics.approach_150_200_prox,   // 30: Approach <200 FW Prox (also Course Management)
-      pm.metrics.approach_over_200_gir,   // 31: Approach >200 FW GIR
-      pm.metrics.approach_over_200_sg,    // 32: Approach >200 FW SG
-      pm.metrics.approach_over_200_prox   // 33: Approach >200 FW Prox (also Course Management)
-    ]
+    metrics: metricSchema.map(entry => resolveMetricValue(pm.metrics, entry.metricName))
   }));
 
   console.log(`✅ Prepared ${rankedPlayers.length} players with historical metrics`);
@@ -479,72 +666,62 @@ async function analyzeCorrelations() {
   // Compute correlations
   console.log('🔄 Computing metric correlations...');
   const correlations = [];
+  const actualMap = new Map(actualResults.map(r => [String(r.dgId), r.finishPosition]));
 
-  metricConfig.groups.forEach((group, groupIdx) => {
-    group.metrics.forEach((metric, localIdx) => {
-      const metricLabel = `${group.name}::${metric.name}`;
-      const metricValues = [];
-      const positions = [];
+  metricSchema.forEach((schemaEntry, index) => {
+    const metricLabel = `${schemaEntry.groupName}::${schemaEntry.metricName}`;
+    const metricValues = [];
+    const positions = [];
 
-      rankedPlayers.forEach(player => {
-        const actualResult = actualResults.find(r => r.dgId === player.dgId);
-        if (!actualResult) return;
-
-        const metricValue = player.metrics[localIdx];
-        // Exclude only NaN or blank values, allow zero as valid
-        if (typeof metricValue === 'number' && !isNaN(metricValue) && isFinite(metricValue)) {
-          metricValues.push(metricValue);
-          positions.push(actualResult.finishPosition);
-        }
-      });
-
-      if (metricValues.length < 3) {
-        console.log(`⚠️ ${analysisName} - Metric excluded: ${metricLabel} (Insufficient data points: ${metricValues.length})`);
-        if (metricValues.length > 0) {
-          console.log(`   Sample values: ${metricValues.slice(0, 5).join(', ')}`);
-          console.log(`   Sample positions: ${positions.slice(0, 5).join(', ')}`);
-        }
-        return;
+    rankedPlayers.forEach(player => {
+      const actualPosition = actualMap.get(String(player.dgId));
+      if (!actualPosition) return;
+      const metricValue = player.metrics[index];
+      if (typeof metricValue === 'number' && !isNaN(metricValue) && isFinite(metricValue)) {
+        metricValues.push(metricValue);
+        positions.push(actualPosition);
       }
+    });
 
-      const correlation = calculatePearsonCorrelation(metricValues, positions);
-      const absCorrelation = Math.abs(correlation);
-
-      // Debug: Show details for zero correlations
-      if (Math.abs(correlation) < 0.001) {
-        console.log(`🔍 ${analysisName} - ${metricLabel}: correlation = ${correlation.toFixed(6)}`);
-        console.log(`   Sample metric values: ${metricValues.slice(0, 10).map(v => v.toFixed(3)).join(', ')}`);
-        console.log(`   Sample positions: ${positions.slice(0, 10).join(', ')}`);
-        console.log(`   Data points: ${metricValues.length}`);
-        console.log(`   Metric value range: ${Math.min(...metricValues).toFixed(3)} to ${Math.max(...metricValues).toFixed(3)}`);
-        console.log(`   Position range: ${Math.min(...positions)} to ${Math.max(...positions)}`);
-        const uniqueValues = [...new Set(metricValues)];
-        console.log(`   Unique metric values: ${uniqueValues.length} (${uniqueValues.slice(0, 5).join(', ')})`);
+    if (metricValues.length < 3) {
+      console.log(`⚠️ ${analysisName} - Metric excluded: ${metricLabel} (Insufficient data points: ${metricValues.length})`);
+      if (metricValues.length > 0) {
+        console.log(`   Sample values: ${metricValues.slice(0, 5).join(', ')}`);
+        console.log(`   Sample positions: ${positions.slice(0, 5).join(', ')}`);
       }
+      return;
+    }
 
-      // Determine expected direction based on metric name
-      let expectedDirection = 'positive'; // Default
-      if (metric.name.includes('Prox') || metric.name === 'Scoring Average' || metric.name === 'Poor Shots') {
-        expectedDirection = 'negative';
-      }
+    const correlation = calculatePearsonCorrelation(metricValues, positions);
+    const absCorrelation = Math.abs(correlation);
 
-      const directionMatch = (correlation > 0 && expectedDirection === 'positive') ||
+    if (Math.abs(correlation) < 0.001) {
+      console.log(`🔍 ${analysisName} - ${metricLabel}: correlation = ${correlation.toFixed(6)}`);
+      console.log(`   Sample metric values: ${metricValues.slice(0, 10).map(v => v.toFixed(3)).join(', ')}`);
+      console.log(`   Sample positions: ${positions.slice(0, 10).join(', ')}`);
+      console.log(`   Data points: ${metricValues.length}`);
+      console.log(`   Metric value range: ${Math.min(...metricValues).toFixed(3)} to ${Math.max(...metricValues).toFixed(3)}`);
+      console.log(`   Position range: ${Math.min(...positions)} to ${Math.max(...positions)}`);
+      const uniqueValues = [...new Set(metricValues)];
+      console.log(`   Unique metric values: ${uniqueValues.length} (${uniqueValues.slice(0, 5).join(', ')})`);
+    }
+
+    const expectedDirection = isLowerBetterMetric(schemaEntry.metricName) ? 'negative' : 'positive';
+    const directionMatch = (correlation > 0 && expectedDirection === 'positive') ||
                            (correlation < 0 && expectedDirection === 'negative');
 
-      correlations.push({
-        group: group.name,
-        metric: metric.name,
-        label: metricLabel,
-        correlation: correlation,
-        absCorrelation: absCorrelation,
-        sampleSize: metricValues.length,
-        expectedDirection: expectedDirection,
-        directionMatch: directionMatch,
-        strength: absCorrelation > 0.3 ? 'Strong' :
-                 absCorrelation > 0.2 ? 'Moderate' :
-                 absCorrelation > 0.1 ? 'Weak' : 'Very Weak'
-      });
-
+    correlations.push({
+      group: schemaEntry.groupName,
+      metric: schemaEntry.metricName,
+      label: metricLabel,
+      correlation: correlation,
+      absCorrelation: absCorrelation,
+      sampleSize: metricValues.length,
+      expectedDirection: expectedDirection,
+      directionMatch: directionMatch,
+      strength: absCorrelation > 0.3 ? 'Strong' :
+               absCorrelation > 0.2 ? 'Moderate' :
+               absCorrelation > 0.1 ? 'Weak' : 'Very Weak'
     });
   });
 
@@ -562,6 +739,31 @@ async function analyzeCorrelations() {
 
     console.log(`${corr.label.substring(0, 48).padEnd(50)}${corrStr.padStart(14)} ${strength}`);
   });
+
+  const invertedMetrics = correlations
+    .filter(corr => shouldInvertMetric(corr.label, corr.correlation))
+    .map(corr => corr.label);
+
+  const top20Signal = computeTopNMetricCorrelations(rankedPlayers, actualResults, metricSchema, 20);
+  const top20Logistic = trainTopNLogisticModel(rankedPlayers, actualResults, metricSchema, 20);
+
+  const output = {
+    timestamp: new Date().toISOString(),
+    eventId: EVENT_ID,
+    tournament: TOURNAMENT_NAME || `Event ${EVENT_ID}`,
+    metricsAnalyzed: correlations.length,
+    correlations,
+    invertedMetrics,
+    top20SignalCorrelations: top20Signal,
+    top20LogisticModel: top20Logistic
+  };
+
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+  const outputPath = path.resolve(OUTPUT_DIR, 'correlation_analysis.json');
+  fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+  console.log(`\n✅ Correlation analysis saved to: ${outputPath}`);
 
   return correlations;
 }
