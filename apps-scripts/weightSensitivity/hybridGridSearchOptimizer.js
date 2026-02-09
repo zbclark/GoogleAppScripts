@@ -17,8 +17,52 @@ const { getSharedConfig } = require('./utilities/configParser');
 const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
 
 const DATA_DIR = __dirname;
+const DEFAULT_DATA_DIR = path.resolve(__dirname, 'data');
 const OUTPUT_DIR = path.resolve(__dirname, 'output');
-const EVENT_ID = '6';
+
+function resolveDataFile(fileName) {
+  const primary = path.resolve(DATA_DIR, fileName);
+  if (fs.existsSync(primary)) return primary;
+  const fallback = path.resolve(DEFAULT_DATA_DIR, fileName);
+  if (fs.existsSync(fallback)) return fallback;
+  return primary;
+}
+
+// CLI args
+const args = process.argv.slice(2);
+let EVENT_ID = '6';
+let TOURNAMENT_NAME = null;
+let OVERRIDE_EVENT_ID = null;
+let OVERRIDE_SEASON = null;
+let positionalEventSet = false;
+
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if ((arg === '--event' || arg === '--eventId') && args[i + 1]) {
+    OVERRIDE_EVENT_ID = String(args[i + 1]).trim();
+    i++;
+    continue;
+  }
+  if ((arg === '--season' || arg === '--year') && args[i + 1]) {
+    const parsedSeason = parseInt(String(args[i + 1]).trim());
+    OVERRIDE_SEASON = Number.isNaN(parsedSeason) ? null : parsedSeason;
+    i++;
+    continue;
+  }
+  if ((arg === '--tournament' || arg === '--name') && args[i + 1]) {
+    TOURNAMENT_NAME = String(args[i + 1]).trim();
+    i++;
+    continue;
+  }
+  if (!arg.startsWith('--')) {
+    if (!positionalEventSet && !OVERRIDE_EVENT_ID) {
+      EVENT_ID = String(arg).trim();
+      positionalEventSet = true;
+    } else if (!TOURNAMENT_NAME) {
+      TOURNAMENT_NAME = String(arg).trim();
+    }
+  }
+}
 
 // Groups that are strong predictors - LOCK these at baseline
 const LOCKED_GROUPS = [
@@ -40,6 +84,70 @@ const OPTIMIZABLE_GROUPS = [
 // Grid search parameters: for each weak group, test weights at ±step increments
 const GRID_STEP = 0.015;  // ±1.5% increments
 const GRID_RANGE = 0.060; // Test within ±6% of baseline
+
+function parseFinishPosition(posStr) {
+  if (!posStr) return null;
+  const str = String(posStr).trim().toUpperCase();
+  if (str.startsWith('T')) {
+    const num = parseInt(str.substring(1));
+    return Number.isNaN(num) ? null : num;
+  }
+  if (str === 'CUT' || str === 'WD' || str === 'DQ') return null;
+  const num = parseInt(str);
+  return Number.isNaN(num) ? null : num;
+}
+
+function shouldInvertMetric(metricLabel, correlation) {
+  const lowerIsBetter = metricLabel.includes('Prox') ||
+    metricLabel.includes('Scoring Average') ||
+    metricLabel.includes('Score') ||
+    metricLabel.includes('Poor Shots');
+
+  return lowerIsBetter && correlation < 0;
+}
+
+function deriveResultsFromHistory(rawHistoryData, eventId, season) {
+  const resultsByPlayer = {};
+  const eventIdStr = String(eventId || '').trim();
+
+  rawHistoryData.forEach(row => {
+    const dgId = String(row['dg_id'] || '').trim();
+    const rowSeason = parseInt(String(row['season'] || row['year'] || '').trim());
+    const rowYear = parseInt(String(row['year'] || '').trim());
+    const rowEventId = String(row['event_id'] || '').trim();
+    if (!dgId || !rowEventId) return;
+    if (eventIdStr && rowEventId !== eventIdStr) return;
+    if (season && !Number.isNaN(season)) {
+      if (rowSeason !== season && rowYear !== season) return;
+    }
+
+    const finishPosition = parseFinishPosition(row['fin_text']);
+    if (!finishPosition || Number.isNaN(finishPosition)) return;
+
+    if (!resultsByPlayer[dgId] || finishPosition < resultsByPlayer[dgId]) {
+      resultsByPlayer[dgId] = finishPosition;
+    }
+  });
+
+  return Object.entries(resultsByPlayer).map(([dgId, finishPosition]) => ({ dgId, finishPosition }));
+}
+
+function findLatestSeasonWithResults(rawHistoryData, eventId) {
+  const eventIdStr = String(eventId || '').trim();
+  const seasons = new Set();
+
+  rawHistoryData.forEach(row => {
+    const rowEventId = String(row['event_id'] || '').trim();
+    if (!rowEventId || (eventIdStr && rowEventId !== eventIdStr)) return;
+    const finishPosition = parseFinishPosition(row['fin_text']);
+    if (!finishPosition || Number.isNaN(finishPosition)) return;
+    const season = parseInt(String(row['season'] || row['year'] || '').trim());
+    if (!Number.isNaN(season)) seasons.add(season);
+  });
+
+  if (seasons.size === 0) return null;
+  return Math.max(...Array.from(seasons));
+}
 
 function normalizeWeights(weights) {
   const total = Object.values(weights).reduce((sum, w) => sum + w, 0);
@@ -73,6 +181,128 @@ function buildModifiedGroups(groups, groupWeights, metricWeights) {
       metrics: normalizedMetrics
     };
   });
+}
+
+function loadInvertedMetrics(outputDir) {
+  const correlationPath = path.resolve(outputDir, 'correlation_analysis.json');
+  if (!fs.existsSync(correlationPath)) return [];
+  try {
+    const correlationData = JSON.parse(fs.readFileSync(correlationPath, 'utf8'));
+    return correlationData.invertedMetrics || [];
+  } catch (error) {
+    console.warn(`⚠️  Unable to read correlation_analysis.json: ${error.message}`);
+    return [];
+  }
+}
+
+function computeMetricCorrelations(rankedPlayers, actualResults, metricConfig) {
+  const actualMap = new Map(actualResults.map(r => [String(r.dgId), r.finishPosition]));
+  const correlations = [];
+  let globalIdx = 0;
+
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      const metricLabel = `${group.name}::${metric.name}`;
+      const metricValues = [];
+      const positions = [];
+
+      rankedPlayers.forEach(player => {
+        const actualPosition = actualMap.get(String(player.dgId));
+        if (!actualPosition) return;
+        const metricValue = player.metrics[globalIdx];
+        if (typeof metricValue === 'number' && !isNaN(metricValue) && isFinite(metricValue)) {
+          metricValues.push(metricValue);
+          positions.push(actualPosition);
+        }
+      });
+
+      const correlation = metricValues.length >= 3
+        ? calculatePearsonCorrelation(metricValues, positions)
+        : 0;
+
+      correlations.push({
+        group: group.name,
+        metric: metric.name,
+        label: metricLabel,
+        correlation,
+        absCorrelation: Math.abs(correlation),
+        sampleSize: metricValues.length
+      });
+
+      globalIdx++;
+    });
+  });
+
+  return correlations;
+}
+
+function buildMetricWeightOverridesFromCorrelations(metricConfig, correlations, baselineMetricWeights) {
+  const correlationMap = new Map(correlations.map(c => [c.label, c.absCorrelation]));
+  const overrides = {};
+
+  metricConfig.groups.forEach(group => {
+    const metricKeys = group.metrics.map(metric => `${group.name}::${metric.name}`);
+    const total = metricKeys.reduce((sum, key) => sum + (correlationMap.get(key) || 0), 0);
+
+    metricKeys.forEach(key => {
+      const baseline = baselineMetricWeights[key];
+      if (total > 0) {
+        overrides[key] = { weight: (correlationMap.get(key) || 0) / total };
+      } else if (typeof baseline === 'number') {
+        overrides[key] = { weight: baseline };
+      }
+    });
+  });
+
+  return overrides;
+}
+
+function runModelWithWeights(players, groupWeights, metricOverrides, config, invertedMetrics = []) {
+  const normalizedGroupWeights = normalizeWeights(groupWeights);
+  const modifiedGroups = buildModifiedGroups(
+    config.groups,
+    normalizedGroupWeights,
+    metricOverrides
+  );
+
+  let rankedPlayers = players;
+  if (!Array.isArray(players)) {
+    const initialResult = generatePlayerRankings(players, {
+      groups: config.groups,
+      pastPerformance: config.pastPerformance,
+      config: config.config
+    });
+    rankedPlayers = initialResult.players;
+  }
+
+  const playersWithInversion = rankedPlayers.map(player => {
+    const metrics = [...player.metrics];
+    let globalIdx = 0;
+    config.groups.forEach(group => {
+      group.metrics.forEach(metric => {
+        const key = `${group.name}::${metric.name}`;
+        if (invertedMetrics.includes(key) && typeof metrics[globalIdx] === 'number') {
+          metrics[globalIdx] = -metrics[globalIdx];
+        }
+        globalIdx++;
+      });
+    });
+
+    return { ...player, metrics };
+  });
+
+  const playersCopy = playersWithInversion.reduce((acc, p) => {
+    acc[p.dgId] = p;
+    return acc;
+  }, {});
+
+  const result = generatePlayerRankings(playersCopy, {
+    groups: modifiedGroups,
+    pastPerformance: config.pastPerformance,
+    config: config.config
+  });
+
+  return result.players;
 }
 
 function calculatePearsonCorrelation(xValues, yValues) {
@@ -152,19 +382,21 @@ function runHybridGridSearch() {
   console.log('='.repeat(90));
 
   // Load configuration
-  const CONFIG_PATH = path.resolve(DATA_DIR, 'Sony Open (2026) - Configuration Sheet.csv');
-  const RESULTS_PATH = path.resolve(DATA_DIR, 'Sony Open (2026) - Tournament Results.csv');
-  const FIELD_PATH = path.resolve(DATA_DIR, 'Sony Open (2026) - Tournament Field.csv');
-  const HISTORY_PATH = path.resolve(DATA_DIR, 'Sony Open (2026) - Historical Data.csv');
-  const APPROACH_PATH = path.resolve(DATA_DIR, 'Sony Open (2026) - Approach Skill.csv');
+  const CONFIG_PATH = resolveDataFile('Sony Open (2026) - Configuration Sheet.csv');
+  const RESULTS_PATH = resolveDataFile('Sony Open (2026) - Tournament Results.csv');
+  const FIELD_PATH = resolveDataFile('Sony Open (2026) - Tournament Field.csv');
+  const HISTORY_PATH = resolveDataFile('Sony Open (2026) - Historical Data.csv');
+  const APPROACH_PATH = resolveDataFile('Sony Open (2026) - Approach Skill.csv');
 
   console.log('\n🔄 Loading configuration...');
   const sharedConfig = getSharedConfig(CONFIG_PATH);
+  const CURRENT_EVENT_ID = OVERRIDE_EVENT_ID || sharedConfig.currentEventId || EVENT_ID;
+  const CURRENT_SEASON = OVERRIDE_SEASON ?? parseInt(sharedConfig.currentSeason || sharedConfig.currentYear || 2026);
   const metricConfig = buildMetricGroupsFromConfig({
     getCell: sharedConfig.getCell,
     pastPerformanceEnabled: sharedConfig.pastPerformanceEnabled,
     pastPerformanceWeight: sharedConfig.pastPerformanceWeight,
-    currentEventId: sharedConfig.currentEventId
+    currentEventId: CURRENT_EVENT_ID
   });
 
   console.log('🔄 Loading data...');
@@ -172,7 +404,7 @@ function runHybridGridSearch() {
   const historyData = loadCsv(HISTORY_PATH, { skipFirstColumn: true });
   const approachData = loadCsv(APPROACH_PATH, { skipFirstColumn: true });
 
-  // Load actual results
+  // Load actual results (if provided)
   function loadActualResults(resultsPath) {
     const rawData = loadCsv(resultsPath, { skipFirstColumn: true });
     const results = [];
@@ -181,13 +413,7 @@ function runHybridGridSearch() {
       const posStr = String(row['Finish Position'] || '').trim().toUpperCase();
       if (!dgId) return;
       
-      let finishPosition = null;
-      if (posStr.startsWith('T')) {
-        finishPosition = parseInt(posStr.substring(1));
-      } else if (posStr !== 'CUT' && posStr !== 'WD' && posStr !== 'DQ') {
-        finishPosition = parseInt(posStr);
-      }
-      
+      const finishPosition = parseFinishPosition(posStr);
       if (finishPosition && !Number.isNaN(finishPosition)) {
         results.push({ dgId, finishPosition });
       }
@@ -195,8 +421,34 @@ function runHybridGridSearch() {
     return results;
   }
 
-  const actualResults = loadActualResults(RESULTS_PATH);
-  console.log(`✓ Loaded ${actualResults.length} actual results`);
+  let actualResults = [];
+  let resultsSource = 'results-file';
+  let resultsSeason = CURRENT_SEASON;
+
+  if (fs.existsSync(RESULTS_PATH)) {
+    actualResults = loadActualResults(RESULTS_PATH);
+  } else {
+    resultsSource = 'historical-data';
+    actualResults = deriveResultsFromHistory(historyData, CURRENT_EVENT_ID, CURRENT_SEASON);
+
+    if (actualResults.length === 0) {
+      resultsSeason = null;
+      actualResults = deriveResultsFromHistory(historyData, CURRENT_EVENT_ID, null);
+      console.log(`⚠️  No results for season ${CURRENT_SEASON}. Using all historical seasons for event ${CURRENT_EVENT_ID}.`);
+    }
+  }
+
+  if (actualResults.length === 0) {
+    console.error('\n❌ No results available to evaluate configurations.');
+    console.error('   Ensure Historical Data contains fin_text for the selected event.');
+    process.exit(1);
+  }
+
+  const resultsLabel = resultsSource === 'results-file'
+    ? 'tournament results file'
+    : (resultsSeason ? `historical data (season ${resultsSeason})` : 'historical data (all seasons)');
+
+  console.log(`✓ Loaded ${actualResults.length} results from ${resultsLabel}`);
 
   // Build player data
   console.log('🔄 Building player data...');
@@ -204,7 +456,7 @@ function runHybridGridSearch() {
     fieldData,
     roundsRawData: historyData,
     approachRawData: approachData,
-    currentEventId: sharedConfig.currentEventId
+    currentEventId: CURRENT_EVENT_ID
   });
 
   // Aggregate
@@ -225,6 +477,38 @@ function runHybridGridSearch() {
       baselineMetricWeights[`${group.name}::${metric.name}`] = metric.weight;
     });
   });
+
+  // Inverted metrics (if available)
+  const baselineRanking = generatePlayerRankings(aggregatedPlayers, {
+    groups: metricConfig.groups,
+    pastPerformance: metricConfig.pastPerformance,
+    config: metricConfig.config
+  });
+
+  let invertedMetrics = [];
+  let metricWeightOverrides = baselineMetricWeights;
+  let correlationSummary = null;
+
+  if (resultsSource === 'historical-data') {
+    const correlations = computeMetricCorrelations(baselineRanking.players, actualResults, metricConfig);
+    invertedMetrics = correlations
+      .filter(corr => shouldInvertMetric(corr.label, corr.correlation))
+      .map(corr => corr.label);
+    metricWeightOverrides = buildMetricWeightOverridesFromCorrelations(
+      metricConfig,
+      correlations,
+      baselineMetricWeights
+    );
+    correlationSummary = correlations;
+    console.log(`\n📊 Derived ${invertedMetrics.length} inverted metrics from historical correlations`);
+  } else {
+    invertedMetrics = loadInvertedMetrics(OUTPUT_DIR);
+    if (invertedMetrics.length > 0) {
+      console.log(`\n📊 Applying ${invertedMetrics.length} inverted metrics from correlation_analysis.json`);
+    } else {
+      console.log('\n⚠️  No inverted metrics found. Running without metric inversion.');
+    }
+  }
 
   console.log('\n' + '='.repeat(90));
   console.log('LOCKING STRATEGY');
@@ -262,7 +546,6 @@ function runHybridGridSearch() {
     .filter(g => g !== null);
 
   // Generate grid points for each optimizable group
-  const gridPoints = [];
   optimizableGroupData.forEach(group => {
     const points = [];
     for (let w = group.minWeight; w <= group.maxWeight + 0.0001; w += GRID_STEP) {
@@ -273,7 +556,7 @@ function runHybridGridSearch() {
 
   const totalCombinations = optimizableGroupData.reduce((prod, g) => prod * g.gridPoints.length, 1);
   console.log(`Total combinations to test: ${totalCombinations}`);
-  console.log(`Limiting to top 50 combinations by correlation...`);
+  console.log(`Sampling up to ${Math.min(totalCombinations, 500)} combinations for evaluation...`);
 
   const testResults = [];
   let tested = 0;
@@ -282,35 +565,33 @@ function runHybridGridSearch() {
   // Generate combinations strategically (not all)
   const step = Math.max(1, Math.floor(totalCombinations / maxTests));
 
+  const radices = optimizableGroupData.map(group => group.gridPoints.length);
+
   for (let i = 0; i < totalCombinations; i += step) {
     let combination = i;
     const weights = { ...baselineGroupWeights };
 
-    // Map index to combination
-    optimizableGroupData.forEach(group => {
-      const pointsPerCombo = optimizableGroupData.reduce((prod, g) => prod * (g === group ? 1 : g.gridPoints.length), 1);
-      const idx = Math.floor(combination / pointsPerCombo) % group.gridPoints.length;
-      weights[group.name] = group.gridPoints[idx];
-      combination %= pointsPerCombo;
+    // Map index to combination (mixed radix)
+    optimizableGroupData.forEach((group, idx) => {
+      const radix = radices[idx];
+      const pointIndex = combination % radix;
+      weights[group.name] = group.gridPoints[pointIndex];
+      combination = Math.floor(combination / radix);
     });
 
     // Normalize weights
     const normalizedWeights = normalizeWeights(weights);
 
     // Test this combination
-    const modifiedGroups = buildModifiedGroups(
-      metricConfig.groups,
+    const predictions = runModelWithWeights(
+      aggregatedPlayers,
       normalizedWeights,
-      baselineMetricWeights
+      metricWeightOverrides,
+      metricConfig,
+      invertedMetrics
     );
 
-    const rankingResult = generatePlayerRankings(aggregatedPlayers, {
-      groups: modifiedGroups,
-      pastPerformance: metricConfig.pastPerformance,
-      config: metricConfig.config
-    });
-
-    const evaluation = evaluateRankings(rankingResult.players, actualResults);
+    const evaluation = evaluateRankings(predictions, actualResults);
 
     testResults.push({
       weights: normalizedWeights,
@@ -342,30 +623,23 @@ function runHybridGridSearch() {
     });
   });
 
-  // Compare best hybrid to baseline and single-year
+  // Compare best hybrid to baseline
   const bestHybrid = testResults[0];
-  const baseline = {
-    correlation: 0.0186,
-    rmse: 47.85,
-    top10: 0.0,
-    top20: 5.0,
-    label: 'BASELINE'
-  };
-  const singleYear = {
-    correlation: 0.1066,
-    rmse: 41.47,
-    top10: 20.0,
-    top20: 35.0,
-    label: 'SINGLE-YEAR OPTIMIZED'
-  };
+  const baselinePredictions = runModelWithWeights(
+    aggregatedPlayers,
+    baselineGroupWeights,
+    metricWeightOverrides,
+    metricConfig,
+    invertedMetrics
+  );
+  const baseline = evaluateRankings(baselinePredictions, actualResults);
 
   console.log('\n' + '='.repeat(90));
-  console.log('COMPARISON: BASELINE vs SINGLE-YEAR vs BEST HYBRID');
+  console.log('COMPARISON: BASELINE vs BEST HYBRID');
   console.log('='.repeat(90));
 
   const comparison = [
     { label: 'BASELINE', ...baseline },
-    { label: 'SINGLE-YEAR OPTIMIZED (current best)', ...singleYear },
     { label: 'BEST HYBRID (grid search)', correlation: bestHybrid.correlation, rmse: bestHybrid.rmse, top10: bestHybrid.top10, top20: bestHybrid.top20 }
   ];
 
@@ -382,32 +656,39 @@ function runHybridGridSearch() {
   });
 
   // Determine improvement
-  const hybridVsSingle = ((bestHybrid.correlation - singleYear.correlation) / singleYear.correlation) * 100;
-  const hybridVsBaseline = ((bestHybrid.correlation - baseline.correlation) / baseline.correlation) * 100;
+  const hybridVsBaseline = baseline.correlation === 0
+    ? null
+    : ((bestHybrid.correlation - baseline.correlation) / baseline.correlation) * 100;
 
   console.log('\n' + '='.repeat(90));
-  if (bestHybrid.correlation > singleYear.correlation) {
-    console.log(`✅ HYBRID WINS: ${hybridVsSingle > 0 ? '+' : ''}${hybridVsSingle.toFixed(2)}% improvement over single-year`);
-  } else if (bestHybrid.correlation < singleYear.correlation) {
-    console.log(`⚠️  SINGLE-YEAR BETTER: Hybrid is ${Math.abs(hybridVsSingle).toFixed(2)}% below single-year`);
+  if (hybridVsBaseline === null) {
+    console.log('⚠️  Baseline correlation is 0. Unable to compute % improvement.');
+  } else if (bestHybrid.correlation > baseline.correlation) {
+    console.log(`✅ HYBRID WINS: ${hybridVsBaseline > 0 ? '+' : ''}${hybridVsBaseline.toFixed(2)}% improvement over baseline`);
+  } else if (bestHybrid.correlation < baseline.correlation) {
+    console.log(`⚠️  BASELINE BETTER: Hybrid is ${Math.abs(hybridVsBaseline).toFixed(2)}% below baseline`);
   } else {
-    console.log(`➖ TIE with single-year optimization`);
+    console.log('➖ TIE with baseline');
   }
 
   // Save results
   const output = {
     timestamp: new Date().toISOString(),
-    eventId: EVENT_ID,
-    tournament: 'Sony Open',
+    eventId: CURRENT_EVENT_ID,
+    season: resultsSeason,
+    tournament: TOURNAMENT_NAME || 'Sony Open',
+    resultsSource,
     strategy: 'Hybrid Grid-Search (Lock Strong Approach, Optimize Weak Groups)',
     configuration: {
       lockedGroups: LOCKED_GROUPS,
       optimizableGroups: OPTIMIZABLE_GROUPS,
+      invertedMetrics,
       gridStep: GRID_STEP,
       gridRange: GRID_RANGE,
       totalCombinations: totalCombinations,
       testedCombinations: tested
     },
+    correlationSummary: correlationSummary ? correlationSummary.slice(0, 50) : null,
     bestResult: {
       correlation: bestHybrid.correlation,
       rmse: bestHybrid.rmse,
@@ -417,9 +698,7 @@ function runHybridGridSearch() {
     },
     comparison: {
       baseline: baseline.correlation,
-      singleYearOptimized: singleYear.correlation,
       bestHybrid: bestHybrid.correlation,
-      improvementVsSingleYear: hybridVsSingle,
       improvementVsBaseline: hybridVsBaseline
     },
     topConfigurations: testResults.slice(0, 10)

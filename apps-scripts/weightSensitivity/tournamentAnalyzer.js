@@ -114,9 +114,8 @@ function calculatePearsonCorrelation(xValues, yValues) {
   return numerator / denom;
 }
 
-function analyzeMetricCorrelations(rankedPlayers, actualResults, metricConfig, analysisName) {
+function analyzeMetricCorrelations(rankedPlayers, actualResults, metricConfig, analysisName = 'Metric Analysis') {
   const correlations = [];
-  let globalMetricIdx = 0;
 
   metricConfig.groups.forEach((group, groupIdx) => {
     group.metrics.forEach((metric, localIdx) => {
@@ -183,7 +182,6 @@ function analyzeMetricCorrelations(rankedPlayers, actualResults, metricConfig, a
                  absCorrelation > 0.1 ? 'Weak' : 'Very Weak'
       });
 
-      globalMetricIdx++;
     });
   });
 
@@ -206,6 +204,7 @@ function analyzeMetricCorrelations(rankedPlayers, actualResults, metricConfig, a
 }
 
 async function analyzeCorrelations() {
+  const analysisName = 'Metric Analysis';
   console.log('\n' + '='.repeat(90));
   console.log(`TOURNAMENT ANALYZER - CORRELATION ANALYSIS`);
   console.log(`Tournament: ${TOURNAMENT_NAME || `Event ${EVENT_ID}`} | Event ID: ${EVENT_ID}`);
@@ -329,13 +328,6 @@ async function analyzeCorrelations() {
 
     if (!approachRow) {
       console.log(`⚠️ No approach data found for player ${row['player_name']} (${dgId})`);
-    } else {
-      // Debug: Show approach data for first few players
-      if (Object.keys(playerMetrics).length < 5) {
-        console.log(`🔍 Approach data for ${row['player_name']} (${dgId}):`);
-        console.log(`   150_200_fw_sg_per_shot: ${approachRow['150_200_fw_sg_per_shot']}`);
-        console.log(`   Parsed value: ${parseFloat(approachRow['150_200_fw_sg_per_shot']) || 0}`);
-      }
     }
 
     // Extract real metrics from historical data and approach data
@@ -453,7 +445,7 @@ async function analyzeCorrelations() {
 
   console.log(`✅ Prepared ${rankedPlayers.length} players with historical metrics`);
 
-  // Debug: Check first few players - show ALL metrics
+  /** Debug: Check first few players - show ALL metrics
   console.log('🔍 Debug: First 3 rankedPlayers (showing all metrics):');
   rankedPlayers.slice(0, 3).forEach((p, i) => {
     console.log(`  Player ${i+1}: ${p.name} (${p.dgId})`);
@@ -474,6 +466,7 @@ async function analyzeCorrelations() {
       console.log(`      ${idx}: ${name} = ${p.metrics[idx]}`);
     });
   });
+  */
 
   // Filter to top finishers (e.g., top 10)
   const topFinishers = rankedPlayers.filter(player => {
@@ -552,7 +545,6 @@ async function analyzeCorrelations() {
                  absCorrelation > 0.1 ? 'Weak' : 'Very Weak'
       });
 
-      globalMetricIdx++;
     });
   });
 
