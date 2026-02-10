@@ -35,6 +35,20 @@ const parseEventDate = (value) => {
   return isNaN(parsed.getTime()) ? null : parsed;
 };
 
+const deriveBirdiesOrBetter = (row) => {
+  const hasBirdies = row.birdies !== undefined && row.birdies !== null;
+  const hasEagles = row.eagles_or_better !== undefined && row.eagles_or_better !== null;
+  if (hasBirdies || hasEagles) {
+    const birdies = hasBirdies ? cleanMetricValue(row.birdies) : 0;
+    const eagles = hasEagles ? cleanMetricValue(row.eagles_or_better) : 0;
+    return birdies + eagles;
+  }
+  if (row.birdies_or_better !== undefined && row.birdies_or_better !== null) {
+    return cleanMetricValue(row.birdies_or_better);
+  }
+  return undefined;
+};
+
 const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEventId, currentSeason = null, includeCurrentEventRounds = false }) => {
   const players = {};
   fieldData.forEach(row => {
@@ -80,8 +94,7 @@ const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEve
         scoringAverage: row.score ? cleanMetricValue(row.score) : undefined,
         eagles: row.eagles_or_better ? cleanMetricValue(row.eagles_or_better) : undefined,
         birdies: row.birdies ? cleanMetricValue(row.birdies) : undefined,
-        birdiesOrBetter: (row.birdies || row.eagles_or_better) ?
-          cleanMetricValue(row.birdies) + cleanMetricValue(row.eagles_or_better) : undefined,
+        birdiesOrBetter: deriveBirdiesOrBetter(row),
         strokesGainedTotal: row.sg_total ? cleanMetricValue(row.sg_total) : undefined,
         drivingDistance: row.driving_dist ? cleanMetricValue(row.driving_dist) : undefined,
         drivingAccuracy: row.driving_acc ? cleanMetricValue(row.driving_acc, true) : undefined,
