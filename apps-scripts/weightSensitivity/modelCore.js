@@ -1111,10 +1111,16 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
             baseMetricName = metric.name.split(':')[1].trim();
           }
           
-          // Try to find in METRIC_MAX_VALUES first, then use fallback logic
+          // Try to find in METRIC_MAX_VALUES first, then use detailed fallback logic
           const maxProxValue = METRIC_MAX_VALUES[baseMetricName] ||
                                (baseMetricName === 'Fairway Proximity' ? 60 :
-                               baseMetricName === 'Rough Proximity' ? 80 : 60);
+                               baseMetricName === 'Rough Proximity' ? 80 :
+                               baseMetricName === 'Approach <100 Prox' ? 40 :
+                               baseMetricName === 'Approach <150 FW Prox' ? 50 :
+                               baseMetricName === 'Approach <150 Rough Prox' ? 60 :
+                               baseMetricName === 'Approach >150 Rough Prox' ? 75 :
+                               baseMetricName === 'Approach <200 FW Prox' ? 65 :
+                               baseMetricName === 'Approach >200 FW Prox' ? 90 : 60);
  
           // Transform to "approach quality" where higher is better
           value = maxProxValue - value;
@@ -1165,7 +1171,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
         if (metric.weight && typeof value === 'number' && !isNaN(value)) {
           const contrib = zScore * metric.weight;
           groupScore += contrib;
-          totalWeight += metric.weight;
+          totalWeight += Math.abs(metric.weight);
         }
       }
       
@@ -1322,7 +1328,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
           
           if (metric.weight && typeof value === 'number' && !isNaN(value)) {
             groupScore += zScore * metric.weight;
-            totalWeight += metric.weight;
+            totalWeight += Math.abs(metric.weight);
           }
         }
         
@@ -1474,7 +1480,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
     );
 
     // Normalize KPI weights
-    const totalKpiWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+    const totalKpiWeight = kpis.reduce((sum, kpi) => sum + Math.abs(kpi.weight), 0);
     const normalizedKpis = kpis.map(kpi => ({
         ...kpi,
         weight: kpi.weight / totalKpiWeight
@@ -1591,7 +1597,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
  * Ensures KPI weights sum to 1.0, normalizing if needed
  */
 function validateKpiWeights(normalizedKpis) {
-  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + Math.abs(kpi.weight), 0);
   
   // Check if weights sum to approximately 1.0 (allowing for small floating point errors)
   if (Math.abs(totalWeight - 1.0) > 0.01) {
@@ -1600,7 +1606,7 @@ function validateKpiWeights(normalizedKpis) {
     // Normalize the weights to ensure they sum to 1.0
     return normalizedKpis.map(kpi => ({
       ...kpi,
-      weight: kpi.weight / totalWeight
+      weight: totalWeight === 0 ? 0 : kpi.weight / totalWeight
     }));
   }
   

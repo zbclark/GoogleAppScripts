@@ -29,6 +29,7 @@ let OVERRIDE_EVENT_ID = null;
 let OVERRIDE_SEASON = null;
 let TOURNAMENT_NAME = null;
 let DRY_RUN = true;
+let INCLUDE_CURRENT_EVENT_ROUNDS = null;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--template' && args[i + 1]) {
@@ -49,6 +50,12 @@ for (let i = 0; i < args.length; i++) {
   }
   if (args[i] === '--dryRun' || args[i] === '--dry-run') {
     DRY_RUN = true;
+  }
+  if (args[i] === '--includeCurrentEventRounds' || args[i] === '--include-current-event-rounds') {
+    INCLUDE_CURRENT_EVENT_ROUNDS = true;
+  }
+  if (args[i] === '--excludeCurrentEventRounds' || args[i] === '--exclude-current-event-rounds') {
+    INCLUDE_CURRENT_EVENT_ROUNDS = false;
   }
 }
 
@@ -730,6 +737,44 @@ function normalizeGeneratedMetricLabel(metricLabel) {
     .trim();
 }
 
+function shouldInvertGeneratedMetric(label, correlation) {
+  return LOWER_BETTER_GENERATED_METRICS.has(label) && correlation < 0;
+}
+
+function buildInvertedLabelSet(top20Signal = []) {
+  const inverted = new Set();
+  (top20Signal || []).forEach(entry => {
+    if (!entry) return;
+    const label = String(entry.label || '').trim();
+    if (!label) return;
+    if (shouldInvertGeneratedMetric(label, entry.correlation || 0)) {
+      inverted.add(normalizeGeneratedMetricLabel(label));
+    }
+  });
+  return inverted;
+}
+
+function applyInversionsToMetricWeights(metricConfig, metricWeights = {}, invertedLabelSet = new Set()) {
+  if (!metricConfig || !Array.isArray(metricConfig.groups) || invertedLabelSet.size === 0) {
+    return { ...metricWeights };
+  }
+
+  const updated = { ...metricWeights };
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      const normalizedName = normalizeGeneratedMetricLabel(metric.name);
+      if (!invertedLabelSet.has(normalizedName)) return;
+      const key = `${group.name}::${metric.name}`;
+      const weight = updated[key];
+      if (typeof weight === 'number') {
+        updated[key] = -Math.abs(weight);
+      }
+    });
+  });
+
+  return updated;
+}
+
 function normalizeIdList(value) {
   if (!value) return [];
   if (Array.isArray(value)) {
@@ -744,6 +789,19 @@ function normalizeIdList(value) {
 function clamp01(value, fallback = 0) {
   if (typeof value !== 'number' || Number.isNaN(value)) return fallback;
   return Math.min(1, Math.max(0, value));
+}
+
+const CURRENT_EVENT_ROUNDS_DEFAULTS = {
+  currentSeasonMetrics: true,
+  currentSeasonBaseline: false,
+  currentSeasonOptimization: false,
+  historicalEvaluation: false
+};
+
+function resolveIncludeCurrentEventRounds(fallback) {
+  if (INCLUDE_CURRENT_EVENT_ROUNDS === true) return true;
+  if (INCLUDE_CURRENT_EVENT_ROUNDS === false) return false;
+  return fallback;
 }
 
 function buildResultsFromRows(rows) {
@@ -840,6 +898,65 @@ function blendAlignmentMaps(maps, weights) {
     });
   });
   return combined;
+}
+
+function applyShotDistributionToMetricWeights(metricWeights = {}, courseSetupWeights = {}) {
+  const normalized = { ...metricWeights };
+  const under100 = typeof courseSetupWeights.under100 === 'number' ? courseSetupWeights.under100 : 0;
+  const from100to150 = typeof courseSetupWeights.from100to150 === 'number' ? courseSetupWeights.from100to150 : 0;
+  const from150to200 = typeof courseSetupWeights.from150to200 === 'number' ? courseSetupWeights.from150to200 : 0;
+  const over200 = typeof courseSetupWeights.over200 === 'number' ? courseSetupWeights.over200 : 0;
+  const total = under100 + from100to150 + from150to200 + over200;
+  if (total <= 0) return normalized;
+
+  const distribution = [under100, from100to150, from150to200, over200].map(value => value / total);
+
+  const applyToGroup = (groupName, metricNames) => {
+    const weights = metricNames.map(name => {
+      const key = `${groupName}::${name}`;
+      const value = normalized[key];
+      return typeof value === 'number' ? value : 0;
+    });
+    const signs = weights.map(value => (Math.sign(value) || 1));
+    const totalAbs = weights.reduce((sum, value) => sum + Math.abs(value), 0);
+    if (totalAbs <= 0) return;
+
+    const [distUnder100, dist100to150, dist150to200, distOver200] = distribution;
+
+    const adjusted = [
+      distUnder100 * totalAbs * signs[0],
+      (dist100to150 * totalAbs / 2) * signs[1],
+      (dist100to150 * totalAbs / 2) * signs[2],
+      dist150to200 * totalAbs * signs[3],
+      (distOver200 * totalAbs / 2) * signs[4],
+      (distOver200 * totalAbs / 2) * signs[5]
+    ];
+
+    metricNames.forEach((name, index) => {
+      const key = `${groupName}::${name}`;
+      normalized[key] = adjusted[index];
+    });
+  };
+
+  applyToGroup('Scoring', [
+    'Scoring: Approach <100 SG',
+    'Scoring: Approach <150 FW SG',
+    'Scoring: Approach <150 Rough SG',
+    'Scoring: Approach <200 FW SG',
+    'Scoring: Approach >200 FW SG',
+    'Scoring: Approach >150 Rough SG'
+  ]);
+
+  applyToGroup('Course Management', [
+    'Course Management: Approach <100 Prox',
+    'Course Management: Approach <150 FW Prox',
+    'Course Management: Approach <150 Rough Prox',
+    'Course Management: Approach <200 FW Prox',
+    'Course Management: Approach >200 FW Prox',
+    'Course Management: Approach >150 Rough Prox'
+  ]);
+
+  return normalized;
 }
 
 function buildTop20CompositeScore(evaluation) {
@@ -1103,14 +1220,25 @@ function nestMetricWeights(metricWeights) {
   const keys = Object.keys(metricWeights);
   const hasFlat = keys.some(key => key.includes('::'));
 
+  const normalizeMetricNameForTemplate = (groupName, metricName) => {
+    if (groupName === 'Course Management' && metricName === 'Poor Shots') {
+      return 'Poor Shot Avoidance';
+    }
+    return metricName;
+  };
+
   if (hasFlat) {
     const nested = {};
     keys.forEach(key => {
       if (typeof metricWeights[key] !== 'number') return;
       const [groupName, metricName] = key.split('::');
       if (!groupName || !metricName) return;
+      const normalizedMetricName = normalizeMetricNameForTemplate(groupName, metricName);
       if (!nested[groupName]) nested[groupName] = {};
-      nested[groupName][metricName] = { weight: metricWeights[key] };
+      if (!nested[groupName][normalizedMetricName]) {
+        nested[groupName][normalizedMetricName] = { weight: 0 };
+      }
+      nested[groupName][normalizedMetricName].weight += metricWeights[key];
     });
     return nested;
   }
@@ -1122,7 +1250,11 @@ function nestMetricWeights(metricWeights) {
     nested[groupName] = {};
     Object.entries(groupMetrics).forEach(([metricName, metricConfig]) => {
       if (metricConfig && typeof metricConfig.weight === 'number') {
-        nested[groupName][metricName] = { weight: metricConfig.weight };
+        const normalizedMetricName = normalizeMetricNameForTemplate(groupName, metricName);
+        if (!nested[groupName][normalizedMetricName]) {
+          nested[groupName][normalizedMetricName] = { weight: 0 };
+        }
+        nested[groupName][normalizedMetricName].weight += metricConfig.weight;
       }
     });
   });
@@ -1492,10 +1624,19 @@ function upsertTemplateInFile(filePath, template, options = {}) {
     const templateString = JSON.stringify({ __KEY__: templateForWrite }, null, 2)
       .replace(/^\{\n|\n\}$/g, '')
       .replace(/\n  /g, '\n  ')
+      .replace(/"name":/g, 'name:')
+      .replace(/"eventId":/g, 'eventId:')
+      .replace(/"description":/g, 'description:')
+      .replace(/"groupWeights":/g, 'groupWeights:')
+      .replace(/"metricWeights":/g, 'metricWeights:')
       .replace(/"weight":/g, 'weight:')
       .replace(/\{\s*weight:\s*([0-9.\-eE]+)\s*\}/g, '{ weight: $1 }');
 
-    const templateWithKey = templateString.replace('__KEY__', templateForWrite.name).trim();
+    const isIdentifierKey = /^[A-Za-z_$][A-Za-z0-9_$]*$/.test(templateForWrite.name);
+    const keyToken = isIdentifierKey
+      ? `${templateForWrite.name}:`
+      : `"${templateForWrite.name}":`;
+    const templateWithKey = templateString.replace(/"__KEY__":/, keyToken).trim();
     let updatedContent;
 
     if (targetBlock) {
@@ -1571,6 +1712,12 @@ function runAdaptiveOptimizer() {
   const CURRENT_EVENT_ID = OVERRIDE_EVENT_ID;
   const CURRENT_SEASON = OVERRIDE_SEASON ?? parseInt(sharedConfig.currentSeason || sharedConfig.currentYear || 2026);
   let courseTemplateKey = null;
+
+  const currentEventRoundsPolicy = INCLUDE_CURRENT_EVENT_ROUNDS === null
+    ? 'default'
+    : (INCLUDE_CURRENT_EVENT_ROUNDS ? 'include' : 'exclude');
+  console.log(`ℹ️  Current-event rounds policy: ${currentEventRoundsPolicy}`);
+  console.log(`   Defaults: metrics=${CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics ? 'include' : 'exclude'}, baseline=${CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonBaseline ? 'include' : 'exclude'}, optimization=${CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization ? 'include' : 'exclude'}, historical=${CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation ? 'include' : 'exclude'}`);
   
   // Load base metricConfig structure
   console.log('🔄 Building metric config...');
@@ -1699,6 +1846,10 @@ function runAdaptiveOptimizer() {
   };
 
   const runRanking = ({ roundsRawData, approachRawData, groupWeights, metricWeights, includeCurrentEventRounds = false }) => {
+    const adjustedMetricWeights = applyShotDistributionToMetricWeights(
+      metricWeights,
+      sharedConfig.courseSetupWeights
+    );
     const playerData = buildPlayerData({
       fieldData,
       roundsRawData,
@@ -1711,7 +1862,7 @@ function runAdaptiveOptimizer() {
     const templateGroups = buildModifiedGroups(
       metricConfig.groups,
       groupWeights,
-      metricWeights
+      adjustedMetricWeights
     );
 
     return generatePlayerRankings(
@@ -1723,6 +1874,21 @@ function runAdaptiveOptimizer() {
       sharedConfig.puttingCourseIds,
       runtimeConfig
     );
+  };
+
+  const filterOutCurrentSeasonEvent = rows => (rows || []).filter(row => {
+    const seasonValue = parseInt(String(row?.year || row?.season || '').trim());
+    if (Number.isNaN(seasonValue)) return true;
+    const eventIdValue = String(row?.event_id || '').trim();
+    return !(String(seasonValue) === String(CURRENT_SEASON) && eventIdValue === String(CURRENT_EVENT_ID));
+  });
+
+  const getCurrentSeasonRoundsForRanking = includeCurrentEventRounds => {
+    if (includeCurrentEventRounds) {
+      return roundsByYear[CURRENT_SEASON] || historicalDataForField;
+    }
+    // Parity mode: exclude only the current season's target event from ranking inputs.
+    return filterOutCurrentSeasonEvent(historyData);
   };
 
   const buildEventResultsFromRows = eventRows => {
@@ -1932,7 +2098,7 @@ function runAdaptiveOptimizer() {
         approachRawData: approachData,
         groupWeights: currentTemplate.groupWeights,
         metricWeights: currentTemplate.metricWeights,
-        includeCurrentEventRounds: true
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
       });
       const firstMetricLength = currentRankingForMetrics.players.find(p => Array.isArray(p.metrics))?.metrics?.length || 0;
       if (firstMetricLength <= 1) {
@@ -2005,7 +2171,7 @@ function runAdaptiveOptimizer() {
             approachRawData: approachData,
             groupWeights: currentTemplate.groupWeights,
             metricWeights: currentTemplate.metricWeights,
-            includeCurrentEventRounds: true
+            includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
           });
           const similarMetricCorrelations = computeGeneratedMetricCorrelations(similarRanking.players, similarCourseResults);
           const similarTop20Correlations = computeGeneratedMetricTopNCorrelations(similarRanking.players, similarCourseResults, 20);
@@ -2029,7 +2195,7 @@ function runAdaptiveOptimizer() {
             approachRawData: approachData,
             groupWeights: currentTemplate.groupWeights,
             metricWeights: currentTemplate.metricWeights,
-            includeCurrentEventRounds: true
+            includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
           });
           const puttingMetricCorrelations = computeGeneratedMetricCorrelations(puttingRanking.players, puttingCourseResults);
           const puttingTop20Correlations = computeGeneratedMetricTopNCorrelations(puttingRanking.players, puttingCourseResults, 20);
@@ -2081,7 +2247,8 @@ function runAdaptiveOptimizer() {
         roundsRawData: rounds,
         approachRawData: useApproach ? approachData : [],
         groupWeights: adjustedGroupWeights,
-        metricWeights: config.metricWeights
+        metricWeights: config.metricWeights,
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonBaseline : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
       });
 
       perYear[year] = evaluateRankings(ranking.players, results, {
@@ -2172,10 +2339,13 @@ function runAdaptiveOptimizer() {
     const normalizedCandidate = normalizeWeights(candidate);
 
     const ranking = runRanking({
-      roundsRawData: roundsByYear[CURRENT_SEASON] || historicalDataForField,
+      roundsRawData: getCurrentSeasonRoundsForRanking(
+        resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+      ),
       approachRawData: approachData,
       groupWeights: normalizedCandidate,
-      metricWeights: step2MetricWeights
+      metricWeights: step2MetricWeights,
+      includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
     });
     const evaluation = evaluateRankings(ranking.players, resultsCurrent, { includeTopN: true });
     tunedResults.push({
@@ -2257,10 +2427,13 @@ function runAdaptiveOptimizer() {
     let evaluation;
     if (resultsFileExists) {
       const ranking = runRanking({
-        roundsRawData: roundsByYear[CURRENT_SEASON] || historicalDataForField,
+        roundsRawData: getCurrentSeasonRoundsForRanking(
+          resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+        ),
         approachRawData: approachData,
         groupWeights: normalizedWeights,
-        metricWeights: adjustedMetricWeights
+        metricWeights: adjustedMetricWeights,
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
       });
       evaluation = evaluateRankings(ranking.players, resultsCurrent, { includeTopN: true });
     } else {
@@ -2273,7 +2446,8 @@ function runAdaptiveOptimizer() {
           roundsRawData: rounds,
           approachRawData: approachData,
           groupWeights: normalizedWeights,
-          metricWeights: adjustedMetricWeights
+          metricWeights: adjustedMetricWeights,
+          includeCurrentEventRounds: resolveIncludeCurrentEventRounds(String(year) === String(CURRENT_SEASON) ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
         });
         yearly[year] = evaluateRankings(ranking.players, results, { includeTopN: String(year) === String(CURRENT_SEASON) });
       });
@@ -2326,10 +2500,13 @@ function runAdaptiveOptimizer() {
   console.log(`   Top-20 Weighted Score: ${optimizedTop20WeightedText}\n`);
 
   const optimizedRankingCurrent = runRanking({
-    roundsRawData: roundsByYear[CURRENT_SEASON] || historicalDataForField,
+    roundsRawData: getCurrentSeasonRoundsForRanking(
+      resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+    ),
     approachRawData: approachData,
     groupWeights: bestOptimized.weights,
-    metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
+    metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
+    includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
   });
 
   // ============================================================================
@@ -2362,7 +2539,8 @@ function runAdaptiveOptimizer() {
       roundsRawData: rounds,
       approachRawData: useApproach ? approachData : [],
       groupWeights: adjustedGroupWeights,
-      metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
+      metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
+      includeCurrentEventRounds: resolveIncludeCurrentEventRounds(useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
     });
 
     const evaluation = evaluateRankings(ranking.players, resultsByYear[year] || resultsCurrent, { includeTopN: useApproach });
@@ -2793,12 +2971,19 @@ function runAdaptiveOptimizer() {
   const optimizedTop20Desc = typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a';
   const optimizedTop20WeightedDesc = typeof bestOptimized.top20WeightedScore === 'number' ? `${bestOptimized.top20WeightedScore.toFixed(1)}%` : 'n/a';
 
+  const invertedLabelSet = buildInvertedLabelSet(currentGeneratedTop20Correlations);
+  const metricWeightsWithInversions = applyInversionsToMetricWeights(
+    metricConfig,
+    bestOptimized.metricWeights || bestTemplate.metricWeights,
+    invertedLabelSet
+  );
+
   const optimizedTemplate = {
     name: courseTemplateKey,
     eventId: String(CURRENT_EVENT_ID),
     description: `${TOURNAMENT_NAME || 'Event'} ${CURRENT_SEASON || ''} Optimized: ${bestOptimized.correlation.toFixed(4)} corr, ${optimizedTop20Desc} Top-20, ${optimizedTop20WeightedDesc} Top-20 Weighted`,
     groupWeights: bestOptimized.weights,
-    metricWeights: nestMetricWeights(bestOptimized.metricWeights || bestTemplate.metricWeights)
+    metricWeights: nestMetricWeights(metricWeightsWithInversions)
   };
 
   const writeBackTargets = [

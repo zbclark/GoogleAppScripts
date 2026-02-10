@@ -1652,7 +1652,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         // Only apply weights if metric is significant
         if (metric.weight && typeof value === 'number' && !isNaN(value)) {
           groupScore += zScore * metric.weight;
-          totalWeight += metric.weight;
+          totalWeight += Math.abs(metric.weight);
         }
       }
       
@@ -1809,7 +1809,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
           
           if (metric.weight && typeof value === 'number' && !isNaN(value)) {
             groupScore += zScore * metric.weight;
-            totalWeight += metric.weight;
+            totalWeight += Math.abs(metric.weight);
           }
         }
         
@@ -1961,7 +1961,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
     );
 
     // Normalize KPI weights
-    const totalKpiWeight = kpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+    const totalKpiWeight = kpis.reduce((sum, kpi) => sum + Math.abs(kpi.weight), 0);
     const normalizedKpis = kpis.map(kpi => ({
         ...kpi,
         weight: kpi.weight / totalKpiWeight
@@ -2027,7 +2027,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
 
 // Ported to test
 function validateKpiWeights(normalizedKpis) {
-  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + kpi.weight, 0);
+  const totalWeight = normalizedKpis.reduce((sum, kpi) => sum + Math.abs(kpi.weight), 0);
   
   // Check if weights sum to approximately 1.0 (allowing for small floating point errors)
   if (Math.abs(totalWeight - 1.0) > 0.01) {
@@ -2036,7 +2036,7 @@ function validateKpiWeights(normalizedKpis) {
     // Normalize the weights to ensure they sum to 1.0
     return normalizedKpis.map(kpi => ({
       ...kpi,
-      weight: kpi.weight / totalWeight
+      weight: totalWeight === 0 ? 0 : kpi.weight / totalWeight
     }));
   }
   
@@ -3523,7 +3523,7 @@ function formatMetricValue(value, index) {
 // Ported to test
 function cleanMetricValue(value, isPercentage = false) {
   let numericValue = typeof value === 'string' 
-    ? parseFloat(value.replace(/[^0-9.]/g, '')) 
+    ? parseFloat(value.replace(/[^0-9.\-]/g, '')) 
     : Number(value);
 
   if (isNaN(numericValue)) {
