@@ -40,6 +40,7 @@ const normalizeTraceValue = (value) => {
   return raw;
 };
 const DEFAULT_TRACE_PLAYER = 'Matsuyama';
+const LOGGING_ENABLED = false;
 const DEFAULT_TRACE_GROUP_STATS = 'true';
 let TRACE_PLAYER_NAME = '';
 let TRACE_PLAYER_NAME_LOWER = '';
@@ -82,44 +83,54 @@ function generatePlayerRankings() {
   const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
 
   // ===== DEBUG LOG CAPTURE =====
-  const debugLogSheetName = "Debug Execution Log";
-  let debugLogSheet = ss.getSheetByName(debugLogSheetName);
-  if (!debugLogSheet) {
-    debugLogSheet = ss.insertSheet(debugLogSheetName);
-  }
-  debugLogSheet.clearContents();
-  debugLogSheet.getRange(1, 1, 1, 2).setValues([["Time", "Message"]]).setFontWeight("bold");
-
   const logs = [];
-  const originalLog = console.log;
-  const originalWarn = console.warn;
-  const originalError = console.error;
+  const originalConsole = {
+    log: console.log,
+    warn: console.warn,
+    error: console.error
+  };
+  if (!LOGGING_ENABLED) {
+    console.log = () => {};
+    console.warn = () => {};
+    console.error = () => {};
+  }
+  const debugLogSheetName = "Debug Execution Log";
+  let debugLogSheet = null;
 
   const logToBuffer = (level, args) => {
     const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
     logs.push([new Date().toLocaleTimeString(), `[${level}] ${msg}`]);
   };
+  if (LOGGING_ENABLED) {
+    debugLogSheet = ss.getSheetByName(debugLogSheetName);
+    if (!debugLogSheet) {
+      debugLogSheet = ss.insertSheet(debugLogSheetName);
+    }
+    debugLogSheet.clearContents();
+    debugLogSheet.getRange(1, 1, 1, 2).setValues([["Time", "Message"]]).setFontWeight("bold");
 
-  console.log = function(...args) {
-    logToBuffer('LOG', args);
-    originalLog(...args);
-  };
-  console.warn = function(...args) {
-    logToBuffer('WARN', args);
-    originalWarn(...args);
-  };
-  console.error = function(...args) {
-    logToBuffer('ERROR', args);
-    originalError(...args);
-  };
+    console.log = function(...args) {
+      logToBuffer('LOG', args);
+      originalConsole.log(...args);
+    };
+    console.warn = function(...args) {
+      logToBuffer('WARN', args);
+      originalConsole.warn(...args);
+    };
+    console.error = function(...args) {
+      logToBuffer('ERROR', args);
+      originalConsole.error(...args);
+    };
 
-  // Ensure at least one entry so the sheet is never blank
-  logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
-  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_PLAYER property: "${TRACE_PLAYER_NAME}"`]);
-  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_ENABLED: ${TRACE_ENABLED}`]);
-  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_GROUP_STATS: ${TRACE_GROUP_STATS}`]);
+    // Ensure at least one entry so the sheet is never blank
+    logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
+    logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_PLAYER property: "${TRACE_PLAYER_NAME}"`]);
+    logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_ENABLED: ${TRACE_ENABLED}`]);
+    logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_GROUP_STATS: ${TRACE_GROUP_STATS}`]);
+  }
 
   const flushLogs = () => {
+    if (!LOGGING_ENABLED) return;
     if (logs.length === 0) {
       logs.push([new Date().toLocaleTimeString(), '[WARN] No console logs captured']);
     }
@@ -490,9 +501,9 @@ function generatePlayerRankings() {
     throw error;
   } finally {
     flushLogs();
-    console.log = originalLog;
-    console.warn = originalWarn;
-    console.error = originalError;
+    console.log = originalConsole.log;
+    console.warn = originalConsole.warn;
+    console.error = originalConsole.error;
   }
 }
 
@@ -3290,7 +3301,8 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
     'Rank', 'DG ID', 'Player Name', 'Top 5', 'Top 10', 'Weighted Score', 'Past Perf. Mult.',
     ...metricLabels.slice(0, HISTORICAL_METRICS).flatMap(m => [m, `${m} Trend`]),
     ...metricLabels.slice(HISTORICAL_METRICS),
-      'WAR' // ADDED: Header for Birdie Chances Created & Wins Above Replacement (WAR)
+    'Refined Weighted Score',
+    'WAR' // ADDED: Header for Birdie Chances Created & Wins Above Replacement (WAR)
   ];
 
   // Write headers
@@ -3380,10 +3392,14 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
       formatMetricValue(val, idx + 17)
     );
 
-    // Return WAR
-    const war = [player.war.toFixed(2)];
+    const refinedWeightedScoreValue = (typeof player.refinedWeightedScore === 'number' && !isNaN(player.refinedWeightedScore))
+      ? player.refinedWeightedScore.toFixed(2)
+      : "0.00";
 
-    rowData.push([...base, ...historical, ...approach, ...war]);
+    // Return Refined Weighted Score + WAR
+    const trailingValues = [refinedWeightedScoreValue, player.war.toFixed(2)];
+
+    rowData.push([...base, ...historical, ...approach, ...trailingValues]);
   });
 
   // Write data
@@ -3417,8 +3433,10 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
   const numColumns = dataRange.getNumColumns();
 
   // Calculate the WAR Column Number
-   const warColumn = numColumns - 1;
-   outputSheet.setColumnWidth(warColumn, 75);
+  const warColumn = numColumns - 1;
+  const refinedScoreColumn = numColumns - 2;
+  outputSheet.setColumnWidth(refinedScoreColumn, 90);
+  outputSheet.setColumnWidth(warColumn, 75);
 
   // 1. Percentage columns (number formatting only)
   const percentageColumns = [

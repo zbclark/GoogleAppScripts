@@ -92,8 +92,12 @@ const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEve
         strokesGainedPutt: row.sg_putt ? cleanMetricValue(row.sg_putt) : undefined,
         greensInReg: row.gir ? cleanMetricValue(row.gir, true) : undefined,
         scrambling: row.scrambling ? cleanMetricValue(row.scrambling, true) : undefined,
-        greatShots: row.great_shots ? cleanMetricValue(row.great_shots) : undefined,
-        poorShots: row.poor_shots ? cleanMetricValue(row.poor_shots) : undefined,
+        greatShots: row.great_shots !== undefined && row.great_shots !== null
+          ? cleanMetricValue(row.great_shots)
+          : undefined,
+        poorShots: row.poor_shots !== undefined && row.poor_shots !== null
+          ? cleanMetricValue(row.poor_shots)
+          : undefined,
         fairwayProx: row.prox_fw ? cleanMetricValue(row.prox_fw) : undefined,
         roughProx: row.prox_rgh ? cleanMetricValue(row.prox_rgh) : undefined
       }

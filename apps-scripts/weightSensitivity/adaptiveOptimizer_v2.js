@@ -22,52 +22,43 @@ const DATA_DIR = __dirname;
 const DEFAULT_DATA_DIR = path.resolve(__dirname, 'data');
 const OUTPUT_DIR = path.resolve(__dirname, 'output');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
-const LOG_TO_FILE = String(process.env.LOG_TO_FILE || '').toLowerCase() === 'true' || Boolean(TRACE_PLAYER);
+const LOGGING_ENABLED = false;
+const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
 
-if (LOG_TO_FILE) {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
-  const normalizedTraceName = TRACE_PLAYER
-    ? TRACE_PLAYER.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase()
-    : 'full';
-  const logFilePath = path.resolve(OUTPUT_DIR, `adaptive_optimizer_trace_${normalizedTraceName}.txt`);
-  const logStream = fs.createWriteStream(logFilePath, { flags: 'w' });
-  const originalConsole = {
-    log: console.log.bind(console),
-    warn: console.warn.bind(console),
-    error: console.error.bind(console)
-  };
-  const formatArg = value => {
-    if (typeof value === 'string') return value;
-    try {
-      return JSON.stringify(value);
-    } catch (err) {
-      return String(value);
-    }
-  };
-  const writeLog = (level, args) => {
-    const message = args.map(formatArg).join(' ');
-    logStream.write(`[${level}] ${message}\n`);
-  };
-
-  console.log = (...args) => {
-    originalConsole.log(...args);
-    writeLog('LOG', args);
-  };
-  console.warn = (...args) => {
-    originalConsole.warn(...args);
-    writeLog('WARN', args);
-  };
-  console.error = (...args) => {
-    originalConsole.error(...args);
-    writeLog('ERROR', args);
-  };
-
-  process.on('exit', () => {
-    logStream.end();
-  });
+if (!LOGGING_ENABLED) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
 }
+
+const hashSeed = value => {
+  if (!value) return null;
+  let hash = 2166136261;
+  for (let i = 0; i < value.length; i++) {
+    hash ^= value.charCodeAt(i);
+    hash = Math.imul(hash, 16777619);
+  }
+  return hash >>> 0;
+};
+
+const createSeededRng = seedValue => {
+  if (seedValue === null || seedValue === undefined) return null;
+  let seed = Number(seedValue);
+  if (Number.isNaN(seed)) seed = hashSeed(String(seedValue));
+  if (seed === null) return null;
+  let t = seed >>> 0;
+  return () => {
+    t += 0x6D2B79F5;
+    let x = t;
+    x = Math.imul(x ^ (x >>> 15), x | 1);
+    x ^= x + Math.imul(x ^ (x >>> 7), x | 61);
+    return ((x ^ (x >>> 14)) >>> 0) / 4294967296;
+  };
+};
+
+const SEEDED_RANDOM = OPT_SEED_RAW ? createSeededRng(OPT_SEED_RAW) : null;
+const rand = SEEDED_RANDOM || Math.random;
+
 
 // Parse CLI arguments
 const args = process.argv.slice(2);
@@ -254,8 +245,12 @@ function buildHistoricalMetricSamples(rawHistoryData, eventId) {
       strokesGainedPutt: row.sg_putt ? cleanMetricValue(row.sg_putt) : null,
       greensInReg: row.gir ? cleanMetricValue(row.gir, true) : null,
       scrambling: row.scrambling ? cleanMetricValue(row.scrambling, true) : null,
-      greatShots: row.great_shots ? cleanMetricValue(row.great_shots) : null,
-      poorShots: row.poor_shots ? cleanMetricValue(row.poor_shots) : null,
+      greatShots: row.great_shots !== undefined && row.great_shots !== null
+        ? cleanMetricValue(row.great_shots)
+        : null,
+      poorShots: row.poor_shots !== undefined && row.poor_shots !== null
+        ? cleanMetricValue(row.poor_shots)
+        : null,
       fairwayProx: row.prox_fw ? cleanMetricValue(row.prox_fw) : null,
       roughProx: row.prox_rgh ? cleanMetricValue(row.prox_rgh) : null
     };
@@ -1537,7 +1532,7 @@ function adjustMetricWeights(metricWeights, metricConfig, maxAdjustment) {
     }));
 
     const updated = groupWeights.map(({ key, weight }) => {
-      const adjustment = (Math.random() * 2 - 1) * maxAdjustment;
+      const adjustment = (rand() * 2 - 1) * maxAdjustment;
       return { key, weight: Math.max(0.0001, weight * (1 + adjustment)) };
     });
 
@@ -2380,7 +2375,7 @@ function runAdaptiveOptimizer() {
     const candidate = { ...groupWeightsSeedNormalized };
     optimizableGroups.forEach(groupName => {
       const base = candidate[groupName] || 0.0001;
-      const adjustment = (Math.random() * 2 - 1) * GROUP_TUNE_RANGE;
+      const adjustment = (rand() * 2 - 1) * GROUP_TUNE_RANGE;
       candidate[groupName] = Math.max(0.0001, base * (1 + adjustment));
     });
     const normalizedCandidate = normalizeWeights(candidate);
@@ -2461,10 +2456,10 @@ function runAdaptiveOptimizer() {
   for (let i = 0; i < MAX_TESTS; i++) {
     const weights = { ...bestTemplate.groupWeights };
     const groupNames = Object.keys(weights);
-    const numAdjust = 2 + Math.floor(Math.random() * 2);
+    const numAdjust = 2 + Math.floor(rand() * 2);
     for (let j = 0; j < numAdjust; j++) {
-      const groupName = groupNames[Math.floor(Math.random() * groupNames.length)];
-      const adjustment = (Math.random() * 2 - 1) * GROUP_GRID_RANGE;
+      const groupName = groupNames[Math.floor(rand() * groupNames.length)];
+      const adjustment = (rand() * 2 - 1) * GROUP_GRID_RANGE;
       weights[groupName] = Math.max(0.001, weights[groupName] * (1 + adjustment));
     }
 
@@ -3011,7 +3006,8 @@ function runAdaptiveOptimizer() {
   } else {
     textLines.push(`No improvement, stick with ${bestTemplate.name}`);
   }
-
+  textLines.push('');
+  textLines.push('---');
   const textOutputPath = path.resolve(OUTPUT_DIR, 'adaptive_optimizer_v2_results.txt');
   fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
