@@ -18,6 +18,23 @@ const parsePosition = (positionValue) => {
   return Number.isNaN(num) ? 100 : num;
 };
 
+const parseEventDate = (value) => {
+  if (!value) return null;
+  if (value instanceof Date) {
+    return isNaN(value.getTime()) ? null : value;
+  }
+
+  const numericValue = Number(value);
+  if (!Number.isNaN(numericValue) && Number.isFinite(numericValue)) {
+    // Excel serial date (days since 1899-12-30)
+    const excelEpoch = Date.UTC(1899, 11, 30);
+    return new Date(excelEpoch + numericValue * 86400000);
+  }
+
+  const parsed = new Date(value);
+  return isNaN(parsed.getTime()) ? null : parsed;
+};
+
 const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEventId, currentSeason = null, includeCurrentEventRounds = false }) => {
   const players = {};
   fieldData.forEach(row => {
@@ -51,10 +68,12 @@ const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEve
       }
     }
 
+    const parsedDate = parseEventDate(row.event_completed) || new Date();
+
     historicalData.push({
       dgId: row.dg_id,
       eventId: row.event_id,
-      date: new Date(row.event_completed || new Date()),
+      date: parsedDate,
       roundNum: cleanMetricValue(row.round_num),
       position: parsePosition(row.fin_text),
       metrics: {

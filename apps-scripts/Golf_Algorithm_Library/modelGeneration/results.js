@@ -32,7 +32,51 @@ const METRIC_TYPES = {
   COMPOSITE: new Set(['Birdie Chances Created'])
 };
 
+const normalizeTraceValue = (value) => {
+  const raw = String(value ?? '').trim();
+  if (!raw) return '';
+  const lowered = raw.toLowerCase();
+  if (lowered === 'null' || lowered === 'undefined') return '';
+  return raw;
+};
+const DEFAULT_TRACE_PLAYER = 'Matsuyama';
+const DEFAULT_TRACE_GROUP_STATS = 'true';
+let TRACE_PLAYER_NAME = '';
+let TRACE_PLAYER_NAME_LOWER = '';
+let TRACE_ENABLED = false;
+let TRACE_GROUP_STATS_RAW = '';
+let TRACE_GROUP_STATS = false;
+
+const parseTraceBoolean = (value, fallback = false) => {
+  if (value === null || value === undefined) return fallback;
+  const raw = String(value).trim().toLowerCase();
+  if (!raw) return fallback;
+  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'y';
+};
+
+const refreshTraceConfig = () => {
+  TRACE_PLAYER_NAME = normalizeTraceValue(
+    PropertiesService.getDocumentProperties().getProperty('DOC_TRACE_PLAYER')
+    || PropertiesService.getScriptProperties().getProperty('SCRIPT_TRACE_PLAYER')
+  );
+  if (!TRACE_PLAYER_NAME) {
+    TRACE_PLAYER_NAME = DEFAULT_TRACE_PLAYER;
+  }
+  TRACE_PLAYER_NAME_LOWER = TRACE_PLAYER_NAME.toLowerCase();
+  TRACE_ENABLED = TRACE_PLAYER_NAME.length > 0;
+
+  TRACE_GROUP_STATS_RAW = normalizeTraceValue(
+    PropertiesService.getDocumentProperties().getProperty('DOC_TRACE_GROUP_STATS')
+    || PropertiesService.getScriptProperties().getProperty('SCRIPT_TRACE_GROUP_STATS')
+    || DEFAULT_TRACE_GROUP_STATS
+  );
+  TRACE_GROUP_STATS = parseTraceBoolean(TRACE_GROUP_STATS_RAW, false);
+};
+
+const shouldTracePlayer = (name) => TRACE_ENABLED && String(name || '').toLowerCase().includes(TRACE_PLAYER_NAME_LOWER);
+
 function generatePlayerRankings() {
+  refreshTraceConfig();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configSheet = ss.getSheetByName("Configuration Sheet");
   const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
@@ -71,6 +115,9 @@ function generatePlayerRankings() {
 
   // Ensure at least one entry so the sheet is never blank
   logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
+  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_PLAYER property: "${TRACE_PLAYER_NAME}"`]);
+  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_ENABLED: ${TRACE_ENABLED}`]);
+  logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_GROUP_STATS: ${TRACE_GROUP_STATS}`]);
 
   const flushLogs = () => {
     if (logs.length === 0) {
@@ -135,16 +182,24 @@ function generatePlayerRankings() {
 
   // ===== DEBUG SNAPSHOT (EXPLICIT, NOT VIA console.log) =====
   const snapshotTime = () => new Date().toLocaleTimeString();
-  const targetName = "Scheffler, Scottie";
-  const targetPlayer = processedData.find(p => p && p.name === targetName);
+  const targetName = TRACE_PLAYER_NAME;
+  const targetPlayer = processedData.find(p => p && shouldTracePlayer(p.name)) || null;
 
   logs.push([snapshotTime(), `[SNAPSHOT] Players processed: ${processedData.length}`]);
   logs.push([snapshotTime(), `[SNAPSHOT] Target player found: ${targetPlayer ? 'YES' : 'NO'}`]);
+  if (!targetPlayer) {
+    const sampleNames = processedData
+      .filter(p => p && p.name)
+      .slice(0, 5)
+      .map(p => p.name)
+      .join(', ');
+    logs.push([snapshotTime(), `[SNAPSHOT] TRACE target not found. Sample players: ${sampleNames}`]);
+  }
 
   if (targetPlayer) {
     logs.push([snapshotTime(), `[SNAPSHOT] ${targetPlayer.name} DG ID: ${targetPlayer.dgId}`]);
     
-    // Log round categorization details for Scheffler
+    // Log round categorization details for trace player
     const targetData = players[targetPlayer.dgId];
     if (targetData) {
       logs.push([snapshotTime(), `[SNAPSHOT] Round Categorization:`]);
@@ -404,7 +459,7 @@ function generatePlayerRankings() {
 
   Object.entries(groupStats).forEach(([groupName, metrics]) => {
     Object.entries(metrics).forEach(([metricName, stats]) => {
-      if (metricName.includes('Approach') || metricName.includes('Prox') || statsFocus.has(metricName)) {
+      if (TRACE_GROUP_STATS || metricName.includes('Approach') || metricName.includes('Prox') || statsFocus.has(metricName)) {
         logs.push([snapshotTime(), `[SNAPSHOT] Stats ${groupName} -> ${metricName}: mean=${stats.mean}, stdDev=${stats.stdDev}`]);
       }
     });
@@ -820,8 +875,8 @@ function applyTrends(updatedMetrics, trends, playerName) {
   // Create a copy of metrics
   const adjustedMetrics = [...updatedMetrics];
   
-  // Log Scheffler's trend application
-  if (playerName === 'Scheffler, Scottie') {
+  // Log trace player's trend application
+  if (shouldTracePlayer(playerName)) {
     console.log(`\n🔄 TREND ADJUSTMENTS FOR ${playerName}:`);
     console.log(`Before trends applied: driving distance [1] = ${adjustedMetrics[1].toFixed(4)} yards`);
   }
@@ -878,8 +933,8 @@ function applyTrends(updatedMetrics, trends, playerName) {
     const originalValue = adjustedMetrics[adjustedIndex];
     adjustedMetrics[adjustedIndex] = originalValue * safeTrendFactor;
     
-    // Detailed logging for Scheffler's driving distance
-    if (playerName === 'Scheffler, Scottie' && originalIndex === 1) {
+    // Detailed logging for trace player's driving distance
+    if (shouldTracePlayer(playerName) && originalIndex === 1) {
       console.log(`\n  Metric: ${metricName} (index ${originalIndex})`);
       console.log(`  Trend Value: ${trends[originalIndex].toFixed(6)} (fractional per-round change)`);
       console.log(`  Trend Weight: ${TREND_WEIGHT} (weight of trend in final adjustment)`);
@@ -891,7 +946,7 @@ function applyTrends(updatedMetrics, trends, playerName) {
     }
   }
   
-  if (playerName === 'Scheffler, Scottie') {
+  if (shouldTracePlayer(playerName)) {
     console.log(`After trends applied: driving distance [1] = ${adjustedMetrics[1].toFixed(4)} yards\n`);
   }
   
@@ -1228,6 +1283,23 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
+  const traceMetricNames = [
+    'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
+    'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
+    'greensInReg', 'scrambling', 'greatShots', 'poorShots',
+    'scoringAverage', 'birdiesOrBetter', 'fairwayProx', 'roughProx',
+    'approach <100 GIR', 'approach <100 SG', 'approach <100 Prox',
+    'approach <150 FW GIR', 'approach <150 FW SG', 'approach <150 FW Prox',
+    'approach <150 Rough GIR', 'approach <150 Rough SG', 'approach <150 Rough Prox',
+    'approach >150 Rough GIR', 'approach >150 Rough SG', 'approach >150 Rough Prox',
+    'approach <200 FW GIR', 'approach <200 FW SG', 'approach <200 FW Prox',
+    'approach >200 FW GIR', 'approach >200 FW SG', 'approach >200 FW Prox'
+  ];
+  const traceMetricNamesWithBCC = [
+    ...traceMetricNames.slice(0, 14),
+    'Birdie Chances Created',
+    ...traceMetricNames.slice(14)
+  ];
  
   console.log(`** CURRENT_EVENT_ID = "${CURRENT_EVENT_ID}" **`);
  
@@ -1563,6 +1635,27 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
  
     // Apply trends to metrics using the helper function
     const adjustedMetrics = applyTrends(updatedMetrics, trends, data.name);
+
+    if (shouldTracePlayer(data.name)) {
+      const formatValue = (value) => (typeof value === 'number' && !isNaN(value) ? value.toFixed(4) : 'n/a');
+      console.log(`\n=== TRACE PLAYER: ${data.name} (${dgId}) ===`);
+      console.log(`Rounds: Historical=${data.historicalRounds.length}, Similar=${data.similarRounds.length}, Putting=${data.puttingRounds.length}`);
+      console.log('Historical averages (0-15):');
+      historicalAvgs.forEach((value, index) => {
+        console.log(`  [${index}] ${traceMetricNames[index]} = ${formatValue(value)}`);
+      });
+      console.log('Approach metrics (16-33):');
+      approachMetrics.forEach((value, index) => {
+        const metricIndex = index + 16;
+        console.log(`  [${metricIndex}] ${traceMetricNames[metricIndex]} = ${formatValue(value)}`);
+      });
+      console.log(`BCC (inserted @14) = ${formatValue(birdieChancesCreated)}`);
+      console.log('Adjusted metrics with BCC (post-trends):');
+      adjustedMetrics.forEach((value, index) => {
+        console.log(`  [${index}] ${traceMetricNamesWithBCC[index]} = ${formatValue(value)}`);
+      });
+      console.log('=== END TRACE PLAYER METRICS ===\n');
+    }
  
     // Calculate Group Scores
     let totalMetricsCount = 0;
@@ -1628,8 +1721,12 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         const stdDev = metricStats.stdDev || 0.001; // Ensure non-zero
         let zScore = (value - metricStats.mean) / stdDev;
         
-        if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && data.name === 'Scheffler, Scottie') {
+        if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && shouldTracePlayer(data.name)) {
           console.log(`  [METRIC] ${metric.name}: raw=${adjustedMetrics[metric.index]?.toFixed(4)}, trans=${value.toFixed(4)}, mean=${metricStats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight.toFixed(6)}`);
+        }
+
+        if (shouldTracePlayer(data.name)) {
+          console.log(`  [TRACE METRIC] ${group.name} :: ${metric.name} | raw=${adjustedMetrics[metric.index]?.toFixed?.(4)}, trans=${value?.toFixed?.(4)}, mean=${metricStats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight.toFixed(6)}`);
         }
         
         // Apply scoring differential penalties for scoring related metrics
@@ -1661,8 +1758,8 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
         groupScore = groupScore / totalWeight;
       }
       
-      if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && data.name === 'Scheffler, Scottie') {
-        console.log(`[DEBUG Scheffler] ${group.name}: metricsProcessed=${metricsProcessed}, metricsSkipped=${metricsSkipped}, groupScore=${groupScore.toFixed(4)}, totalWeight=${totalWeight.toFixed(4)}`);
+      if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && shouldTracePlayer(data.name)) {
+        console.log(`[DEBUG TRACE] ${group.name}: metricsProcessed=${metricsProcessed}, metricsSkipped=${metricsSkipped}, groupScore=${groupScore.toFixed(4)}, totalWeight=${totalWeight.toFixed(4)}`);
       }
       
       // Store the group score
@@ -2411,9 +2508,9 @@ function aggregatePlayerData(metricGroups) {
           players[dgId].puttingRounds.push(roundData);
           console.log(`Added putting-specific round for ${players[dgId].name}, event ${eventId}`);
           
-          // Log Scheffler's putting rounds details
-          if (players[dgId].name === 'Scheffler, Scottie') {
-            console.log(`[SNAPSHOT] GAS Scheffler putting round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
+          // Log trace player's putting rounds details
+          if (shouldTracePlayer(players[dgId].name)) {
+            console.log(`[SNAPSHOT] GAS trace putting round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
           }
       }
       
@@ -2426,9 +2523,9 @@ function aggregatePlayerData(metricGroups) {
       if (!eventType.isSimilar && !eventType.isPuttingSpecific) {
           players[dgId].historicalRounds.push(roundData);
           
-          // Log Scheffler's historical rounds details
-          if (players[dgId].name === 'Scheffler, Scottie') {
-            console.log(`[SNAPSHOT] GAS Scheffler historical round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
+          // Log trace player's historical rounds details
+          if (shouldTracePlayer(players[dgId].name)) {
+            console.log(`[SNAPSHOT] GAS trace historical round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
           }
       }
       });
@@ -2723,8 +2820,8 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
     let sumWeighted = 0;
     let sumWeights = 0;
     
-    // For Scheffler's driving distance, show detailed lambda application
-    const showDetail = playerName === 'Scheffler, Scottie' && values.length > 0 && values[0] > 200 && values[0] < 350;
+    // For trace player's driving distance, show detailed lambda application
+    const showDetail = shouldTracePlayer(playerName) && values.length > 0 && values[0] > 200 && values[0] < 350;
     
     if (showDetail) {
       console.log(`\n📐 EXPONENTIAL DECAY WEIGHTING (λ=${decayFactor}):`);
@@ -2796,9 +2893,9 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   const playerName = sortedHistorical.length > 0 ? sortedHistorical[0].playerName : 'Unknown';
   console.log(`${playerName}: Prepared ${sortedHistorical.length} historical, ${sortedSimilar.length} similar, and ${sortedPutting.length} putting rounds`);
   
-  // Log Scheffler's individual rounds
-  if (playerName === 'Scheffler, Scottie') {
-    console.log(`\n🎯 SCHEFFLER ROUND DETAILS:\n`);
+  // Log trace player's individual rounds
+  if (shouldTracePlayer(playerName)) {
+    console.log(`\n🎯 TRACE ROUND DETAILS FOR ${playerName}:\n`);
     console.log(`Historical Rounds (events 2, 60, 464, 478):`);
     sortedHistorical.forEach((round, idx) => {
       if (round.metrics.drivingDistance) {
@@ -2845,9 +2942,9 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       lambdaPutting
     ) : null;
     
-    // Add detailed logging for Scheffler's putting metric calculation
-    if (playerName === 'Scheffler, Scottie' && isPuttingMetric) {
-      console.log(`[SNAPSHOT] GAS SCHEFFLER ${metricKey} RAW DATA:`);
+    // Add detailed logging for trace player's putting metric calculation
+    if (shouldTracePlayer(playerName) && isPuttingMetric) {
+      console.log(`[SNAPSHOT] GAS TRACE ${metricKey} RAW DATA:`);
       console.log(`[SNAPSHOT]   Putting rounds: ${sortedPutting.length}`);
       sortedPutting.forEach((r, i) => {
         console.log(`[SNAPSHOT]     Round ${i}: ${metricKey}=${r.metrics?.[metricKey]}, date=${r.date}, event=${r.eventId}, roundNum=${r.roundNum}`);
@@ -2885,9 +2982,9 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
           Historical: ${historicalAvg.toFixed(3)} × weight ${(1-dynamicPuttingWeight).toFixed(2)} = ${(historicalAvg * (1-dynamicPuttingWeight)).toFixed(3)}
           Final value: ${finalValue.toFixed(3)}`);
         
-        // Add detailed logging for Scheffler
-        if (playerName === 'Scheffler, Scottie') {
-          console.log(`[SNAPSHOT] SCHEFFLER PUTTING BLEND DETAIL:`);
+        // Add detailed logging for trace player
+        if (shouldTracePlayer(playerName)) {
+          console.log(`[SNAPSHOT] TRACE PUTTING BLEND DETAIL:`);
           console.log(`[SNAPSHOT]   Putting rounds: ${sortedPutting.length}`);
           console.log(`[SNAPSHOT]   Historical rounds: ${sortedHistorical.length}`);
           console.log(`[SNAPSHOT]   Base putting weight: ${puttingWeight}`);
@@ -2919,7 +3016,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
         // Blend similar with historical data
         finalValue = (similarAvg * dynamicSimilarWeight) + (historicalAvg * (1 - dynamicSimilarWeight));
         
-        if (playerName === 'Scheffler, Scottie' && metricKey === 'drivingDistance') {
+        if (shouldTracePlayer(playerName) && metricKey === 'drivingDistance') {
           console.log(`\n📊 DETAILED BLENDING FOR ${playerName} - ${metricKey}:`);
           console.log(`  Similar Courses (events 3,7,12,23,28):`);
           console.log(`    - Rounds: ${sortedSimilar.length}`);

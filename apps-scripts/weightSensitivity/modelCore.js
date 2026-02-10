@@ -7,7 +7,16 @@
 // Toggle verbose logging for model calculations
 const DEBUG_LOGGING = false;
 const DEBUG_SNAPSHOT = String(process.env.DEBUG_SNAPSHOT || '').toLowerCase() === 'true';
-const snapshotLog = DEBUG_SNAPSHOT ? globalThis.console.log.bind(globalThis.console) : () => {};
+const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim().toLowerCase();
+const snapshotLog = (...args) => {
+  if (!DEBUG_SNAPSHOT) return;
+  globalThis.console.log(...args);
+};
+const traceLog = (...args) => {
+  if (!TRACE_PLAYER) return;
+  globalThis.console.log(...args);
+};
+const shouldTracePlayer = (name) => TRACE_PLAYER && String(name || '').toLowerCase().includes(TRACE_PLAYER);
 const console = DEBUG_LOGGING
   ? globalThis.console
   : {
@@ -371,16 +380,27 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
  
   // Create standardized date strings for consistent sorting
   const prepareRounds = (rounds) => {
-    return rounds
-      .filter(round => round && round.metrics)
+    const isValidDate = (value) => {
+      const date = new Date(value);
+      return !isNaN(date.getTime());
+    };
+
+    const validRounds = rounds
+      .filter(round => round && round.metrics && isValidDate(round.date));
+
+    const invalidCount = (rounds?.length || 0) - validRounds.length;
+    if (invalidCount > 0) {
+      console.warn(`Filtered ${invalidCount} rounds with invalid dates`);
+    }
+
+    return validRounds
       .sort((a, b) => {
-        // First convert dates to ISO string format for consistent comparison
-        const dateA = new Date(a.date).toISOString();
-        const dateB = new Date(b.date).toISOString();
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
         
         // Primary sort by date (newest first)
         if (dateA !== dateB) {
-          return dateB.localeCompare(dateA);
+          return dateB - dateA;
         }
         // Secondary sort by round number (if dates are identical)
         return b.roundNum - a.roundNum;
@@ -740,6 +760,23 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
+  const traceMetricNames = [
+    'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
+    'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
+    'greensInReg', 'scrambling', 'greatShots', 'poorShots',
+    'scoringAverage', 'birdiesOrBetter', 'fairwayProx', 'roughProx',
+    'approach <100 GIR', 'approach <100 SG', 'approach <100 Prox',
+    'approach <150 FW GIR', 'approach <150 FW SG', 'approach <150 FW Prox',
+    'approach <150 Rough GIR', 'approach <150 Rough SG', 'approach <150 Rough Prox',
+    'approach >150 Rough GIR', 'approach >150 Rough SG', 'approach >150 Rough Prox',
+    'approach <200 FW GIR', 'approach <200 FW SG', 'approach <200 FW Prox',
+    'approach >200 FW GIR', 'approach >200 FW SG', 'approach >200 FW Prox'
+  ];
+  const traceMetricNamesWithBCC = [
+    ...traceMetricNames.slice(0, 14),
+    'Birdie Chances Created',
+    ...traceMetricNames.slice(14)
+  ];
  
   console.log(`** CURRENT_EVENT_ID = "${CURRENT_EVENT_ID}" **`);
  
@@ -1080,6 +1117,27 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
  
     // Apply trends to metrics using the helper function
     const adjustedMetrics = applyTrends(updatedMetrics, trends, data.name);
+
+    if (shouldTracePlayer(data.name)) {
+      const formatValue = (value) => (typeof value === 'number' && !isNaN(value) ? value.toFixed(4) : 'n/a');
+      traceLog(`\n=== TRACE PLAYER: ${data.name} (${dgId}) ===`);
+      traceLog(`Rounds: Historical=${data.historicalRounds.length}, Similar=${data.similarRounds.length}, Putting=${data.puttingRounds.length}`);
+      traceLog('Historical averages (0-15):');
+      historicalAvgs.forEach((value, index) => {
+        traceLog(`  [${index}] ${traceMetricNames[index]} = ${formatValue(value)}`);
+      });
+      traceLog('Approach metrics (16-33):');
+      approachMetrics.forEach((value, index) => {
+        const metricIndex = index + 16;
+        traceLog(`  [${metricIndex}] ${traceMetricNames[metricIndex]} = ${formatValue(value)}`);
+      });
+      traceLog(`BCC (inserted @14) = ${formatValue(birdieChancesCreated)}`);
+      traceLog('Adjusted metrics with BCC (post-trends):');
+      adjustedMetrics.forEach((value, index) => {
+        traceLog(`  [${index}] ${traceMetricNamesWithBCC[index]} = ${formatValue(value)}`);
+      });
+      traceLog('=== END TRACE PLAYER METRICS ===\n');
+    }
  
     // Calculate Group Scores
     let totalMetricsCount = 0;
@@ -1145,6 +1203,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
         
         const stdDev = metricStats.stdDev || 0.001; // Ensure non-zero
         let zScore = (value - metricStats.mean) / stdDev;
+
+        if (shouldTracePlayer(data.name)) {
+          traceLog(`  [TRACE METRIC] ${group.name} :: ${metric.name} | raw=${adjustedMetrics[metric.index]?.toFixed?.(4)}, trans=${value?.toFixed?.(4)}, mean=${metricStats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight.toFixed(6)}`);
+        }
         
         if ((group.name === 'Approach - Short (<100)' || group.name === 'Driving Performance') && data.name === 'Scheffler, Scottie') {
           console.log(`  [METRIC] ${metric.name}: raw=${adjustedMetrics[metric.index]?.toFixed(4)}, trans=${value.toFixed(4)}, mean=${metricStats.mean.toFixed(4)}, stdDev=${stdDev.toFixed(4)}, z=${zScore.toFixed(4)}, weight=${metric.weight.toFixed(6)}`);

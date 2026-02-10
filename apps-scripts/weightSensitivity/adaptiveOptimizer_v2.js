@@ -21,6 +21,53 @@ const { WEIGHT_TEMPLATES } = require('./utilities/weightTemplates');
 const DATA_DIR = __dirname;
 const DEFAULT_DATA_DIR = path.resolve(__dirname, 'data');
 const OUTPUT_DIR = path.resolve(__dirname, 'output');
+const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
+const LOG_TO_FILE = String(process.env.LOG_TO_FILE || '').toLowerCase() === 'true' || Boolean(TRACE_PLAYER);
+
+if (LOG_TO_FILE) {
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+  const normalizedTraceName = TRACE_PLAYER
+    ? TRACE_PLAYER.replace(/[^a-z0-9]+/gi, '_').replace(/^_+|_+$/g, '').toLowerCase()
+    : 'full';
+  const logFilePath = path.resolve(OUTPUT_DIR, `adaptive_optimizer_trace_${normalizedTraceName}.txt`);
+  const logStream = fs.createWriteStream(logFilePath, { flags: 'w' });
+  const originalConsole = {
+    log: console.log.bind(console),
+    warn: console.warn.bind(console),
+    error: console.error.bind(console)
+  };
+  const formatArg = value => {
+    if (typeof value === 'string') return value;
+    try {
+      return JSON.stringify(value);
+    } catch (err) {
+      return String(value);
+    }
+  };
+  const writeLog = (level, args) => {
+    const message = args.map(formatArg).join(' ');
+    logStream.write(`[${level}] ${message}\n`);
+  };
+
+  console.log = (...args) => {
+    originalConsole.log(...args);
+    writeLog('LOG', args);
+  };
+  console.warn = (...args) => {
+    originalConsole.warn(...args);
+    writeLog('WARN', args);
+  };
+  console.error = (...args) => {
+    originalConsole.error(...args);
+    writeLog('ERROR', args);
+  };
+
+  process.on('exit', () => {
+    logStream.end();
+  });
+}
 
 // Parse CLI arguments
 const args = process.argv.slice(2);

@@ -21,13 +21,27 @@ function loadCsv(filePath, options = {}) {
   if (typeof options.headerRow === 'number') {
     headerLineIdx = options.headerRow;
   } else {
-    // Auto-detect: find the line that contains 'dg_id' or other known column headers
+    // Auto-detect: prefer the line that starts with dg_id (optionally after a leading comma)
+    let detectedIdx = null;
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i].trim();
-      if (line.includes('dg_id') || line.includes('player_name')) {
-        headerLineIdx = i;
+      if (/^,?\s*dg_id,/.test(line)) {
+        detectedIdx = i;
         break;
       }
+    }
+    if (detectedIdx === null) {
+      // Fallback: find the first line that contains 'dg_id' or 'player_name'
+      for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        if (line.includes('dg_id') || line.includes('player_name')) {
+          detectedIdx = i;
+          break;
+        }
+      }
+    }
+    if (detectedIdx !== null) {
+      headerLineIdx = detectedIdx;
     }
   }
   // Optionally remove first column from all rows
