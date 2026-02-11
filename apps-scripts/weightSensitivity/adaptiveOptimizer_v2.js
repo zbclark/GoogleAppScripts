@@ -24,6 +24,7 @@ const OUTPUT_DIR = path.resolve(__dirname, 'output');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
 const LOGGING_ENABLED = false;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
+const OPT_TESTS_RAW = String(process.env.OPT_TESTS || '').trim();
 
 if (!LOGGING_ENABLED) {
   console.log = () => {};
@@ -68,6 +69,7 @@ let OVERRIDE_SEASON = null;
 let TOURNAMENT_NAME = null;
 let DRY_RUN = true;
 let INCLUDE_CURRENT_EVENT_ROUNDS = null;
+let MAX_TESTS_OVERRIDE = null;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--template' && args[i + 1]) {
@@ -82,6 +84,10 @@ for (let i = 0; i < args.length; i++) {
   }
   if ((args[i] === '--tournament' || args[i] === '--name') && args[i + 1]) {
     TOURNAMENT_NAME = String(args[i + 1]).trim();
+  }
+  if (args[i] === '--tests' && args[i + 1]) {
+    const parsedTests = parseInt(String(args[i + 1]).trim(), 10);
+    MAX_TESTS_OVERRIDE = Number.isNaN(parsedTests) ? null : parsedTests;
   }
   if (args[i] === '--writeTemplates') {
     DRY_RUN = false;
@@ -100,6 +106,9 @@ for (let i = 0; i < args.length; i++) {
 console.log('---');
 console.log('ADAPTIVE WEIGHT OPTIMIZER v2');
 console.log('---');
+if (OPT_SEED_RAW) {
+  console.log(`OPT_SEED: ${OPT_SEED_RAW}`);
+}
 
 if (!OVERRIDE_EVENT_ID) {
   console.error('\n❌ Missing required argument: --event <eventId>');
@@ -3158,7 +3167,9 @@ function runAdaptiveOptimizer() {
 
   const GROUP_GRID_RANGE = 0.20;
   const METRIC_GRID_RANGE = 0.15;
-  const MAX_TESTS = 1500;
+  const parsedEnvTests = parseInt(OPT_TESTS_RAW, 10);
+  const MAX_TESTS = MAX_TESTS_OVERRIDE
+    ?? (Number.isNaN(parsedEnvTests) ? 1500 : parsedEnvTests);
   const optimizedResults = [];
   const WEIGHT_OBJECTIVE = {
     correlation: 0.3,
@@ -3395,6 +3406,7 @@ function runAdaptiveOptimizer() {
     eventId: CURRENT_EVENT_ID,
     tournament: TOURNAMENT_NAME || 'Sony Open',
     dryRun: DRY_RUN,
+    optSeed: OPT_SEED_RAW || null,
     historicalMetricCorrelations,
     currentGeneratedMetricCorrelations,
     currentGeneratedTop20Correlations,
@@ -3452,7 +3464,18 @@ function runAdaptiveOptimizer() {
     }
   };
 
-  const outputPath = path.resolve(OUTPUT_DIR, 'adaptive_optimizer_v2_results.json');
+  const baseName = (TOURNAMENT_NAME || `event_${CURRENT_EVENT_ID}`)
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_\-]/g, '');
+
+  const seedSuffix = OPT_SEED_RAW
+    ? `_seed-${String(OPT_SEED_RAW).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '')}`
+    : '';
+
+  const outputBaseName = `${baseName}${seedSuffix}`;
+
+  const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_results.json`);
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
 
   const textLines = [];
@@ -3460,6 +3483,9 @@ function runAdaptiveOptimizer() {
   textLines.push('ADAPTIVE WEIGHT OPTIMIZER - FINAL RESULTS');
   textLines.push('='.repeat(100));
   textLines.push(`DRY RUN: ${DRY_RUN ? 'ON (template files not modified)' : 'OFF (templates written)'}`);
+  if (OPT_SEED_RAW) {
+    textLines.push(`OPT_SEED: ${OPT_SEED_RAW}`);
+  }
   textLines.push('');
   textLines.push('STEP 1: HISTORICAL METRIC CORRELATIONS');
   textLines.push('Functions: buildHistoricalMetricSamples, computeHistoricalMetricCorrelations (adaptiveOptimizer_v2.js)');
@@ -3721,7 +3747,7 @@ function runAdaptiveOptimizer() {
   }
   textLines.push('');
   textLines.push('---');
-  const textOutputPath = path.resolve(OUTPUT_DIR, 'adaptive_optimizer_v2_results.txt');
+  const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_results.txt`);
   fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
   const optimizedTop20Desc = typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a';
@@ -3762,8 +3788,8 @@ function runAdaptiveOptimizer() {
     }
   });
 
-  console.log(`✅ JSON results also saved to: output/adaptive_optimizer_v2_results.json`);
-  console.log(`✅ Text results saved to: output/adaptive_optimizer_v2_results.txt\n`);
+  console.log(`✅ JSON results also saved to: output/${outputBaseName}_results.json`);
+  console.log(`✅ Text results saved to: output/${outputBaseName}_results.txt\n`);
 }
 
 runAdaptiveOptimizer();

@@ -32,119 +32,24 @@ const METRIC_TYPES = {
   COMPOSITE: new Set(['Birdie Chances Created'])
 };
 
-const normalizeTraceValue = (value) => {
-  const raw = String(value ?? '').trim();
-  if (!raw) return '';
-  const lowered = raw.toLowerCase();
-  if (lowered === 'null' || lowered === 'undefined') return '';
-  return raw;
-};
-const DEFAULT_TRACE_PLAYER = 'Matsuyama';
-const LOGGING_ENABLED = false;
-const DEFAULT_TRACE_GROUP_STATS = 'true';
-let TRACE_PLAYER_NAME = '';
-let TRACE_PLAYER_NAME_LOWER = '';
-let TRACE_ENABLED = false;
-let TRACE_GROUP_STATS_RAW = '';
-let TRACE_GROUP_STATS = false;
-
-const parseTraceBoolean = (value, fallback = false) => {
-  if (value === null || value === undefined) return fallback;
-  const raw = String(value).trim().toLowerCase();
-  if (!raw) return fallback;
-  return raw === 'true' || raw === '1' || raw === 'yes' || raw === 'y';
-};
-
-const refreshTraceConfig = () => {
-  TRACE_PLAYER_NAME = normalizeTraceValue(
-    PropertiesService.getDocumentProperties().getProperty('DOC_TRACE_PLAYER')
-    || PropertiesService.getScriptProperties().getProperty('SCRIPT_TRACE_PLAYER')
-  );
-  if (!TRACE_PLAYER_NAME) {
-    TRACE_PLAYER_NAME = DEFAULT_TRACE_PLAYER;
-  }
-  TRACE_PLAYER_NAME_LOWER = TRACE_PLAYER_NAME.toLowerCase();
-  TRACE_ENABLED = TRACE_PLAYER_NAME.length > 0;
-
-  TRACE_GROUP_STATS_RAW = normalizeTraceValue(
-    PropertiesService.getDocumentProperties().getProperty('DOC_TRACE_GROUP_STATS')
-    || PropertiesService.getScriptProperties().getProperty('SCRIPT_TRACE_GROUP_STATS')
-    || DEFAULT_TRACE_GROUP_STATS
-  );
-  TRACE_GROUP_STATS = parseTraceBoolean(TRACE_GROUP_STATS_RAW, false);
-};
-
-const shouldTracePlayer = (name) => TRACE_ENABLED && String(name || '').toLowerCase().includes(TRACE_PLAYER_NAME_LOWER);
-
 function generatePlayerRankings() {
+  ensureTraceConfigViaUi();
+  ensureTraceGroupStatsViaUi();
+  ensureDebugCalculationSheetViaUi();
   refreshTraceConfig();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configSheet = ss.getSheetByName("Configuration Sheet");
   const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
 
   // ===== DEBUG LOG CAPTURE =====
-  const logs = [];
-  const originalConsole = {
-    log: console.log,
-    warn: console.warn,
-    error: console.error
-  };
-  if (!LOGGING_ENABLED) {
-    console.log = () => {};
-    console.warn = () => {};
-    console.error = () => {};
-  }
-  const debugLogSheetName = "Debug Execution Log";
-  let debugLogSheet = null;
-
-  const logToBuffer = (level, args) => {
-    const msg = args.map(a => (typeof a === 'string' ? a : JSON.stringify(a))).join(' ');
-    logs.push([new Date().toLocaleTimeString(), `[${level}] ${msg}`]);
-  };
+  const { logs, flushLogs, restore } = initDebugLogCapture({ enabled: LOGGING_ENABLED });
   if (LOGGING_ENABLED) {
-    debugLogSheet = ss.getSheetByName(debugLogSheetName);
-    if (!debugLogSheet) {
-      debugLogSheet = ss.insertSheet(debugLogSheetName);
-    }
-    debugLogSheet.clearContents();
-    debugLogSheet.getRange(1, 1, 1, 2).setValues([["Time", "Message"]]).setFontWeight("bold");
-
-    console.log = function(...args) {
-      logToBuffer('LOG', args);
-      originalConsole.log(...args);
-    };
-    console.warn = function(...args) {
-      logToBuffer('WARN', args);
-      originalConsole.warn(...args);
-    };
-    console.error = function(...args) {
-      logToBuffer('ERROR', args);
-      originalConsole.error(...args);
-    };
-
     // Ensure at least one entry so the sheet is never blank
     logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
     logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_PLAYER property: "${TRACE_PLAYER_NAME}"`]);
     logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_ENABLED: ${TRACE_ENABLED}`]);
     logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_GROUP_STATS: ${TRACE_GROUP_STATS}`]);
   }
-
-  const flushLogs = () => {
-    if (!LOGGING_ENABLED) return;
-    if (logs.length === 0) {
-      logs.push([new Date().toLocaleTimeString(), '[WARN] No console logs captured']);
-    }
-
-    const requiredRows = logs.length + 1; // +1 for header row
-    if (debugLogSheet.getMaxRows() < requiredRows) {
-      debugLogSheet.insertRowsAfter(debugLogSheet.getMaxRows(), requiredRows - debugLogSheet.getMaxRows());
-    }
-
-    debugLogSheet.getRange(2, 1, logs.length, 2).setValues(logs);
-    debugLogSheet.setColumnWidths(1, 1, 100);
-    debugLogSheet.setColumnWidth(2, 800);
-    SpreadsheetApp.flush();
-  };
 
   try {
     logs.push([new Date().toLocaleTimeString(), '[LOG] Starting generatePlayerRankings']);
@@ -492,7 +397,9 @@ function generatePlayerRankings() {
   writeRankingOutput(outputSheet, sortedData, metricLabels, metricGroups, groupStats);
 
   // 6. Create Debug Sheet with calculation breakdown - USE SORTED DATA WITH RANKS
-  createDebugCalculationSheet(ss, sortedData, metricGroups, groupStats);
+  if (isDebugCalculationSheetEnabled()) {
+    createDebugCalculationSheet(ss, sortedData, metricGroups, groupStats);
+  }
 
     logs.push([new Date().toLocaleTimeString(), '[LOG] generatePlayerRankings completed successfully']);
     return "Rankings generated successfully!";
@@ -501,9 +408,7 @@ function generatePlayerRankings() {
     throw error;
   } finally {
     flushLogs();
-    console.log = originalConsole.log;
-    console.warn = originalConsole.warn;
-    console.error = originalConsole.error;
+    restore();
   }
 }
 

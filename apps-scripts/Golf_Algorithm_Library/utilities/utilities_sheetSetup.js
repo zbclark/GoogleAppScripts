@@ -8,6 +8,7 @@ function getG9WithRetry(sheet, retries = 5, delay = 500) {
   return null;
 }
 
+
 function setupSheet() {
   const ui = SpreadsheetApp.getUi();
   
@@ -262,25 +263,15 @@ function clearConfig() {
     console.error("Error clearing Tournament Results sheet:", e);
   }
 
-  // 5. Clear Historical Results Sheet
+  // 5. Preserve Historical Data Sheet (do not clear)
   try {
     if (historicalDataSheet) {
-      // Use fixed generous limits to ensure all data is cleared
-      const lastRow = historicalDataSheet.getLastRow();
-      const lastCol = historicalDataSheet.getLastColumn();
-      const colsToClean = 50;   // Should cover all reasonable columns
-      
-      console.log(`Clearing Historical Data sheet.`);
-      
-      // Clear content and formatting
-      const hisDataRange = resultsSheet.getRange(6, 2, lastRow, lastCol);
-      hisDataRange.clear();
-      
+      console.log("Preserving Historical Data sheet (no clear performed).");
     } else {
       console.log("Historical Data sheet not found");
     }
   } catch (e) {
-    console.error("Error clearing Historical Data sheet:", e);
+    console.error("Error handling Historical Data sheet:", e);
   }
 
   // 6. Delete Debug Sheet

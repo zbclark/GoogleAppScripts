@@ -39,6 +39,91 @@ const MAIN_HEADERS = Object.freeze([
   "sg_categories", "traditional_stats"
 ]);
 
+const HISTORICAL_START_ROW = 5;
+const HISTORICAL_START_COL = 2;
+
+function getHistoricalColumnIndex(header) {
+  const headerIndex = MAIN_HEADERS.indexOf(header);
+  if (headerIndex === -1) return null;
+  return HISTORICAL_START_COL + headerIndex;
+}
+
+function buildRequiredEventKeys(filteredEvents) {
+  return new Set(
+    filteredEvents.map(event => `${event.eventId}-${event.year}`)
+  );
+}
+
+function cleanupHistoricalSheet(historicalSheet, requiredEventKeys) {
+  if (!historicalSheet) return;
+  if (!requiredEventKeys || requiredEventKeys.size === 0) {
+    logDebug('Skipping historical cleanup: no required events provided.');
+    return;
+  }
+
+  const lastRow = historicalSheet.getLastRow();
+  if (lastRow < HISTORICAL_START_ROW) return;
+
+  const yearCol = getHistoricalColumnIndex('year');
+  const eventIdCol = getHistoricalColumnIndex('event_id');
+
+  if (!yearCol || !eventIdCol) {
+    logDebug('Historical cleanup skipped: year/event_id columns not found in headers.');
+    return;
+  }
+
+  const numRows = lastRow - HISTORICAL_START_ROW + 1;
+  const yearValues = historicalSheet.getRange(HISTORICAL_START_ROW, yearCol, numRows, 1).getValues();
+  const eventValues = historicalSheet.getRange(HISTORICAL_START_ROW, eventIdCol, numRows, 1).getValues();
+
+  const rowsToDelete = [];
+  for (let i = 0; i < numRows; i++) {
+    const year = yearValues[i][0] ? yearValues[i][0].toString().trim() : '';
+    const eventId = eventValues[i][0] ? eventValues[i][0].toString().trim() : '';
+    const key = `${eventId}-${year}`;
+    if (!eventId || !year || !requiredEventKeys.has(key)) {
+      rowsToDelete.push(HISTORICAL_START_ROW + i);
+    }
+  }
+
+  if (rowsToDelete.length === 0) {
+    logDebug('Historical cleanup: no rows to delete.');
+    return;
+  }
+
+  // Delete from bottom to top to avoid index shift
+  rowsToDelete.sort((a, b) => b - a).forEach(row => {
+    historicalSheet.deleteRow(row);
+  });
+
+  logDebug(`Historical cleanup: deleted ${rowsToDelete.length} rows not in required events.`);
+}
+
+function rebuildProcessedEventKeysFromSheet(historicalSheet) {
+  const processed = new Set();
+  if (!historicalSheet) return processed;
+
+  const lastRow = historicalSheet.getLastRow();
+  if (lastRow < HISTORICAL_START_ROW) return processed;
+
+  const yearCol = getHistoricalColumnIndex('year');
+  const eventIdCol = getHistoricalColumnIndex('event_id');
+
+  if (!yearCol || !eventIdCol) return processed;
+
+  const numRows = lastRow - HISTORICAL_START_ROW + 1;
+  const yearValues = historicalSheet.getRange(HISTORICAL_START_ROW, yearCol, numRows, 1).getValues();
+  const eventValues = historicalSheet.getRange(HISTORICAL_START_ROW, eventIdCol, numRows, 1).getValues();
+
+  for (let i = 0; i < numRows; i++) {
+    const year = yearValues[i][0] ? yearValues[i][0].toString().trim() : '';
+    const eventId = eventValues[i][0] ? eventValues[i][0].toString().trim() : '';
+    if (eventId && year) processed.add(`${eventId}-${year}`);
+  }
+
+  return processed;
+}
+
 /**************************
 *   Configuration Sheet Setup
 **************************/
@@ -147,6 +232,31 @@ function calculateDateRange(period) {
   };
 }
 
+function extractCourseIdsFromConfig(values) {
+  const ids = new Set();
+  const regex = /\(ID:\s*(\d+)\)/g;
+
+  values.flat().forEach(cellValue => {
+    if (!cellValue) return;
+    const text = cellValue.toString();
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+      ids.add(match[1]);
+    }
+  });
+
+  return ids;
+}
+
+function getAllowedCourseIdsFromConfig(configSheet) {
+  if (!configSheet) return new Set();
+  const scoringCourses = configSheet.getRange("F33:F37").getValues();
+  const puttingCourses = configSheet.getRange("F40:F44").getValues();
+  const allowed = extractCourseIdsFromConfig([...scoringCourses, ...puttingCourses]);
+  logDebug(`Allowed course IDs from config: ${[...allowed].join(', ') || 'none'}`);
+  return allowed;
+}
+
 /**
  * Logs debug messages when DEBUG is true.
  * @param {string} message - The message to log.
@@ -157,6 +267,7 @@ function logDebug(message) {
     console.log(message);
   }
 }
+
 
 /**
  * Delays execution for the specified number of milliseconds.
@@ -1049,6 +1160,8 @@ async function updateHistoricalDataFromButton() {
     const dateRange = calculateDateRange(period);  
     if (!dateRange) throw new Error("Failed to calculate date range");  
     const { startDate, endDate } = dateRange;  
+
+    const allowedCourseIds = getAllowedCourseIdsFromConfig(configSheet);
   
     // 2) Special events  
     const specialEventRanges = [  
@@ -1109,16 +1222,7 @@ async function updateHistoricalDataFromButton() {
   
       // Initialize processed keys from sheet if we don't already have them  
       if (!processedEventKeysStr) {  
-        const lastRow = historicalSheet.getLastRow();  
-        if (lastRow > 5) {  
-          const yearCol = 6; // adjust if your year is in a different column  
-          const historicalData = historicalSheet.getRange(5, yearCol, lastRow - 4, 2).getValues();  
-          historicalData.forEach(row => {  
-            const year = row[0] ? row[0].toString().trim() : '';  
-            const eventId = row[1] ? row[1].toString().trim() : '';  
-            if (eventId && year) processedEventKeys.add(`${eventId}-${year}`);  
-          });  
-        }  
+        processedEventKeys = rebuildProcessedEventKeysFromSheet(historicalSheet);
         saveProcessedKeys(); // <-- THIS writes processed keys to Script Properties  
         logDebug(`Initialized processedEventKeys from sheet: ${processedEventKeys.size}`);  
       }  
@@ -1150,7 +1254,7 @@ async function updateHistoricalDataFromButton() {
           (year >= currentYear - 5);  
   
         if (isSpecialEvent) {  
-          filteredEvents.push({ tour, eventId, year });  
+          filteredEvents.push({ tour, eventId, year, isSpecial: true });  
           existing.add(key);  
           return;  
         }  
@@ -1163,7 +1267,7 @@ async function updateHistoricalDataFromButton() {
           t <= endDate.getTime();  
   
         if (isValidRegularEvent) {  
-          filteredEvents.push({ tour, eventId, year });  
+          filteredEvents.push({ tour, eventId, year, isSpecial: false });  
           existing.add(key);  
         }  
       });  
@@ -1171,6 +1275,24 @@ async function updateHistoricalDataFromButton() {
       saveFilteredEvents(); // <-- THIS writes the computed queue to Script Properties  
       logDebug(`Computed + cached filteredEvents queue: ${filteredEvents.length}`);  
     }  
+
+    // Cleanup historical sheet to keep only required events
+    const requiredEventKeys = buildRequiredEventKeys(filteredEvents);
+    cleanupHistoricalSheet(historicalSheet, requiredEventKeys);
+
+    // Rebuild processed keys after cleanup to avoid stale entries
+    processedEventKeys = rebuildProcessedEventKeysFromSheet(historicalSheet);
+    saveProcessedKeys();
+
+    // Remove already-processed events from the queue
+    if (filteredEvents.length > 0) {
+      filteredEvents = filteredEvents.filter(event => {
+        const eventKey = `${event.eventId}-${event.year}`;
+        return !processedEventKeys.has(eventKey);
+      });
+      saveFilteredEvents();
+      logDebug(`Queue filtered after cleanup: ${filteredEvents.length} events remaining`);
+    }
   
     const headers = MAIN_HEADERS;  
     let allData = [headers];  
@@ -1210,7 +1332,8 @@ async function updateHistoricalDataFromButton() {
           event.eventId,  
           event.year,  
           apiKey,  
-          headers  
+          headers,
+          event.isSpecial ? allowedCourseIds : new Set()
         );  
   
         if (eventData && eventData.length > 1) {  
@@ -1449,7 +1572,7 @@ async function updateApproachSkillDataFromButton() {
 /**
  * Fetches and processes historical data with enhanced error handling
  */
-async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers) {
+async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers, allowedCourseIds = new Set()) {
   let successCount = 0;
   let errorCount = 0;
   const runtimeStart = new Date().getTime();
@@ -1481,6 +1604,39 @@ async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers) {
           logDebug(`API Error: ${responseData.error}`);
           errorCount++;
           continue;
+        }
+
+        if (allowedCourseIds && allowedCourseIds.size > 0) {
+          const observedCourseIds = new Set();
+          const courseNum = responseData.course_num ? responseData.course_num.toString().trim() : '';
+          if (courseNum) observedCourseIds.add(courseNum);
+
+          if (responseData.scores && responseData.scores.length > 0) {
+            responseData.scores.forEach(player => {
+              Object.keys(player).forEach(key => {
+                if (!key.startsWith('round_')) return;
+                const round = player[key];
+                const roundCourse = round?.course_num ? round.course_num.toString().trim() : '';
+                if (roundCourse) observedCourseIds.add(roundCourse);
+              });
+            });
+          }
+
+          const hasAllowedCourse = [...observedCourseIds].some(id => allowedCourseIds.has(id));
+          if (!hasAllowedCourse) {
+            const observedIdsText = [...observedCourseIds].join(', ') || 'none';
+            const allowedIdsText = [...allowedCourseIds].join(', ') || 'none';
+            const message = `Skipping event ${eventId} (${year}) - course IDs ${observedIdsText} not in allowed list.`;
+            logDebug(message);
+            appendDebugExecutionLog(message, {
+              tour,
+              eventId,
+              year,
+              courseIds: observedIdsText,
+              allowedCourseIds: allowedIdsText
+            });
+            continue;
+          }
         }
 
         const processedData = Array.isArray(responseData.data) ? 
