@@ -10,15 +10,16 @@
 const fs = require('fs');
 const path = require('path');
 
-const { loadCsv } = require('./utilities/csvLoader');
-const { buildPlayerData } = require('./utilities/dataPrep');
-const { aggregatePlayerData, generatePlayerRankings } = require('./modelCore');
-const { getSharedConfig } = require('./utilities/configParser');
-const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
+const { loadCsv } = require('../utilities/csvLoader');
+const { buildPlayerData } = require('../utilities/dataPrep');
+const { aggregatePlayerData, generatePlayerRankings } = require('../core/modelCore');
+const { getSharedConfig } = require('../utilities/configParser');
+const { buildMetricGroupsFromConfig } = require('../core/metricConfigBuilder');
 
-const DATA_DIR = __dirname;
-const DEFAULT_DATA_DIR = path.resolve(__dirname, 'data');
-const OUTPUT_DIR = path.resolve(__dirname, 'output');
+const ROOT_DIR = path.resolve(__dirname, '..');
+const DATA_DIR = ROOT_DIR;
+const DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
+const OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
 
 function resolveDataFile(fileName) {
   const primary = path.resolve(DATA_DIR, fileName);

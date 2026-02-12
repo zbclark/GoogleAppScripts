@@ -11,26 +11,21 @@
 const fs = require('fs');
 const path = require('path');
 
-const { loadCsv } = require('./utilities/csvLoader');
-const { buildPlayerData } = require('./utilities/dataPrep');
+const { loadCsv } = require('../utilities/csvLoader');
+const { buildPlayerData } = require('../utilities/dataPrep');
 const { generatePlayerRankings, cleanMetricValue } = require('./modelCore');
-const { getSharedConfig } = require('./utilities/configParser');
+const { getSharedConfig } = require('../utilities/configParser');
 const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
-const { WEIGHT_TEMPLATES } = require('./utilities/weightTemplates');
+const { WEIGHT_TEMPLATES } = require('../utilities/weightTemplates');
 
-const DATA_DIR = __dirname;
-const DEFAULT_DATA_DIR = path.resolve(__dirname, 'data');
-const OUTPUT_DIR = path.resolve(__dirname, 'output');
+const ROOT_DIR = path.resolve(__dirname, '..');
+const DATA_DIR = ROOT_DIR;
+const DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
+const OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
-const LOGGING_ENABLED = false;
+let LOGGING_ENABLED = false;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
 const OPT_TESTS_RAW = String(process.env.OPT_TESTS || '').trim();
-
-if (!LOGGING_ENABLED) {
-  console.log = () => {};
-  console.warn = () => {};
-  console.error = () => {};
-}
 
 const hashSeed = value => {
   if (!value) return null;
@@ -89,6 +84,9 @@ for (let i = 0; i < args.length; i++) {
     const parsedTests = parseInt(String(args[i + 1]).trim(), 10);
     MAX_TESTS_OVERRIDE = Number.isNaN(parsedTests) ? null : parsedTests;
   }
+  if (args[i] === '--log' || args[i] === '--verbose') {
+    LOGGING_ENABLED = true;
+  }
   if (args[i] === '--writeTemplates') {
     DRY_RUN = false;
   }
@@ -101,6 +99,17 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '--excludeCurrentEventRounds' || args[i] === '--exclude-current-event-rounds') {
     INCLUDE_CURRENT_EVENT_ROUNDS = false;
   }
+}
+
+const loggingEnv = String(process.env.LOGGING_ENABLED || '').trim().toLowerCase();
+if (loggingEnv === '1' || loggingEnv === 'true' || loggingEnv === 'yes') {
+  LOGGING_ENABLED = true;
+}
+
+if (!LOGGING_ENABLED) {
+  console.log = () => {};
+  console.warn = () => {};
+  console.error = () => {};
 }
 
 console.log('---');
@@ -3769,8 +3778,8 @@ function runAdaptiveOptimizer() {
   };
 
   const writeBackTargets = [
-    path.resolve(__dirname, 'utilities', 'weightTemplates.js'),
-    path.resolve(__dirname, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
+    path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js'),
+    path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
   ];
 
   writeBackTargets.forEach(filePath => {

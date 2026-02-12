@@ -42,7 +42,8 @@ if (!tournamentKey) {
   console.warn(`⚠️  Proceeding with custom tournament name: "${tournamentName}"\n`);
 }
 
-const OUTPUT_DIR = path.join(__dirname, 'output');
+const ROOT_DIR = path.resolve(__dirname, '..');
+const OUTPUT_DIR = path.join(ROOT_DIR, 'output');
 const RESULTS_FILE = path.join(OUTPUT_DIR, 'workflow_results.json');
 
 // Ensure output directory exists

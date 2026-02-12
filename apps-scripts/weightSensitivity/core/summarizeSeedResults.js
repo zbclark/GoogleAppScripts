@@ -3,7 +3,7 @@
 const fs = require('fs');
 const path = require('path');
 
-const OUTPUT_DIR = path.resolve(__dirname, 'output');
+const OUTPUT_DIR = path.resolve(__dirname, '..', 'output');
 
 const args = process.argv.slice(2);
 let TOURNAMENT_NAME = null;
