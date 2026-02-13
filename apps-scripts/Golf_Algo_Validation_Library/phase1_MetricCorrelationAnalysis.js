@@ -32,13 +32,14 @@ function analyzeMetricCorrelations() {
     // Normalized metric list aligned to model/template naming
     const allMetrics = [
           "Driving Distance",
-      const lower = String(header || "").trim().toLowerCase();
-      if (!lower) return;
-      headerMap[lower] = idx;
-
-      if (!lower.includes("model")) {
-        actualHeaderMap[normalizeHeaderLabel(header)] = idx;
-      }
+          "Driving Accuracy",
+          "SG OTT",
+          "Approach <100 GIR",
+          "Approach <100 SG",
+          "Approach <100 Prox",
+          "Approach <150 FW GIR",
+          "Approach <150 FW SG",
+          "Approach <150 FW Prox",
           "Approach <150 Rough GIR",
           "Approach <150 Rough SG",
           "Approach <150 Rough Prox",
@@ -52,14 +53,9 @@ function analyzeMetricCorrelations() {
           "Approach >200 FW SG",
           "Approach >200 FW Prox",
           "SG Putting",
-    
-    colMap.dgId = findHeaderIndex(["dg id", "dgid"]);
-    colMap.name = findHeaderIndex(["player name", "name"]);
-    colMap.modelRank = findHeaderIndex(["model rank", "model ranking", "rank"]);
-    colMap.finishPos = findHeaderIndex(["finish position", "finish pos", "fin pos", "finish"]);
           "SG Around Green",
           "SG T2G",
-      console.log("⚠️ No model metric columns found for player-level deltas.");
+          "Scoring Average",
           "Birdie Chances Created",
           "Birdies or Better",
           "Greens in Regulation",
@@ -827,7 +823,7 @@ function classifyCoursesIntoTypes(tournamentCorrelations, tournaments) {
     });
     
     // Classify based on dominant positive correlation pattern
-    if (powerScore == 0 && technicalScore == 0) {
+    if (powerScore === 0 && technicalScore === 0) {
       courseTypes['BALANCED'].tournaments.push(tournament.name);
       return;
     }
@@ -933,15 +929,9 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
           "Approach <150 FW GIR",
           "Approach <150 FW SG",
           "Approach <150 FW Prox",
-          "Approach <150 Rough GIR",
-          "Approach <150 Rough SG",
-          "Approach <150 Rough Prox",
           "Approach <200 FW GIR",
           "Approach <200 FW SG",
           "Approach <200 FW Prox",
-          "Approach >150 Rough GIR",
-          "Approach >150 Rough SG",
-          "Approach >150 Rough Prox",
           "Approach >200 FW GIR",
           "Approach >200 FW SG",
           "Approach >200 FW Prox",
@@ -950,23 +940,21 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
           "SG T2G",
           "Scoring Average",
           "Birdie Chances Created",
-          "Birdies or Better",
-          "Greens in Regulation",
           "Scoring: Approach <100 SG",
           "Scoring: Approach <150 FW SG",
-          "Scoring: Approach <150 Rough SG",
-          "Scoring: Approach >150 Rough SG",
-          "Scoring: Approach <200 FW SG",
-          "Scoring: Approach >200 FW SG",
+          "Approach <150 Rough SG",
+          "Approach >150 Rough SG",
+          "Approach <200 FW SG",
+          "Approach >200 FW SG",
           "Scrambling",
           "Great Shots",
           "Poor Shot Avoidance",
-          "Course Management: Approach <100 Prox",
-          "Course Management: Approach <150 FW Prox",
-          "Course Management: Approach <150 Rough Prox",
-          "Course Management: Approach >150 Rough Prox",
-          "Course Management: Approach <200 FW Prox",
-          "Course Management: Approach >200 FW Prox"
+          "Approach <100 Prox",
+          "Approach <150 FW Prox",
+          "Approach <150 Rough Prox",
+          "Approach >150 Rough Prox",
+          "Approach <200 FW Prox",
+          "Approach >200 FW Prox"
         ];
         
         // Find best matching index - check for exact match first, then partial
@@ -1252,7 +1240,6 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
             console.log(`❌ Missing required delta columns for ${tournament.name}: ${missingRequired.join(', ')}`);
             throw new Error(`Tournament Results missing required model/actual columns: ${missingRequired.join(', ')}`);
           }
-
           let useModelMap = false;
           let useActualMap = false;
           let modelMetricsByPlayer = new Map();
@@ -1455,6 +1442,7 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
                 console.log("statDeltas keys:", Object.keys(player.statDeltas));
               }
               
+              // Add delta values for this player
               const formatDeltaValue = (metricKey, deltaValue) => {
                 if (deltaValue === undefined || deltaValue === null || Number.isNaN(deltaValue)) return "";
                 if (metricKey.includes("Distance") || metricKey === "Scoring Average") {
@@ -1466,12 +1454,10 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
                 return deltaValue.toFixed(2);
               };
 
-              // Add delta values for this player
               deltaMetrics.forEach(deltaKey => {
                 const metricKey = deltaKey.replace(" Δ", "");
                 const delta = player.statDeltas[metricKey];
 
-                // Debug first player
                 if (idx === 0) {
                   console.log(`  ${metricKey}: delta=${delta}`);
                 }
@@ -1596,8 +1582,53 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
     
     // Collect all metrics with their weights
     const allMetrics = getMetricGroupings();
+    const sortOrder = [
+          "Driving Distance",
+          "Driving Accuracy",
+          "SG OTT",
+          "Approach <100 GIR",
+          "Approach <100 SG",
+          "Approach <100 Prox",
+          "Approach <150 FW GIR",
+          "Approach <150 FW SG",
+          "Approach <150 FW Prox",
+          "Approach <150 Rough GIR",
+          "Approach <150 Rough SG",
+          "Approach <150 Rough Prox",
+          "Approach <200 FW GIR",
+          "Approach <200 FW SG",
+          "Approach <200 FW Prox",
+          "Approach >150 Rough GIR",
+          "Approach >150 Rough SG",
+          "Approach >150 Rough Prox",
+          "Approach >200 FW GIR",
+          "Approach >200 FW SG",
+          "Approach >200 FW Prox",
+          "SG Putting",
+          "SG Around Green",
+          "SG T2G",
+          "Scoring Average",
+          "Birdie Chances Created",
+          "Birdies or Better",
+          "Greens in Regulation",
+          "Scoring: Approach <100 SG",
+          "Scoring: Approach <150 FW SG",
+          "Scoring: Approach <150 Rough SG",
+          "Scoring: Approach >150 Rough SG",
+          "Scoring: Approach <200 FW SG",
+          "Scoring: Approach >200 FW SG",
+          "Scrambling",
+          "Great Shots",
+          "Poor Shot Avoidance",
+          "Course Management: Approach <100 Prox",
+          "Course Management: Approach <150 FW Prox",
+          "Course Management: Approach <150 Rough Prox",
+          "Course Management: Approach >150 Rough Prox",
+          "Course Management: Approach <200 FW Prox",
+          "Course Management: Approach >200 FW Prox"
+        ];
+
     const metricsList = [];
-    
     for (const [groupName, metrics] of Object.entries(allMetrics)) {
       for (const metricName of metrics) {
         metricsList.push({
@@ -1606,6 +1637,14 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
         });
       }
     }
+
+    const sortIndex = new Map(sortOrder.map((metric, index) => [metric, index]));
+    metricsList.sort((a, b) => {
+      const indexA = sortIndex.has(a.name) ? sortIndex.get(a.name) : Number.MAX_SAFE_INTEGER;
+      const indexB = sortIndex.has(b.name) ? sortIndex.get(b.name) : Number.MAX_SAFE_INTEGER;
+      if (indexA !== indexB) return indexA - indexB;
+      return a.name.localeCompare(b.name);
+    });
     
     // Group correlations for recommended weight calculation
     const groupCorrelationTotals = {};
@@ -1634,7 +1673,7 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
       }
       groupCorrelationTotals[groupName] = { max: maxCorrelation, hasData: hasData };
     }
-    
+
     const groupWeights = getGroupWeights(typeName);
     
     // Add each metric

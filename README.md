@@ -4,6 +4,7 @@
 This repository is a workspace to store Google Apps Script projects locally.
 
 **📋 Main References:**
+
 - **[VALIDATION_FRAMEWORK.md](VALIDATION_FRAMEWORK.md)** - Complete 6-phase validation & improvement system
 - **[MODEL_IMPROVEMENT_GUIDE.md](apps-scripts/Golf_Algo_Validation/MODEL_IMPROVEMENT_GUIDE.md)** - Strategic workflow for using validation data
 - **[IMPROVEMENT_CHECKLIST.md](apps-scripts/Golf_Algo_Validation/IMPROVEMENT_CHECKLIST.md)** - Tactical analysis checklist
@@ -14,6 +15,7 @@ I added a helper script that lists your Google Apps Script projects (via `clasp`
 
 ## Prerequisites
 
+
 - Node.js and npm
 - clasp: install globally with `npm install -g @google/clasp`
 - jq: JSON processor (e.g. `sudo apt install jq` on Debian/Ubuntu)
@@ -23,6 +25,7 @@ I added a helper script that lists your Google Apps Script projects (via `clasp`
 This repository is designed to work with GitHub Codespaces for a consistent development environment.
 
 **Managing Codespace:**
+
 ```bash
 # Stop the current codespace
 gh codespace stop -c animated-bassoon-pqxxxppx7q5h77xp
@@ -37,6 +40,7 @@ gh codespace create
 ## Usage
 
 1. Authenticate with Google:
+
    ```bash
    clasp login
    ```
@@ -44,16 +48,19 @@ gh codespace create
 2. Run the helper script (multiple options):
 
    **Auto-discover projects:**
+
    ```bash
    ./scripts/pull_apps_scripts.sh
    ```
 
    **Pull specific script IDs:**
+
    ```bash
    ./scripts/pull_apps_scripts.sh SCRIPT_ID1 SCRIPT_ID2 ...
    ```
 
    **Pull from script-ids.txt file:**
+
    ```bash
    ./scripts/pull_apps_scripts.sh --from-file script-ids.txt
    ```
@@ -63,6 +70,7 @@ The script will create `apps-scripts/` and clone each project into a folder name
 ## Finding Script IDs
 
 If `clasp list` doesn't show your projects, you can find script IDs by:
+
 
 1. Visit [script.google.com](https://script.google.com)
 2. Open any project
@@ -74,28 +82,55 @@ If `clasp list` doesn't show your projects, you can find script IDs by:
 After editing your Apps Script files locally, push changes back to Google Apps Script:
 
 **Push all projects:**
+
 ```bash
 ./scripts/push_to_production.sh
 ```
 
 **Push specific project:**
+
 ```bash
 ./scripts/push_to_production.sh ADS_Sales_Operations
 ```
 
 **Push and create deployment:**
+
 ```bash
 ./scripts/push_to_production.sh --deploy Golf_Algorithm
 ```
 
 **List available projects:**
+
 ```bash
 ./scripts/push_to_production.sh --list
 ```
 
+## Golf Algo Validation Wrapper (bound script)
+
+This repo includes a bound wrapper script that exposes menu entry points for the
+validation library.
+
+**Current IDs:**
+
+- Library: `1aqDp0T5LK5Ubhv1ON5aOERkQ9XlUeWV62ggWo9oFWbBrvuzL2UPqzT4E`
+- Wrapper: `1hMiiJGQ_7ojKDxv_XaCN_yqDFgOFDz6KkjwmnQeDHD4-MApRmRWq7UFN`
+- Parent spreadsheet: `1NHj1Kebyu0kF5rmRR4K30LmRkPVMSps55f8japJMTzw`
+
+**How to use:**
+
+1. Open the parent spreadsheet.
+2. Reload the sheet (or open **Extensions → Apps Script** once to initialize).
+3. Use the menu: **🏌️ Golf Model Analysis**.
+
+**Notes:**
+
+- The wrapper calls into the library using the symbol `GolfAlgoValidation`.
+- The wrapper currently uses the library in `developmentMode: true` for rapid iteration.
+
 ## Development Workflow
 
 1. **Pull latest changes:**
+
    ```bash
    ./scripts/pull_apps_scripts.sh --from-file script-ids.txt
    ```
@@ -105,17 +140,20 @@ After editing your Apps Script files locally, push changes back to Google Apps S
 3. **Test changes** (optional): Visit script.google.com and test in the web editor
 
 4. **Push to production:**
+
    ```bash
    ./scripts/push_to_production.sh ProjectName
    ```
 
 5. **Commit to Git:**
+
    ```bash
    git add -A && git commit -m "Update ProjectName: description of changes"
    git push origin main
    ```
 
 ## Notes
+
 
 - If a project is already present, the script runs `clasp pull` to update it.
 - The script handles cases where `clasp list` doesn't work (common issue).
@@ -127,6 +165,7 @@ After editing your Apps Script files locally, push changes back to Google Apps S
 ## Your Current Projects
 
 ✅ **ADS Sales Operations** - Successfully cloned with 9 files:
+
 - ProjectEntryForm.html
 - projectEntryForm.js  
 - statusColumnChanges.js

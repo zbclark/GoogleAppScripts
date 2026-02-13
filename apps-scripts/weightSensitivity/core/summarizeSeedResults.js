@@ -41,6 +41,9 @@ const summaries = files.map(filePath => {
   const raw = fs.readFileSync(filePath, 'utf8');
   const data = JSON.parse(raw);
   const optimized = data.step3_optimized?.evaluation || {};
+  const currentYearPlayers = Array.isArray(data.step3_optimized?.rankingsCurrentYear)
+    ? data.step3_optimized.rankingsCurrentYear.length
+    : null;
   return {
     file: path.basename(filePath),
     seed: data.optSeed || null,
@@ -52,7 +55,7 @@ const summaries = files.map(filePath => {
     stdDevError: optimized.stdDevError ?? null,
     top20: optimized.top20 ?? null,
     top20WeightedScore: optimized.top20WeightedScore ?? null,
-    matchedPlayers: optimized.matchedPlayers ?? null
+    matchedPlayers: currentYearPlayers ?? optimized.matchedPlayers ?? null
   };
 });
 

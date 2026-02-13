@@ -1,4 +1,4 @@
-const { cleanMetricValue } = require('../modelCore');
+const { cleanMetricValue } = require('../core/modelCore');
 
 const parsePosition = (positionValue) => {
   if (!positionValue) return 100;

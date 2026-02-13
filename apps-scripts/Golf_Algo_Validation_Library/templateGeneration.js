@@ -129,7 +129,7 @@ function generateWeightTemplates() {
     };
 
     console.log("=== PHASE 1: WEIGHT TEMPLATE GENERATION ===\n");
-    console.log("Analyzing ${workbookFiles} tournaments to generate optimal weight profiles...\n");
+    console.log("Analyzing tournaments to generate optimal weight profiles...\n");
 
     let tournamentCount = 0;
     let skippedTournaments = [];
@@ -140,7 +140,7 @@ function generateWeightTemplates() {
       const ss = SpreadsheetApp.open(file);
       
       tournamentCount++;
-      console.log(`\n📋 [${tournamentCount}/${workbookFiles}] Processing: ${fileName}`);
+      console.log(`\n📋 Processing: ${fileName}`);
 
       // STEP 1: Read course type from Configuration Sheet (user must enter manually)
       // For now, try to get it from a cell in the tournament workbook's config

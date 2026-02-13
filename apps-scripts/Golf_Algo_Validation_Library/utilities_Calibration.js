@@ -231,10 +231,10 @@ function createCalibrationReport(masterSs, calibrationData) {
   
   sheet.appendRow([" "]);
   sheet.appendRow(["TOURNAMENT BREAKDOWN"]);
-  sheet.getRange(9, 1).setFontWeight("bold").setFontSize(12);
+  sheet.getRange(8, 1).setFontWeight("bold").setFontSize(12);
   
   sheet.appendRow(["Tournament", "Top Finishers", "Avg Miss (T5)", "Top 5 Accuracy", "Notes"]);
-  sheet.getRange(10, 1, 1, 5).setFontWeight("bold").setBackground("#e5e7eb");
+  sheet.getRange(9, 1, 1, 5).setFontWeight("bold").setBackground("#e5e7eb");
   
   let rowNum = 11;
   for (const t of calibrationData.tournaments.sort((a, b) => a.accuracyMetrics.avgMissTop5 - b.accuracyMetrics.avgMissTop5)) {

@@ -13,7 +13,7 @@ Each phase is a complete analytical step in the model validation workflow:
 
 **Main Functions**:
 - `analyzeMetricCorrelations()` - Analyze metric correlations per-tournament and aggregate
-- `loadTournamentData()` - Load tournament data from Golf 2025 folder
+- `loadTournamentData()` - Load tournament data from the selected Golf data folder
 - `analyzeTournamentData()` - Analyze single tournament metrics
 - `getMetricCorrelations()` - Calculate correlation values
 - `getAggregateCorrelations()` - Aggregate data across tournaments

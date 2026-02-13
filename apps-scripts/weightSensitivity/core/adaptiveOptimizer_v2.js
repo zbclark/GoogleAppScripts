@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const { parse } = require('csv-parse/sync');
 
 const { loadCsv } = require('../utilities/csvLoader');
 const { buildPlayerData } = require('../utilities/dataPrep');
@@ -26,6 +27,15 @@ const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
 let LOGGING_ENABLED = false;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
 const OPT_TESTS_RAW = String(process.env.OPT_TESTS || '').trim();
+const MIN_METRIC_COVERAGE = 0.70;
+const VALIDATION_RANGE_PCT = 0.20;
+const VALIDATION_PRIOR_WEIGHT = 0.25;
+const DELTA_TREND_PRIOR_WEIGHT = 0.15;
+const DELTA_TREND_RANGE = {
+  STABLE: 0.10,
+  WATCH: 0.20,
+  CHRONIC: 0.35
+};
 
 const hashSeed = value => {
   if (!value) return null;
@@ -54,6 +64,26 @@ const createSeededRng = seedValue => {
 
 const SEEDED_RANDOM = OPT_SEED_RAW ? createSeededRng(OPT_SEED_RAW) : null;
 const rand = SEEDED_RANDOM || Math.random;
+
+const buildFeatureVector = (player, metricSpecs) => {
+  if (!player || !Array.isArray(player.metrics)) return null;
+  const specs = normalizeMetricSpecs(metricSpecs);
+  if (specs.length === 0) return null;
+
+  let validCount = 0;
+  const features = specs.map(({ label, index }) => {
+    const rawValue = player.metrics[index];
+    if (typeof rawValue === 'number' && !Number.isNaN(rawValue)) {
+      validCount += 1;
+      return LOWER_BETTER_GENERATED_METRICS.has(label) ? -rawValue : rawValue;
+    }
+    return 0;
+  });
+
+  const coverage = validCount / specs.length;
+  if (coverage < MIN_METRIC_COVERAGE) return null;
+  return { features, coverage };
+};
 
 
 // Parse CLI arguments
@@ -133,6 +163,443 @@ function normalizeWeights(weights) {
     normalized[k] = v / total;
   });
   return normalized;
+}
+
+function listCsvFilesInDirs(dirs) {
+  const files = [];
+  dirs.forEach(dir => {
+    if (!dir || !fs.existsSync(dir)) return;
+    fs.readdirSync(dir).forEach(file => {
+      if (!file.toLowerCase().endsWith('.csv')) return;
+      files.push({
+        name: file,
+        path: path.resolve(dir, file)
+      });
+    });
+  });
+  return files;
+}
+
+function findValidationFileByKeywords(dirs, keywords = []) {
+  const normalizedKeywords = keywords.map(keyword => String(keyword || '').toLowerCase());
+  const candidates = listCsvFilesInDirs(dirs);
+  const matches = candidates.filter(file => {
+    const lower = file.name.toLowerCase();
+    return normalizedKeywords.every(keyword => lower.includes(keyword));
+  });
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => a.name.localeCompare(b.name));
+  return matches[0].path;
+}
+
+function parseCsvRows(filePath) {
+  const content = fs.readFileSync(filePath, 'utf8');
+  return parse(content, {
+    relax_column_count: true,
+    skip_empty_lines: false
+  });
+}
+
+function normalizeValidationMetricName(metricName) {
+  const aliases = {
+    'Poor Shot Avoidance': 'Poor Shots'
+  };
+  return aliases[metricName] || metricName;
+}
+
+function buildMetricNameToGroupMap(metricConfig) {
+  const map = new Map();
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return map;
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      map.set(metric.name, group.name);
+    });
+  });
+  return map;
+}
+
+function resolveValidationMetricToConfig(metricName, metricConfig) {
+  if (!metricName) return null;
+  const normalized = normalizeValidationMetricName(metricName);
+  const labelMap = buildMetricNameToGroupMap(metricConfig);
+  if (labelMap.has(normalized)) return normalized;
+
+  const stripped = normalizeGeneratedMetricLabel(normalized);
+  if (!stripped) return null;
+  const matches = [];
+  labelMap.forEach((groupName, name) => {
+    if (normalizeGeneratedMetricLabel(name) === stripped) {
+      matches.push(name);
+    }
+  });
+  if (matches.length === 1) return matches[0];
+  return null;
+}
+
+function parseValidationTypeSummary(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  const rows = parseCsvRows(filePath);
+  if (!rows.length) return null;
+
+  let headerIndex = -1;
+  let metricIdx = -1;
+  let corrIdx = -1;
+
+  rows.forEach((row, idx) => {
+    if (headerIndex !== -1) return;
+    const cells = row.map(cell => String(cell || '').trim());
+    const metricCol = cells.findIndex(cell => cell.toLowerCase() === 'metric');
+    const corrCol = cells.findIndex(cell => cell.toLowerCase().includes('avg correlation'));
+    if (metricCol !== -1 && corrCol !== -1) {
+      headerIndex = idx;
+      metricIdx = metricCol;
+      corrIdx = corrCol;
+    }
+  });
+
+  if (headerIndex === -1) return null;
+  const dataRows = rows.slice(headerIndex + 1);
+  const metrics = [];
+  dataRows.forEach(row => {
+    const metric = String(row[metricIdx] || '').trim();
+    if (!metric) return;
+    const corrValue = parseFloat(String(row[corrIdx] || '').replace('%', '').trim());
+    if (Number.isNaN(corrValue)) return;
+    metrics.push({ metric, avgCorrelation: corrValue });
+  });
+
+  return metrics.length ? metrics : null;
+}
+
+function parseValidationWeightTemplates(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  const rows = parseCsvRows(filePath);
+  const results = { POWER: [], TECHNICAL: [], BALANCED: [] };
+  let currentType = null;
+  let columnIndex = null;
+
+  rows.forEach(rawRow => {
+    const row = rawRow.map(cell => String(cell || '').trim());
+    const firstCell = row[0] || '';
+    const upperCell = firstCell.toUpperCase();
+
+    if (upperCell.includes('POWER COURSES')) {
+      currentType = 'POWER';
+      columnIndex = null;
+      return;
+    }
+    if (upperCell.includes('TECHNICAL COURSES')) {
+      currentType = 'TECHNICAL';
+      columnIndex = null;
+      return;
+    }
+    if (upperCell.includes('BALANCED COURSES')) {
+      currentType = 'BALANCED';
+      columnIndex = null;
+      return;
+    }
+
+    if (!currentType) return;
+    if (firstCell.toLowerCase() === 'metric') {
+      columnIndex = {
+        metric: row.findIndex(cell => cell.toLowerCase() === 'metric'),
+        config: row.findIndex(cell => cell.toLowerCase().includes('config weight')),
+        template: row.findIndex(cell => cell.toLowerCase().includes('template weight')),
+        recommended: row.findIndex(cell => cell.toLowerCase().includes('recommended'))
+      };
+      return;
+    }
+
+    if (!columnIndex || columnIndex.metric === -1) return;
+    const metric = row[columnIndex.metric];
+    if (!metric) return;
+    const configWeight = parseFloat(row[columnIndex.config]);
+    const templateWeight = parseFloat(row[columnIndex.template]);
+    const recommendedWeight = parseFloat(row[columnIndex.recommended]);
+    results[currentType].push({
+      metric,
+      configWeight: Number.isNaN(configWeight) ? null : configWeight,
+      templateWeight: Number.isNaN(templateWeight) ? null : templateWeight,
+      recommendedWeight: Number.isNaN(recommendedWeight) ? null : recommendedWeight
+    });
+  });
+
+  return results;
+}
+
+function parseValidationDeltaTrends(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  const rows = parseCsvRows(filePath);
+  if (!rows.length) return null;
+
+  let headerIndex = -1;
+  let metricIdx = -1;
+  let biasIdx = -1;
+  let statusIdx = -1;
+
+  rows.forEach((row, idx) => {
+    if (headerIndex !== -1) return;
+    const cells = row.map(cell => String(cell || '').trim());
+    const metricCol = cells.findIndex(cell => cell.toLowerCase() === 'metric');
+    const biasCol = cells.findIndex(cell => cell.toLowerCase().includes('bias z'));
+    const statusCol = cells.findIndex(cell => cell.toLowerCase() === 'status');
+    if (metricCol !== -1) {
+      headerIndex = idx;
+      metricIdx = metricCol;
+      biasIdx = biasCol;
+      statusIdx = statusCol;
+    }
+  });
+
+  if (headerIndex === -1) return null;
+  const dataRows = rows.slice(headerIndex + 1);
+  const results = [];
+  dataRows.forEach(row => {
+    const metric = String(row[metricIdx] || '').trim();
+    if (!metric) return;
+    const biasZ = biasIdx !== -1 ? parseFloat(String(row[biasIdx] || '').trim()) : null;
+    const status = statusIdx !== -1 ? String(row[statusIdx] || '').trim().toUpperCase() : null;
+    results.push({ metric, biasZ: Number.isNaN(biasZ) ? null : biasZ, status });
+  });
+
+  return results.length ? results : null;
+}
+
+function determineValidationCourseType(typeSummaries) {
+  const scores = Object.entries(typeSummaries || {}).map(([type, metrics]) => {
+    if (!metrics || metrics.length === 0) return { type, score: -Infinity };
+    const total = metrics.reduce((sum, entry) => sum + Math.abs(entry.avgCorrelation || 0), 0);
+    return { type, score: total / metrics.length };
+  });
+  scores.sort((a, b) => b.score - a.score);
+  return scores[0]?.score > -Infinity ? scores[0].type : null;
+}
+
+function buildValidationAlignmentMap(metricConfig, summaryMetrics = []) {
+  const map = new Map();
+  (summaryMetrics || []).forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    if (typeof entry.avgCorrelation !== 'number' || Number.isNaN(entry.avgCorrelation)) return;
+    map.set(normalizeGeneratedMetricLabel(resolved), entry.avgCorrelation);
+  });
+  return map;
+}
+
+function buildDeltaTrendMap(metricConfig, deltaTrends = []) {
+  const map = new Map();
+  (deltaTrends || []).forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const biasZ = typeof entry.biasZ === 'number' ? entry.biasZ : null;
+    const score = biasZ !== null ? (1 - biasZ) : 0;
+    map.set(normalizeGeneratedMetricLabel(resolved), score);
+  });
+  return map;
+}
+
+function buildValidationMetricWeights(metricConfig, validationWeights = [], fallbackMetricWeights = {}) {
+  const metricWeights = { ...(fallbackMetricWeights || {}) };
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return metricWeights;
+
+  const validationMap = new Map();
+  validationWeights.forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const weight = typeof entry.recommendedWeight === 'number'
+      ? entry.recommendedWeight
+      : (typeof entry.templateWeight === 'number' ? entry.templateWeight : null);
+    if (weight === null || Number.isNaN(weight)) return;
+    validationMap.set(resolved, weight);
+  });
+
+  metricConfig.groups.forEach(group => {
+    const keys = group.metrics.map(metric => metric.name);
+    const weights = keys.map(metricName => validationMap.has(metricName) ? validationMap.get(metricName) : null);
+    const hasValidation = weights.some(weight => typeof weight === 'number');
+    if (!hasValidation) return;
+    const normalized = weights.map(weight => (typeof weight === 'number' ? weight : 0));
+    const total = normalized.reduce((sum, value) => sum + value, 0);
+    if (total <= 0) return;
+    group.metrics.forEach((metric, idx) => {
+      const key = `${group.name}::${metric.name}`;
+      metricWeights[key] = normalized[idx] / total;
+    });
+  });
+
+  return metricWeights;
+}
+
+function buildValidationGroupWeights(metricConfig, summaryMetrics = [], fallbackGroupWeights = {}) {
+  const groupWeights = { ...(fallbackGroupWeights || {}) };
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return groupWeights;
+  const groupMap = buildMetricNameToGroupMap(metricConfig);
+  const totals = {};
+
+  summaryMetrics.forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const groupName = groupMap.get(resolved);
+    if (!groupName) return;
+    const corr = Math.abs(entry.avgCorrelation || 0);
+    totals[groupName] = (totals[groupName] || 0) + corr;
+  });
+
+  const totalWeight = Object.values(totals).reduce((sum, value) => sum + value, 0);
+  if (totalWeight <= 0) return groupWeights;
+
+  Object.entries(totals).forEach(([groupName, value]) => {
+    groupWeights[groupName] = value / totalWeight;
+  });
+
+  return normalizeWeights(groupWeights);
+}
+
+function buildValidationMetricConstraints(metricConfig, validationWeights = [], rangePct = VALIDATION_RANGE_PCT) {
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return {};
+  const constraints = {};
+  const validationMap = new Map();
+  validationWeights.forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const weight = typeof entry.recommendedWeight === 'number'
+      ? entry.recommendedWeight
+      : (typeof entry.templateWeight === 'number' ? entry.templateWeight : null);
+    if (weight === null || Number.isNaN(weight)) return;
+    validationMap.set(resolved, weight);
+  });
+
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      const validated = validationMap.get(metric.name);
+      if (validated === undefined) return;
+      const key = `${group.name}::${metric.name}`;
+      constraints[key] = {
+        min: Math.max(0, validated * (1 - rangePct)),
+        max: validated * (1 + rangePct)
+      };
+    });
+  });
+
+  return constraints;
+}
+
+function adjustConstraintsByDeltaTrends(metricConfig, constraints = {}, deltaTrends = []) {
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return constraints;
+  if (!deltaTrends || deltaTrends.length === 0) return constraints;
+  const statusMap = new Map();
+  deltaTrends.forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const status = String(entry.status || '').toUpperCase();
+    statusMap.set(resolved, status);
+  });
+
+  const updated = { ...constraints };
+  Object.entries(updated).forEach(([key, constraint]) => {
+    const [, metricNameRaw] = key.split('::');
+    const metricName = metricNameRaw ? metricNameRaw.trim() : null;
+    if (!metricName || !constraint) return;
+    const status = statusMap.get(metricName) || 'WATCH';
+    const rangePct = DELTA_TREND_RANGE[status] ?? VALIDATION_RANGE_PCT;
+    const center = (constraint.min + constraint.max) / 2;
+    updated[key] = {
+      min: Math.max(0, center * (1 - rangePct)),
+      max: center * (1 + rangePct)
+    };
+  });
+
+  return updated;
+}
+
+function summarizeDeltaTrendGuardrails(metricConfig, constraints = {}, deltaTrends = []) {
+  const summary = {
+    totalConstrained: 0,
+    statusCounts: { STABLE: 0, WATCH: 0, CHRONIC: 0 },
+    ranges: { ...DELTA_TREND_RANGE }
+  };
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return summary;
+
+  const statusMap = new Map();
+  (deltaTrends || []).forEach(entry => {
+    const resolved = resolveValidationMetricToConfig(entry.metric, metricConfig);
+    if (!resolved) return;
+    const status = String(entry.status || '').toUpperCase();
+    statusMap.set(resolved, status);
+  });
+
+  Object.keys(constraints || {}).forEach(key => {
+    const [, metricNameRaw] = key.split('::');
+    const metricName = metricNameRaw ? metricNameRaw.trim() : null;
+    if (!metricName) return;
+    const status = statusMap.get(metricName) || 'WATCH';
+    if (!summary.statusCounts[status]) summary.statusCounts[status] = 0;
+    summary.statusCounts[status] += 1;
+    summary.totalConstrained += 1;
+  });
+
+  return summary;
+}
+
+function applyMetricWeightConstraints(metricConfig, metricWeights, constraints = {}) {
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return metricWeights;
+  const updated = { ...metricWeights };
+  metricConfig.groups.forEach(group => {
+    const keys = group.metrics.map(metric => `${group.name}::${metric.name}`);
+    const clamped = keys.map(key => {
+      const value = typeof updated[key] === 'number' ? updated[key] : 0;
+      const constraint = constraints[key];
+      if (!constraint) return value;
+      return Math.min(constraint.max, Math.max(constraint.min, value));
+    });
+    const total = clamped.reduce((sum, value) => sum + value, 0);
+    if (total <= 0) return;
+    keys.forEach((key, idx) => {
+      updated[key] = clamped[idx] / total;
+    });
+  });
+  return updated;
+}
+
+function loadValidationOutputs(metricConfig, dirs) {
+  const dataDirs = dirs || [DATA_DIR, DEFAULT_DATA_DIR];
+  const typeSummaries = {
+    POWER: parseValidationTypeSummary(findValidationFileByKeywords(dataDirs, ['03', 'power', 'summary'])) || [],
+    TECHNICAL: parseValidationTypeSummary(findValidationFileByKeywords(dataDirs, ['03', 'technical', 'summary'])) || [],
+    BALANCED: parseValidationTypeSummary(findValidationFileByKeywords(dataDirs, ['03', 'balanced', 'summary'])) || []
+  };
+  const weightTemplatesPath =
+    findValidationFileByKeywords(dataDirs, ['weight', 'templates']) ||
+    findValidationFileByKeywords(dataDirs, ['weight', 'template']) ||
+    findValidationFileByKeywords(dataDirs, ['weight_templates']) ||
+    null;
+  const weightTemplates = parseValidationWeightTemplates(weightTemplatesPath) || { POWER: [], TECHNICAL: [], BALANCED: [] };
+  const deltaTrendsPath =
+    findValidationFileByKeywords(dataDirs, ['05', 'delta', 'trends']) ||
+    findValidationFileByKeywords(dataDirs, ['model', 'delta', 'trends']) ||
+    findValidationFileByKeywords(dataDirs, ['delta', 'trends']) ||
+    null;
+  const deltaTrends = parseValidationDeltaTrends(deltaTrendsPath) || [];
+
+  const courseType = determineValidationCourseType(typeSummaries);
+  if (courseType) {
+    console.log(`✓ Validation course type selected from summaries: ${courseType}`);
+  } else {
+    console.log('ℹ️  Validation course type selection unavailable (missing summary CSVs).');
+  }
+
+  if (!weightTemplatesPath) {
+    console.log('ℹ️  Validation weight templates CSV not found; skipping validation weight constraints.');
+  }
+
+  return {
+    courseType,
+    typeSummaries,
+    weightTemplates,
+    weightTemplatesPath,
+    deltaTrends,
+    deltaTrendsPath
+  };
 }
 
 function normalizeTemplateKey(value) {
@@ -711,7 +1178,6 @@ function buildMetricWeightsFromSuggested(metricConfig, suggestedMetricWeights, f
       }
     });
   });
-
   return result;
 }
 
@@ -860,22 +1326,14 @@ function buildTopNSamplesFromPlayers(players, results, metricSpecs, topN = 20) {
     }
   });
 
-  const specs = normalizeMetricSpecs(metricSpecs);
   return players.reduce((acc, player) => {
     const dgId = String(player.dgId || '').trim();
     if (!dgId) return acc;
     const finishPosition = resultsById.get(dgId);
     if (!finishPosition || Number.isNaN(finishPosition)) return acc;
-    if (!Array.isArray(player.metrics)) return acc;
-    const features = [];
-    for (let i = 0; i < specs.length; i++) {
-      const { label, index } = specs[i];
-      const rawValue = player.metrics[index];
-      if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return acc;
-      const adjustedValue = LOWER_BETTER_GENERATED_METRICS.has(label) ? -rawValue : rawValue;
-      features.push(adjustedValue);
-    }
-    acc.push({ features, label: finishPosition <= topN ? 1 : 0 });
+    const featurePack = buildFeatureVector(player, metricSpecs);
+    if (!featurePack) return acc;
+    acc.push({ features: featurePack.features, label: finishPosition <= 20 ? 1 : 0 });
     return acc;
   }, []);
 }
@@ -2128,6 +2586,44 @@ function runAdaptiveOptimizer() {
 
   const metricConfig = baseMetricConfig;
 
+  const validationData = loadValidationOutputs(metricConfig, [DATA_DIR, DEFAULT_DATA_DIR]);
+  let validationCourseType = validationData.courseType;
+  let validationTemplateConfig = null;
+  let validationMetricConstraints = null;
+  let validationAlignmentMap = new Map();
+  let deltaTrendAlignmentMap = new Map();
+  let deltaTrends = [];
+  let deltaTrendSummary = null;
+  let validationGroupWeights = null;
+  let validationMetricWeights = null;
+  let validationTemplateName = null;
+
+  if (validationCourseType) {
+    const validationWeightsForType = validationData.weightTemplates[validationCourseType] || [];
+    const validationSummaryForType = validationData.typeSummaries[validationCourseType] || [];
+    const fallbackValidationTemplate = templateConfigs[validationCourseType]
+      || templateConfigs[CURRENT_EVENT_ID]
+      || Object.values(templateConfigs)[0];
+    validationGroupWeights = buildValidationGroupWeights(metricConfig, validationSummaryForType, fallbackValidationTemplate?.groupWeights || {});
+    validationMetricWeights = buildValidationMetricWeights(metricConfig, validationWeightsForType, fallbackValidationTemplate?.metricWeights || {});
+    validationMetricConstraints = buildValidationMetricConstraints(metricConfig, validationWeightsForType, VALIDATION_RANGE_PCT);
+    validationAlignmentMap = buildValidationAlignmentMap(metricConfig, validationSummaryForType);
+    deltaTrends = validationData.deltaTrends || [];
+    deltaTrendAlignmentMap = buildDeltaTrendMap(metricConfig, deltaTrends);
+    if (deltaTrends.length > 0) {
+      validationMetricConstraints = adjustConstraintsByDeltaTrends(metricConfig, validationMetricConstraints, deltaTrends);
+      deltaTrendSummary = summarizeDeltaTrendGuardrails(metricConfig, validationMetricConstraints, deltaTrends);
+      console.log(`✓ Applied delta trend guardrails (${deltaTrends.length} metrics)`);
+    }
+    validationTemplateConfig = {
+      groupWeights: validationGroupWeights || fallbackValidationTemplate?.groupWeights || {},
+      metricWeights: validationMetricWeights || fallbackValidationTemplate?.metricWeights || {}
+    };
+    validationTemplateName = `VALIDATION_${validationCourseType}`;
+    templateConfigs[validationTemplateName] = validationTemplateConfig;
+    console.log(`✓ Loaded validation template: ${validationTemplateName}`);
+  }
+
   console.log('\n🔄 Loading data...');
   const fieldData = loadCsv(FIELD_PATH, { skipFirstColumn: true });
   console.log(`✓ Loaded field: ${fieldData.length} players`);
@@ -2282,15 +2778,10 @@ function runAdaptiveOptimizer() {
     return ranking.players.reduce((acc, player) => {
       const finishPosition = resultsByPlayer.get(String(player.dgId));
       if (!finishPosition) return acc;
-      if (!Array.isArray(player.metrics) || player.metrics.length < GENERATED_METRIC_LABELS.length) return acc;
-      const features = [];
-      for (let i = 0; i < GENERATED_METRIC_LABELS.length; i++) {
-        const rawValue = player.metrics[i];
-        if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return acc;
-        const adjustedValue = LOWER_BETTER_GENERATED_METRICS.has(GENERATED_METRIC_LABELS[i]) ? -rawValue : rawValue;
-        features.push(adjustedValue);
-      }
-      acc.push({ features, label: finishPosition <= 20 ? 1 : 0 });
+      const metricSpecs = GENERATED_METRIC_LABELS.map((label, index) => ({ label, index }));
+      const featurePack = buildFeatureVector(player, metricSpecs);
+      if (!featurePack) return acc;
+      acc.push({ features: featurePack.features, label: finishPosition <= 20 ? 1 : 0 });
       return acc;
     }, []);
   };
@@ -2343,17 +2834,9 @@ function runAdaptiveOptimizer() {
       const samples = ranking.players.reduce((acc, player) => {
         const finishPosition = resultsByPlayer.get(String(player.dgId));
         if (!finishPosition) return acc;
-        if (!Array.isArray(player.metrics)) return acc;
-        const specs = normalizeMetricSpecs(metricSpecs);
-        const features = [];
-        for (let i = 0; i < specs.length; i++) {
-          const { label, index } = specs[i];
-          const rawValue = player.metrics[index];
-          if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return acc;
-          const adjustedValue = LOWER_BETTER_GENERATED_METRICS.has(label) ? -rawValue : rawValue;
-          features.push(adjustedValue);
-        }
-        acc.push({ features, label: finishPosition <= 20 ? 1 : 0 });
+        const featurePack = buildFeatureVector(player, metricSpecs);
+        if (!featurePack) return acc;
+        acc.push({ features: featurePack.features, label: finishPosition <= 20 ? 1 : 0 });
         return acc;
       }, []);
 
@@ -2453,6 +2936,11 @@ function runAdaptiveOptimizer() {
   console.log('Analyze past-year metrics vs finish position');
   console.log('---');
 
+  const allEventRounds = historyData.filter(row => {
+    const eventId = String(row['event_id'] || '').trim();
+    return eventId === String(CURRENT_EVENT_ID);
+  });
+
   const historicalDataForField = historyData.filter(row => {
     const dgId = String(row['dg_id'] || '').trim();
     const eventId = String(row['event_id'] || '').trim();
@@ -2471,14 +2959,15 @@ function runAdaptiveOptimizer() {
   const availableYears = Object.keys(resultsByYear).sort();
 
   console.log(`\n✓ Years available for evaluation: ${availableYears.join(', ') || 'none'}`);
-  console.log(`✓ Total historical rounds for event ${CURRENT_EVENT_ID}: ${historicalDataForField.length}\n`);
+  console.log(`✓ Total historical rounds for event ${CURRENT_EVENT_ID} (all players): ${allEventRounds.length}`);
+  console.log(`✓ Total historical rounds for event ${CURRENT_EVENT_ID} (current field only): ${historicalDataForField.length}\n`);
 
-  const historicalMetricSamples = buildHistoricalMetricSamples(historicalDataForField, CURRENT_EVENT_ID);
+  const historicalMetricSamples = buildHistoricalMetricSamples(allEventRounds, CURRENT_EVENT_ID);
   const historicalMetricCorrelations = computeHistoricalMetricCorrelations(historicalMetricSamples);
 
   console.log('---');
-  console.log('STEP 1b: CURRENT-SEASON METRIC CORRELATIONS');
-  console.log('Correlate generatePlayerRankings metrics for current season');
+  console.log('STEP 1b: CURRENT-SEASON (EVENT + SIMILAR + PUTTING) METRIC CORRELATIONS');
+  console.log('Correlate generatePlayerRankings metrics for current season using event + similar/putting courses');
   console.log('---');
 
   const currentSeasonRounds = roundsByYear[effectiveSeason] || [];
@@ -2687,52 +3176,68 @@ function runAdaptiveOptimizer() {
   } else if (currentSeasonRounds.length > 0 || currentSeasonRoundsAllEvents.length > 0) {
     const currentTemplate = templateConfigs[CURRENT_EVENT_ID] || Object.values(templateConfigs)[0];
     if (!currentTemplate) {
-      console.warn('⚠️  No template available for current-season metric correlations.');
+      console.warn('⚠️  No template available for current-season (event + similar + putting) metric correlations.');
     } else {
       const similarCourseIds = normalizeIdList(sharedConfig.similarCourseIds);
       const puttingCourseIds = normalizeIdList(sharedConfig.puttingCourseIds);
       const similarCourseBlend = clamp01(sharedConfig.similarCoursesWeight, 0.3);
       const puttingCourseBlend = clamp01(sharedConfig.puttingCoursesWeight, 0.35);
       const fieldIdSet = field2026DgIds;
+      const eventIdSetForMetrics = new Set([
+        String(CURRENT_EVENT_ID),
+        ...similarCourseIds.map(String),
+        ...puttingCourseIds.map(String)
+      ]);
 
-      const roundsForMetrics = currentSeasonRoundsAllEvents.length > 0
-        ? currentSeasonRoundsAllEvents
-        : currentSeasonRounds;
-      if (roundsForMetrics.length !== currentSeasonRounds.length) {
-        console.log(`ℹ️  Using ${roundsForMetrics.length} current-season rounds (all events) for metric correlations instead of ${currentSeasonRounds.length} event-only rounds.`);
-      }
-      const currentRankingForMetrics = runRanking({
-        roundsRawData: roundsForMetrics,
-        approachRawData: approachData,
-        groupWeights: currentTemplate.groupWeights,
-        metricWeights: currentTemplate.metricWeights,
-        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
+      const roundsForMetrics = historyData.filter(row => {
+        const dgId = String(row['dg_id'] || '').trim();
+        if (!fieldIdSet.has(dgId)) return false;
+        const year = parseInt(String(row['year'] || row['season'] || '').trim());
+        if (Number.isNaN(year)) return false;
+        if (String(year) !== String(effectiveSeason)) return false;
+        const eventId = String(row['event_id'] || '').trim();
+        return eventIdSetForMetrics.has(eventId);
       });
-      const firstMetricLength = currentRankingForMetrics.players.find(p => Array.isArray(p.metrics))?.metrics?.length || 0;
-      if (firstMetricLength <= 1) {
-        const metricLabel = firstMetricLength === 1 ? (GENERATED_METRIC_LABELS[0] || 'Metric 0') : 'Weighted Score';
-        const singleMetric = computeSingleMetricCorrelation(currentRankingForMetrics.players, resultsCurrent, {
-          label: metricLabel,
-          valueGetter: player => {
-            if (Array.isArray(player.metrics) && typeof player.metrics[0] === 'number') {
-              return player.metrics[0];
-            }
-            if (typeof player.weightedScore === 'number') return player.weightedScore;
-            if (typeof player.finalScore === 'number') return player.finalScore;
-            return null;
-          }
-        });
-        currentGeneratedMetricCorrelations = [{ index: 0, label: singleMetric.label, correlation: singleMetric.correlation, samples: singleMetric.samples }];
-        currentGeneratedTop20Correlations = [{ index: 0, label: singleMetric.label, correlation: singleMetric.correlation, samples: singleMetric.samples }];
+
+      if (roundsForMetrics.length > 0) {
+        console.log(`ℹ️  Using ${roundsForMetrics.length} current-season rounds (event + similar + putting courses) for metric correlations.`);
       } else {
-        currentGeneratedMetricCorrelations = computeGeneratedMetricCorrelations(currentRankingForMetrics.players, resultsCurrent);
-        currentGeneratedTop20Correlations = computeGeneratedMetricTopNCorrelations(currentRankingForMetrics.players, resultsCurrent, 20);
-        currentGeneratedTop20Logistic = trainTopNLogisticModel(
-          currentRankingForMetrics.players,
-          resultsCurrent,
-          GENERATED_METRIC_LABELS,
-          { topN: 20 }
-        );
+        console.warn('⚠️  No current-season rounds found for event + similar + putting courses; skipping Step 1b correlations.');
+      }
+      if (roundsForMetrics.length > 0) {
+        const currentRankingForMetrics = runRanking({
+          roundsRawData: roundsForMetrics,
+          approachRawData: approachData,
+          groupWeights: currentTemplate.groupWeights,
+          metricWeights: currentTemplate.metricWeights,
+          includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
+        });
+        const firstMetricLength = currentRankingForMetrics.players.find(p => Array.isArray(p.metrics))?.metrics?.length || 0;
+        if (firstMetricLength <= 1) {
+          const metricLabel = firstMetricLength === 1 ? (GENERATED_METRIC_LABELS[0] || 'Metric 0') : 'Weighted Score';
+          const singleMetric = computeSingleMetricCorrelation(currentRankingForMetrics.players, resultsCurrent, {
+            label: metricLabel,
+            valueGetter: player => {
+              if (Array.isArray(player.metrics) && typeof player.metrics[0] === 'number') {
+                return player.metrics[0];
+              }
+              if (typeof player.weightedScore === 'number') return player.weightedScore;
+              if (typeof player.finalScore === 'number') return player.finalScore;
+              return null;
+            }
+          });
+          currentGeneratedMetricCorrelations = [{ index: 0, label: singleMetric.label, correlation: singleMetric.correlation, samples: singleMetric.samples }];
+          currentGeneratedTop20Correlations = [{ index: 0, label: singleMetric.label, correlation: singleMetric.correlation, samples: singleMetric.samples }];
+        } else {
+          currentGeneratedMetricCorrelations = computeGeneratedMetricCorrelations(currentRankingForMetrics.players, resultsCurrent);
+          currentGeneratedTop20Correlations = computeGeneratedMetricTopNCorrelations(currentRankingForMetrics.players, resultsCurrent, 20);
+          currentGeneratedTop20Logistic = trainTopNLogisticModel(
+            currentRankingForMetrics.players,
+            resultsCurrent,
+            GENERATED_METRIC_LABELS,
+            { topN: 20 }
+          );
+        }
 
         const seasonEventSamples = buildEventSamplesBySeason(CURRENT_SEASON);
         let eventSamples = seasonEventSamples;
@@ -2827,10 +3332,10 @@ function runAdaptiveOptimizer() {
       const signalMap = buildAlignmentMapFromTop20Signal(currentGeneratedTop20Correlations);
       const logisticMap = buildAlignmentMapFromTop20Logistic(GENERATED_METRIC_LABELS, currentGeneratedTop20Logistic);
       currentGeneratedTop20AlignmentMap = blendAlignmentMaps([signalMap, logisticMap], [0.5, 0.5]);
-      console.log(`✓ Computed ${currentGeneratedMetricCorrelations.length} metric correlations for ${CURRENT_SEASON}`);
+      console.log(`✓ Computed ${currentGeneratedMetricCorrelations.length} metric correlations for ${CURRENT_SEASON} (event + similar + putting)`);
     }
   } else {
-    console.warn(`⚠️  No ${CURRENT_SEASON} rounds found (event or all-events); skipping current-season metric correlations.`);
+    console.warn(`⚠️  No ${CURRENT_SEASON} rounds found (event + similar + putting); skipping Step 1b correlations.`);
   }
 
   if (!HAS_CURRENT_RESULTS) {
@@ -2998,6 +3503,30 @@ function runAdaptiveOptimizer() {
     return;
   }
 
+  let alignmentMapForOptimization = currentGeneratedTop20AlignmentMap;
+  const alignmentMaps = [];
+  const alignmentWeights = [];
+
+  if (currentGeneratedTop20AlignmentMap.size > 0) {
+    alignmentMaps.push(currentGeneratedTop20AlignmentMap);
+    alignmentWeights.push(1 - VALIDATION_PRIOR_WEIGHT - DELTA_TREND_PRIOR_WEIGHT);
+  }
+
+  if (validationAlignmentMap.size > 0) {
+    alignmentMaps.push(validationAlignmentMap);
+    alignmentWeights.push(VALIDATION_PRIOR_WEIGHT);
+  }
+
+  if (deltaTrendAlignmentMap.size > 0) {
+    alignmentMaps.push(deltaTrendAlignmentMap);
+    alignmentWeights.push(DELTA_TREND_PRIOR_WEIGHT);
+    console.log(`ℹ️  Blended delta trend prior (${Math.round(DELTA_TREND_PRIOR_WEIGHT * 100)}%) into alignment map.`);
+  }
+
+  if (alignmentMaps.length > 0) {
+    alignmentMapForOptimization = blendAlignmentMaps(alignmentMaps, alignmentWeights);
+  }
+
   console.log('---');
   console.log('STEP 1c: CURRENT-SEASON TEMPLATE BASELINE');
   console.log(`Compare baseline templates for ${CURRENT_SEASON} only`);
@@ -3058,15 +3587,27 @@ function runAdaptiveOptimizer() {
     }
   }
 
-  const bestTemplate = [...templateResults].sort((a, b) => {
+  let bestTemplate = [...templateResults].sort((a, b) => {
     const evalA = a.evaluationCurrent;
     const evalB = b.evaluationCurrent;
 
     if (!evalA && !evalB) {
-      return (b.evaluation?.correlation || 0) - (a.evaluation?.correlation || 0);
+      const aWeighted = typeof a.evaluation?.top20WeightedScore === 'number' ? a.evaluation.top20WeightedScore : -Infinity;
+      const bWeighted = typeof b.evaluation?.top20WeightedScore === 'number' ? b.evaluation.top20WeightedScore : -Infinity;
+      if (bWeighted !== aWeighted) return bWeighted - aWeighted;
+      const aCorr = typeof a.evaluation?.correlation === 'number' ? a.evaluation.correlation : -Infinity;
+      const bCorr = typeof b.evaluation?.correlation === 'number' ? b.evaluation.correlation : -Infinity;
+      if (bCorr !== aCorr) return bCorr - aCorr;
+      const aTop20 = typeof a.evaluation?.top20 === 'number' ? a.evaluation.top20 : -Infinity;
+      const bTop20 = typeof b.evaluation?.top20 === 'number' ? b.evaluation.top20 : -Infinity;
+      return bTop20 - aTop20;
     }
     if (!evalA) return 1;
     if (!evalB) return -1;
+
+    const aWeighted = typeof evalA.top20WeightedScore === 'number' ? evalA.top20WeightedScore : -Infinity;
+    const bWeighted = typeof evalB.top20WeightedScore === 'number' ? evalB.top20WeightedScore : -Infinity;
+    if (bWeighted !== aWeighted) return bWeighted - aWeighted;
 
     if (evalB.correlation !== evalA.correlation) {
       return evalB.correlation - evalA.correlation;
@@ -3076,6 +3617,14 @@ function runAdaptiveOptimizer() {
     const bTop20 = typeof evalB.top20 === 'number' ? evalB.top20 : -Infinity;
     return bTop20 - aTop20;
   })[0];
+
+  if (validationTemplateName && validationTemplateConfig) {
+    const validationResult = templateResults.find(result => result.name === validationTemplateName);
+    if (validationResult) {
+      bestTemplate = validationResult;
+      console.log(`ℹ️  Using validation-selected baseline template: ${validationTemplateName}`);
+    }
+  }
 
   const baselineEvaluation = bestTemplate.evaluationCurrent || bestTemplate.evaluation;
   const configTemplateResult = templateResults.find(result => result.name === String(CURRENT_EVENT_ID));
@@ -3197,7 +3746,10 @@ function runAdaptiveOptimizer() {
     }
 
     const normalizedWeights = normalizeWeights(weights);
-    const adjustedMetricWeights = adjustMetricWeights(bestTemplate.metricWeights, metricConfig, METRIC_GRID_RANGE);
+    let adjustedMetricWeights = adjustMetricWeights(bestTemplate.metricWeights, metricConfig, METRIC_GRID_RANGE);
+    if (validationMetricConstraints && Object.keys(validationMetricConstraints).length > 0) {
+      adjustedMetricWeights = applyMetricWeightConstraints(metricConfig, adjustedMetricWeights, validationMetricConstraints);
+    }
 
     let evaluation;
     if (resultsFileExists) {
@@ -3229,8 +3781,8 @@ function runAdaptiveOptimizer() {
       evaluation = aggregateYearlyEvaluations(yearly);
     }
 
-    const alignmentScore = currentGeneratedTop20AlignmentMap.size > 0
-      ? computeMetricAlignmentScore(adjustedMetricWeights, normalizedWeights, currentGeneratedTop20AlignmentMap)
+    const alignmentScore = alignmentMapForOptimization.size > 0
+      ? computeMetricAlignmentScore(adjustedMetricWeights, normalizedWeights, alignmentMapForOptimization)
       : 0;
     const correlationScore = (evaluation.correlation + 1) / 2;
     const top20Score = buildTop20CompositeScore(evaluation);
@@ -3283,6 +3835,10 @@ function runAdaptiveOptimizer() {
     metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
     includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
   });
+
+  const optimizedEvaluationCurrent = resultsCurrent.length > 0
+    ? evaluateRankings(optimizedRankingCurrent.players, resultsCurrent, { includeTopN: true })
+    : null;
 
   // ============================================================================
   // STEP 4: MULTI-YEAR VALIDATION
@@ -3377,7 +3933,10 @@ function runAdaptiveOptimizer() {
   console.log(`   Top-10 Accuracy: ${bestOptimizedTop10}`);
   console.log(`   Top-20 Accuracy: ${bestOptimizedTop20}`);
   console.log(`   Top-20 Weighted Score: ${bestOptimizedTop20Weighted}`);
-  console.log(`   Matched Players: ${bestOptimized.matchedPlayers}`);
+  console.log(`   Matched Players (multi-year): ${bestOptimized.matchedPlayers}`);
+  if (optimizedEvaluationCurrent) {
+    console.log(`   Matched Players (current year): ${optimizedEvaluationCurrent.matchedPlayers}`);
+  }
 
   console.log('\n📈 Optimized Weights:');
   Object.entries(bestOptimized.weights).forEach(([metric, weight]) => {
@@ -3439,6 +3998,14 @@ function runAdaptiveOptimizer() {
       name: result.name === String(CURRENT_EVENT_ID) ? 'CONFIGURATION_SHEET' : result.name,
       evaluation: result.yearly[CURRENT_SEASON] || null
     })),
+    validationIntegration: {
+      validationCourseType,
+      validationTemplateName,
+      validationPriorWeight: VALIDATION_PRIOR_WEIGHT,
+      deltaTrendPriorWeight: DELTA_TREND_PRIOR_WEIGHT,
+      deltaTrendsPath: validationData.deltaTrendsPath || null,
+      deltaTrendSummary
+    },
     multiYearTemplateComparison: templateResults.map(result => ({
       name: result.name,
       evaluation: result.evaluation,
@@ -3453,6 +4020,7 @@ function runAdaptiveOptimizer() {
     },
     step3_optimized: {
       evaluation: bestOptimized,
+      evaluationCurrentYear: optimizedEvaluationCurrent,
       groupWeights: bestOptimized.weights,
       metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
       alignmentScore: bestOptimized.alignmentScore,
@@ -3516,7 +4084,7 @@ function runAdaptiveOptimizer() {
     });
   });
   textLines.push('');
-  textLines.push(`STEP 1b: CURRENT-SEASON GENERATED METRICS (${CURRENT_SEASON})`);
+  textLines.push(`STEP 1b: CURRENT-SEASON GENERATED METRICS (${CURRENT_SEASON}, event + similar + putting)`);
   textLines.push('Functions: runRanking (adaptiveOptimizer_v2.js) -> buildPlayerData (utilities/dataPrep.js) -> generatePlayerRankings (modelCore.js)');
   textLines.push('Additional: computeGeneratedMetricCorrelations, computeGeneratedMetricTopNCorrelations, trainTopNLogisticModel, crossValidateTopNLogisticByEvent, buildSuggestedMetricWeights, buildSuggestedGroupWeights (adaptiveOptimizer_v2.js)');
   const reportSimilarCourseIds = normalizeIdList(sharedConfig.similarCourseIds);
@@ -3524,7 +4092,7 @@ function runAdaptiveOptimizer() {
   const reportSimilarBlend = clamp01(sharedConfig.similarCoursesWeight, 0.3);
   const reportPuttingBlend = clamp01(sharedConfig.puttingCoursesWeight, 0.35);
   textLines.push(`Blend settings: similarCourseEvents=${reportSimilarCourseIds.length}, similarBlend=${reportSimilarBlend.toFixed(2)}, puttingCourseEvents=${reportPuttingCourseIds.length}, puttingBlend=${reportPuttingBlend.toFixed(2)} (SG Putting only)`);
-  textLines.push(`CURRENT-SEASON GENERATED METRIC CORRELATIONS (${CURRENT_SEASON}):`);
+  textLines.push(`CURRENT-SEASON GENERATED METRIC CORRELATIONS (${CURRENT_SEASON}, event + similar + putting):`);
   if (currentGeneratedMetricCorrelations.length === 0) {
     textLines.push(`  No ${CURRENT_SEASON} metric correlations computed.`);
   } else {
@@ -3533,7 +4101,7 @@ function runAdaptiveOptimizer() {
     });
   }
   textLines.push('');
-  textLines.push(`CURRENT-SEASON GENERATED METRIC TOP-20 SIGNAL (${CURRENT_SEASON}):`);
+  textLines.push(`CURRENT-SEASON GENERATED METRIC TOP-20 SIGNAL (${CURRENT_SEASON}, event + similar + putting):`);
   if (currentGeneratedTop20Correlations.length === 0) {
     textLines.push(`  No ${CURRENT_SEASON} top-20 correlations computed.`);
   } else {
@@ -3542,7 +4110,7 @@ function runAdaptiveOptimizer() {
     });
   }
   textLines.push('');
-  textLines.push(`CURRENT-SEASON TOP-20 LOGISTIC MODEL (${CURRENT_SEASON}):`);
+  textLines.push(`CURRENT-SEASON TOP-20 LOGISTIC MODEL (${CURRENT_SEASON}, event + similar + putting):`);
   if (!currentGeneratedTop20Logistic || !currentGeneratedTop20Logistic.success) {
     const reason = currentGeneratedTop20Logistic?.message || 'Not enough data';
     textLines.push(`  Logistic model unavailable: ${reason}`);
@@ -3595,6 +4163,20 @@ function runAdaptiveOptimizer() {
   textLines.push('');
   textLines.push(`STEP 1c: CURRENT-YEAR TEMPLATE BASELINE (${CURRENT_SEASON})`);
   textLines.push('Functions: runRanking, evaluateRankings, computeTemplateCorrelationAlignment (adaptiveOptimizer_v2.js)');
+  textLines.push('VALIDATION / DELTA TREND INTEGRATION SUMMARY:');
+  textLines.push(`  Validation Course Type: ${validationCourseType || 'n/a'}`);
+  textLines.push(`  Validation Template: ${validationTemplateName || 'n/a'}`);
+  textLines.push(`  Validation Prior Weight: ${VALIDATION_PRIOR_WEIGHT}`);
+  textLines.push(`  Delta Trend Prior Weight: ${DELTA_TREND_PRIOR_WEIGHT}`);
+  textLines.push(`  Delta Trends Source: ${validationData.deltaTrendsPath || 'n/a'}`);
+  if (deltaTrendSummary) {
+    textLines.push(`  Guardrail Totals: ${deltaTrendSummary.totalConstrained}`);
+    textLines.push(`  Guardrails by Status: STABLE=${deltaTrendSummary.statusCounts.STABLE || 0}, WATCH=${deltaTrendSummary.statusCounts.WATCH || 0}, CHRONIC=${deltaTrendSummary.statusCounts.CHRONIC || 0}`);
+    textLines.push(`  Guardrail Ranges: STABLE=±${(DELTA_TREND_RANGE.STABLE * 100).toFixed(0)}%, WATCH=±${(DELTA_TREND_RANGE.WATCH * 100).toFixed(0)}%, CHRONIC=±${(DELTA_TREND_RANGE.CHRONIC * 100).toFixed(0)}%`);
+  } else {
+    textLines.push('  Guardrail Totals: n/a');
+  }
+  textLines.push('');
   if (configBaselineEvaluation) {
     textLines.push('CONFIGURATION_SHEET BASELINE (event-specific config weights):');
     textLines.push(`Template: CONFIGURATION_SHEET`);
@@ -3701,6 +4283,9 @@ function runAdaptiveOptimizer() {
   textLines.push(`Top-20 Accuracy: ${typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a'}`);
   textLines.push(`Top-20 Weighted Score: ${typeof bestOptimized.top20WeightedScore === 'number' ? `${bestOptimized.top20WeightedScore.toFixed(1)}%` : 'n/a'}`);
   textLines.push(`Matched Players: ${bestOptimized.matchedPlayers}`);
+  if (optimizedEvaluationCurrent) {
+    textLines.push(`Matched Players (current year): ${optimizedEvaluationCurrent.matchedPlayers}`);
+  }
   textLines.push('');
   textLines.push('Optimized Group Weights:');
   Object.entries(bestOptimized.weights).forEach(([metric, weight]) => {

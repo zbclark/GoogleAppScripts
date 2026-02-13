@@ -12,6 +12,8 @@
 1jhESh7N0Oliz0soOjEd16Ydnf6AYg6b3D-PrbauFsps-RMaA_ujIeUMd ADS Pricing Template
 1PXdo_jjopMXd3Jv1stRPMSsaPjNUudSSoo_YZx9n1EuTxuNZB86TJ8uG Golf Algorithm
 1vIbXWCAIHIGHyqBg1v70Mf2b05HgA0mAvMp_UlzQxcacf3LgZ-IlKm-U Golf Algo Validation
+1aqDp0T5LK5Ubhv1ON5aOERkQ9XlUeWV62ggWo9oFWbBrvuzL2UPqzT4E Golf Algo Validation Library
+1hMiiJGQ_7ojKDxv_XaCN_yqDFgOFDz6KkjwmnQeDHD4-MApRmRWq7UFN Golf Algo Validation Wrapper
 
 # Add more script IDs below:
 # ANOTHER_SCRIPT_ID_HERE Another Project Name

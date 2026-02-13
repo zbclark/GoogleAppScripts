@@ -10,7 +10,11 @@ function onOpen() {
   
   ui.createMenu('🏌️ Golf Model Analysis')
     .addItem('🚀 Run Complete Model Analysis', 'runCompleteModelAnalysis')
+    .addItem('🚀 Run Complete (Choose Year)', 'runCompleteModelAnalysisWithYearPrompt')
     .addSeparator()
+    .addItem('⚙️ Set Golf Data Year', 'configureGolfDataYear')
+    .addSeparator()
+    .addItem('📊 Run Validation (Choose Year)', 'runValidationWithYearPrompt')
     .addItem('📊 Run 2025 Validation', 'runValidation2025')
     .addItem('📊 Run 2026 Validation', 'runValidation2026')
     .addToUi();
