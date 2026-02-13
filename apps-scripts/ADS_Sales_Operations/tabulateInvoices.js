@@ -29,13 +29,13 @@ function fillWorkWeekMatrixAllMonths() {
     return;  
   }  
     
-  var dateRange = matrixSheet.getRange("B7:S7");  
+  var dateRange = matrixSheet.getRange("B7:AE7");  
   var dateValues = dateRange.getValues();  
   
   console.log("Fetched date values (2D array):", dateValues);  
   
   if (!dateValues || dateValues.length === 0) {  
-    console.error("WARNING: No data found in range 'B7:S7'.");  
+    console.error("WARNING: No data found in range 'B7:AE7'.");  
     return;  
   }  
   
@@ -100,13 +100,13 @@ function fillWorkWeekMatrix(sheet) {
   
   var spreadsheet = SpreadsheetApp.getActiveSpreadsheet();  
   var matrixSheet = spreadsheet.getSheetByName("Financial Summary");   
-  var dateRange = matrixSheet.getRange("B7:S7");  
+  var dateRange = matrixSheet.getRange("B7:AE7");  
   var dateValues = dateRange.getValues();  
   
   console.log("Fetched date values (2D array):", dateValues);  
   
   if (!dateValues || dateValues.length === 0) {  
-    console.error("WARNING: No data found in range 'B7:S7'.");  
+    console.error("WARNING: No data found in range 'B7:AE7'.");  
     return;  
   }  
   
