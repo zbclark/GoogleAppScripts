@@ -10,6 +10,7 @@
 
 const fs = require('fs');
 const path = require('path');
+const crypto = require('crypto');
 const { parse } = require('csv-parse/sync');
 
 const { loadCsv } = require('../utilities/csvLoader');
@@ -95,6 +96,8 @@ let TOURNAMENT_NAME = null;
 let DRY_RUN = true;
 let INCLUDE_CURRENT_EVENT_ROUNDS = null;
 let MAX_TESTS_OVERRIDE = null;
+let WRITE_VALIDATION_TEMPLATES = false;
+let WRITE_TEMPLATES = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--template' && args[i + 1]) {
@@ -119,6 +122,10 @@ for (let i = 0; i < args.length; i++) {
   }
   if (args[i] === '--writeTemplates') {
     DRY_RUN = false;
+    WRITE_TEMPLATES = true;
+  }
+  if (args[i] === '--writeValidationTemplates') {
+    WRITE_VALIDATION_TEMPLATES = true;
   }
   if (args[i] === '--dryRun' || args[i] === '--dry-run') {
     DRY_RUN = true;
@@ -134,6 +141,17 @@ for (let i = 0; i < args.length; i++) {
 const loggingEnv = String(process.env.LOGGING_ENABLED || '').trim().toLowerCase();
 if (loggingEnv === '1' || loggingEnv === 'true' || loggingEnv === 'yes') {
   LOGGING_ENABLED = true;
+}
+
+const writeValidationEnv = String(process.env.WRITE_VALIDATION_TEMPLATES || '').trim().toLowerCase();
+if (writeValidationEnv === '1' || writeValidationEnv === 'true' || writeValidationEnv === 'yes') {
+  WRITE_VALIDATION_TEMPLATES = true;
+}
+
+const writeTemplatesEnv = String(process.env.WRITE_TEMPLATES || '').trim().toLowerCase();
+if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesEnv === 'yes') {
+  WRITE_TEMPLATES = true;
+  DRY_RUN = false;
 }
 
 if (!LOGGING_ENABLED) {
@@ -455,6 +473,43 @@ function buildValidationGroupWeights(metricConfig, summaryMetrics = [], fallback
   return normalizeWeights(groupWeights);
 }
 
+function buildValidationTemplateForType({
+  type,
+  metricConfig,
+  validationData,
+  templateConfigs,
+  eventId,
+  sourceLabel
+}) {
+  if (!type) return null;
+  const weightsForType = validationData?.weightTemplates?.[type] || [];
+  const summaryForType = validationData?.typeSummaries?.[type] || [];
+  if (!weightsForType.length && !summaryForType.length) return null;
+
+  const fallbackTemplate = templateConfigs?.[type]
+    || templateConfigs?.[String(eventId)]
+    || Object.values(templateConfigs || {})[0];
+
+  const groupWeights = buildValidationGroupWeights(
+    metricConfig,
+    summaryForType,
+    fallbackTemplate?.groupWeights || {}
+  );
+  const metricWeights = buildValidationMetricWeights(
+    metricConfig,
+    weightsForType,
+    fallbackTemplate?.metricWeights || {}
+  );
+
+  const descriptionSuffix = sourceLabel ? ` (${sourceLabel})` : '';
+  return {
+    name: type,
+    description: `Validation CSV ${type} template${descriptionSuffix}`,
+    groupWeights,
+    metricWeights: nestMetricWeights(metricWeights)
+  };
+}
+
 function buildValidationMetricConstraints(metricConfig, validationWeights = [], rangePct = VALIDATION_RANGE_PCT) {
   if (!metricConfig || !Array.isArray(metricConfig.groups)) return {};
   const constraints = {};
@@ -482,6 +537,55 @@ function buildValidationMetricConstraints(metricConfig, validationWeights = [], 
   });
 
   return constraints;
+}
+
+function flattenMetricWeights(metricConfig, metricWeights) {
+  const flattened = {};
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return flattened;
+  if (!metricWeights) return flattened;
+
+  metricConfig.groups.forEach(group => {
+    group.metrics.forEach(metric => {
+      const flatKey = `${group.name}::${metric.name}`;
+      if (Object.prototype.hasOwnProperty.call(metricWeights, flatKey)) {
+        const value = metricWeights[flatKey];
+        flattened[flatKey] = typeof value === 'number' ? value : (value?.weight ?? null);
+        return;
+      }
+      const groupBlock = metricWeights[group.name];
+      if (groupBlock && Object.prototype.hasOwnProperty.call(groupBlock, metric.name)) {
+        const entry = groupBlock[metric.name];
+        flattened[flatKey] = typeof entry === 'number' ? entry : (entry?.weight ?? null);
+      }
+    });
+  });
+
+  return flattened;
+}
+
+function templatesAreDifferent(templateA, templateB, metricConfig, tolerance = 1e-4) {
+  if (!templateA || !templateB) return true;
+  const groupWeightsA = templateA.groupWeights || {};
+  const groupWeightsB = templateB.groupWeights || {};
+  const groupKeys = new Set([...Object.keys(groupWeightsA), ...Object.keys(groupWeightsB)]);
+  for (const key of groupKeys) {
+    const a = groupWeightsA[key] ?? null;
+    const b = groupWeightsB[key] ?? null;
+    if (a === null || b === null) return true;
+    if (Math.abs(a - b) > tolerance) return true;
+  }
+
+  const flatA = flattenMetricWeights(metricConfig, templateA.metricWeights || {});
+  const flatB = flattenMetricWeights(metricConfig, templateB.metricWeights || {});
+  const metricKeys = new Set([...Object.keys(flatA), ...Object.keys(flatB)]);
+  for (const key of metricKeys) {
+    const a = flatA[key];
+    const b = flatB[key];
+    if (a === null || b === null || a === undefined || b === undefined) return true;
+    if (Math.abs(a - b) > tolerance) return true;
+  }
+
+  return false;
 }
 
 function adjustConstraintsByDeltaTrends(metricConfig, constraints = {}, deltaTrends = []) {
@@ -1554,6 +1658,75 @@ function clamp01(value, fallback = 0) {
   return Math.min(1, Math.max(0, value));
 }
 
+function scoreLowerBetter(value, good, bad) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+  if (value <= good) return 1;
+  if (value >= bad) return 0;
+  return (bad - value) / (bad - good);
+}
+
+function scoreHigherBetter(value, good, bad) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return 0;
+  if (value >= good) return 1;
+  if (value <= bad) return 0;
+  return (value - bad) / (good - bad);
+}
+
+function computeCvReliability(cvSummary, options = {}) {
+  if (!cvSummary || !cvSummary.success) return 0;
+  const {
+    logLossGood = 0.25,
+    logLossBad = 0.45,
+    accuracyGood = 0.65,
+    accuracyBad = 0.52,
+    minEvents = 3,
+    maxEvents = 8,
+    minSamples = 120,
+    maxSamples = 350
+  } = options;
+
+  const logLossScore = scoreLowerBetter(cvSummary.avgLogLoss, logLossGood, logLossBad);
+  const accuracyScore = scoreHigherBetter(cvSummary.avgAccuracy, accuracyGood, accuracyBad);
+  const eventCount = typeof cvSummary.eventCount === 'number' ? cvSummary.eventCount : 0;
+  const sampleCount = typeof cvSummary.totalSamples === 'number' ? cvSummary.totalSamples : 0;
+  const eventScore = clamp01((eventCount - (minEvents - 1)) / Math.max(1, maxEvents - (minEvents - 1)));
+  const sampleScore = clamp01((sampleCount - minSamples) / Math.max(1, maxSamples - minSamples));
+  const baseScore = (logLossScore + accuracyScore) / 2;
+  return clamp01(baseScore * eventScore * sampleScore);
+}
+
+function groupWeightsMapToArray(groupWeights) {
+  return Object.entries(groupWeights || {})
+    .map(([groupName, weight]) => ({ groupName, weight }))
+    .sort((a, b) => (b.weight || 0) - (a.weight || 0));
+}
+
+function blendSuggestedGroupWeightsWithCv(suggestedGroupWeights, fallbackGroupWeights, cvReliability, options = {}) {
+  const maxModelShare = typeof options.maxModelShare === 'number' ? options.maxModelShare : 0.35;
+  if (!suggestedGroupWeights || !Array.isArray(suggestedGroupWeights.weights) || suggestedGroupWeights.weights.length === 0) {
+    return {
+      source: suggestedGroupWeights?.source || 'none',
+      weights: [],
+      cvReliability,
+      modelShare: 0,
+      priorShare: 1
+    };
+  }
+
+  const modelShare = clamp01(maxModelShare * clamp01(cvReliability));
+  const priorShare = 1 - modelShare;
+  const filledGroupWeights = buildFilledGroupWeights(suggestedGroupWeights, fallbackGroupWeights);
+  const blended = blendGroupWeights(fallbackGroupWeights, filledGroupWeights, priorShare, modelShare);
+
+  return {
+    source: suggestedGroupWeights.source || 'none',
+    weights: groupWeightsMapToArray(blended),
+    cvReliability,
+    modelShare,
+    priorShare
+  };
+}
+
 const CURRENT_EVENT_ROUNDS_DEFAULTS = {
   currentSeasonMetrics: true,
   currentSeasonBaseline: false,
@@ -1919,22 +2092,97 @@ function evaluateRankings(predictions, actualResults, options = {}) {
     const sortedPredictions = hasRank
       ? [...predictions].filter(p => typeof p.rank === 'number').sort((a, b) => (a.rank || 0) - (b.rank || 0))
       : [...predictions];
-    const predictedTop20 = sortedPredictions.slice(0, 20).map(p => String(p.dgId));
-    const actualTop20 = actualResults
-      .filter(result => result.finishPosition && !Number.isNaN(result.finishPosition) && result.finishPosition <= 20)
-      .sort((a, b) => a.finishPosition - b.finishPosition)
-      .map(result => String(result.dgId));
-    const actualTop20Set = new Set(actualTop20);
-    const overlap = predictedTop20.filter(id => actualTop20Set.has(id));
-    evaluation.top20Details = {
-      predicted: predictedTop20,
-      actual: actualTop20,
-      overlap,
-      overlapCount: overlap.length
+    const buildTopNDetails = n => {
+      const predictedTopN = sortedPredictions.slice(0, n).map(p => String(p.dgId));
+      const actualTopN = actualResults
+        .filter(result => result.finishPosition && !Number.isNaN(result.finishPosition) && result.finishPosition <= n)
+        .sort((a, b) => a.finishPosition - b.finishPosition)
+        .map(result => String(result.dgId));
+      const actualTopNSet = new Set(actualTopN);
+      const overlap = predictedTopN.filter(id => actualTopNSet.has(id));
+      return {
+        predicted: predictedTopN,
+        actual: actualTopN,
+        overlap,
+        overlapCount: overlap.length
+      };
     };
+    evaluation.top10Details = buildTopNDetails(10);
+    evaluation.top20Details = buildTopNDetails(20);
   }
 
   return evaluation;
+}
+
+function hashFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  const content = fs.readFileSync(filePath);
+  return crypto.createHash('sha256').update(content).digest('hex');
+}
+
+function buildRunFingerprint({
+  eventId,
+  season,
+  tournament,
+  optSeed,
+  tests,
+  dryRun,
+  includeCurrentEventRounds,
+  templateOverride,
+  filePaths,
+  validationPaths
+}) {
+  const fileHashes = {};
+  (filePaths || []).forEach(entry => {
+    if (!entry || !entry.label) return;
+    fileHashes[entry.label] = {
+      path: entry.path ? path.basename(entry.path) : null,
+      sha256: hashFile(entry.path)
+    };
+  });
+  (validationPaths || []).forEach(entry => {
+    if (!entry || !entry.label) return;
+    fileHashes[entry.label] = {
+      path: entry.path ? path.basename(entry.path) : null,
+      sha256: hashFile(entry.path)
+    };
+  });
+
+  return {
+    algorithm: 'sha256',
+    createdAt: new Date().toISOString(),
+    eventId,
+    season,
+    tournament: tournament || null,
+    optSeed: optSeed || null,
+    tests: tests || null,
+    dryRun: !!dryRun,
+    includeCurrentEventRounds,
+    templateOverride: templateOverride || null,
+    files: fileHashes
+  };
+}
+
+function ensureDirectory(dirPath) {
+  if (!dirPath) return;
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+}
+
+function buildBackupPath(filePath) {
+  const archiveDir = path.resolve(OUTPUT_DIR, 'archive');
+  ensureDirectory(archiveDir);
+  const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+  const baseName = path.basename(filePath);
+  return path.resolve(archiveDir, `${baseName}.${timestamp}.bak`);
+}
+
+function backupIfExists(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  const backupPath = buildBackupPath(filePath);
+  fs.copyFileSync(filePath, backupPath);
+  return backupPath;
 }
 
 function buildModifiedGroups(groups, groupWeights, metricWeights) {
@@ -2552,11 +2800,9 @@ function runAdaptiveOptimizer() {
   console.log('\n--- LOADING ALL AVAILABLE TEMPLATES ---');
   Object.entries(WEIGHT_TEMPLATES).forEach(([templateName, template]) => {
     if (!template) return;
-    if (['POWER', 'BALANCED', 'TECHNICAL'].includes(templateName) || template.eventId === String(CURRENT_EVENT_ID)) {
-      const normalized = normalizeTemplateWeights(template, baseMetricConfig);
-      templateConfigs[templateName] = normalized;
-      console.log(`✓ Loaded ${templateName} template`);
-    }
+    const normalized = normalizeTemplateWeights(template, baseMetricConfig);
+    templateConfigs[templateName] = normalized;
+    console.log(`✓ Loaded ${templateName} template`);
   });
 
   if (TEMPLATE) {
@@ -2623,6 +2869,34 @@ function runAdaptiveOptimizer() {
     templateConfigs[validationTemplateName] = validationTemplateConfig;
     console.log(`✓ Loaded validation template: ${validationTemplateName}`);
   }
+
+  const resolvedTestsForFingerprint = (() => {
+    const parsedTests = parseInt(OPT_TESTS_RAW, 10);
+    if (!Number.isNaN(parsedTests)) return parsedTests;
+    return typeof MAX_TESTS_OVERRIDE === 'number' ? MAX_TESTS_OVERRIDE : null;
+  })();
+  const runFingerprint = buildRunFingerprint({
+    eventId: CURRENT_EVENT_ID,
+    season: effectiveSeason,
+    tournament: TOURNAMENT_NAME || tournamentNameFallback,
+    optSeed: OPT_SEED_RAW,
+    tests: resolvedTestsForFingerprint,
+    dryRun: DRY_RUN,
+    includeCurrentEventRounds: INCLUDE_CURRENT_EVENT_ROUNDS,
+    templateOverride: TEMPLATE,
+    filePaths: [
+      { label: 'configurationSheet', path: CONFIG_PATH },
+      { label: 'tournamentField', path: FIELD_PATH },
+      { label: 'historicalData', path: HISTORY_PATH },
+      { label: 'approachSkill', path: APPROACH_PATH },
+      { label: 'tournamentResults', path: RESULTS_PATH },
+      { label: 'weightTemplatesJs', path: path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js') }
+    ],
+    validationPaths: [
+      { label: 'validationWeightTemplates', path: validationData?.weightTemplatesPath || null },
+      { label: 'validationDeltaTrends', path: validationData?.deltaTrendsPath || null }
+    ]
+  });
 
   console.log('\n🔄 Loading data...');
   const fieldData = loadCsv(FIELD_PATH, { skipFirstColumn: true });
@@ -2982,17 +3256,60 @@ function runAdaptiveOptimizer() {
   let currentGeneratedTop20Correlations = [];
   let currentGeneratedTop20Logistic = null;
   let currentGeneratedTop20CvSummary = null;
+  let historicalCoreTop20Correlations = [];
   let suggestedTop20MetricWeights = { source: 'none', weights: [] };
   let suggestedTop20GroupWeights = { source: 'none', weights: [] };
+  let conservativeSuggestedTop20GroupWeights = { source: 'none', weights: [], cvReliability: 0, modelShare: 0, priorShare: 1 };
+  let cvReliability = 0;
   let tunedTop20GroupWeights = null;
   let currentGeneratedCorrelationMap = new Map();
   let currentGeneratedTop20AlignmentMap = new Map();
   const HISTORICAL_METRIC_LABELS = GENERATED_METRIC_LABELS.slice(0, 17);
+  const HISTORICAL_CORE_TOP20_BLEND = 0.65;
+  const HISTORICAL_CORE_METRIC_LABELS = [
+    'SG Total',
+    'Scoring Average',
+    'Birdies or Better',
+    'Driving Distance',
+    'Driving Accuracy',
+    'SG T2G',
+    'SG Approach',
+    'SG Around Green',
+    'SG OTT',
+    'SG Putting',
+    'Poor Shots'
+  ];
   let trainingMetricNotes = {
     included: [],
     excluded: ['Birdie Chances Created', 'SG Total'],
     derived: ['Birdies or Better = birdies + eagles (from historical rounds when available)']
   };
+
+  const coreMetricSpecs = HISTORICAL_CORE_METRIC_LABELS
+    .map(label => ({ label, index: GENERATED_METRIC_LABELS.indexOf(label) }))
+    .filter(spec => spec.index >= 0);
+  if (coreMetricSpecs.length > 0 && allEventRounds.length > 0) {
+    const baseTemplateForCore = templateConfigs[CURRENT_EVENT_ID] || Object.values(templateConfigs)[0];
+    if (baseTemplateForCore) {
+      const coreResults = buildResultsFromRows(allEventRounds);
+      const coreFieldData = buildFieldDataFromHistory(allEventRounds, new Set([String(CURRENT_EVENT_ID)]));
+      const coreGroupWeights = removeApproachGroupWeights(baseTemplateForCore.groupWeights || {});
+      const coreRanking = runRanking({
+        roundsRawData: allEventRounds,
+        approachRawData: [],
+        groupWeights: coreGroupWeights,
+        metricWeights: baseTemplateForCore.metricWeights || {},
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation),
+        fieldDataOverride: coreFieldData
+      });
+      historicalCoreTop20Correlations = computeGeneratedMetricTopNCorrelationsForLabels(
+        coreRanking.players,
+        coreResults,
+        coreMetricSpecs,
+        20
+      );
+    }
+  }
 
   if (!HAS_CURRENT_RESULTS) {
     const currentTemplate = templateConfigs[CURRENT_EVENT_ID] || Object.values(templateConfigs)[0];
@@ -3156,6 +3473,13 @@ function runAdaptiveOptimizer() {
         }
       }
 
+      if (historicalCoreTop20Correlations.length > 0) {
+        currentGeneratedTop20Correlations = blendCorrelationLists(
+          currentGeneratedTop20Correlations,
+          historicalCoreTop20Correlations,
+          HISTORICAL_CORE_TOP20_BLEND
+        );
+      }
       suggestedTop20MetricWeights = buildSuggestedMetricWeights(
         metricLabelsForTraining,
         currentGeneratedTop20Correlations,
@@ -3188,6 +3512,10 @@ function runAdaptiveOptimizer() {
         ...similarCourseIds.map(String),
         ...puttingCourseIds.map(String)
       ]);
+      const eventIdListForMetrics = Array.from(eventIdSetForMetrics.values());
+      console.log(`ℹ️  Current-season metric scope: season=${effectiveSeason}, events=[${eventIdListForMetrics.join(', ')}] (event + similar + putting).`);
+      console.log(`   Similar events: ${similarCourseIds.length ? similarCourseIds.join(', ') : 'none'}`);
+      console.log(`   Putting events: ${puttingCourseIds.length ? puttingCourseIds.join(', ') : 'none'}`);
 
       const roundsForMetrics = historyData.filter(row => {
         const dgId = String(row['dg_id'] || '').trim();
@@ -3200,7 +3528,7 @@ function runAdaptiveOptimizer() {
       });
 
       if (roundsForMetrics.length > 0) {
-        console.log(`ℹ️  Using ${roundsForMetrics.length} current-season rounds (event + similar + putting courses) for metric correlations.`);
+        console.log(`ℹ️  Using ${roundsForMetrics.length} current-season rounds (season=${effectiveSeason}, event + similar + putting) for metric correlations.`);
       } else {
         console.warn('⚠️  No current-season rounds found for event + similar + putting courses; skipping Step 1b correlations.');
       }
@@ -3317,6 +3645,13 @@ function runAdaptiveOptimizer() {
         }
       }
 
+      if (historicalCoreTop20Correlations.length > 0) {
+        currentGeneratedTop20Correlations = blendCorrelationLists(
+          currentGeneratedTop20Correlations,
+          historicalCoreTop20Correlations,
+          HISTORICAL_CORE_TOP20_BLEND
+        );
+      }
       suggestedTop20MetricWeights = buildSuggestedMetricWeights(
         GENERATED_METRIC_LABELS,
         currentGeneratedTop20Correlations,
@@ -3337,6 +3672,15 @@ function runAdaptiveOptimizer() {
   } else {
     console.warn(`⚠️  No ${CURRENT_SEASON} rounds found (event + similar + putting); skipping Step 1b correlations.`);
   }
+
+  const fallbackTemplateForCv = templateConfigs[CURRENT_EVENT_ID] || Object.values(templateConfigs)[0];
+  cvReliability = computeCvReliability(currentGeneratedTop20CvSummary);
+  conservativeSuggestedTop20GroupWeights = blendSuggestedGroupWeightsWithCv(
+    suggestedTop20GroupWeights,
+    fallbackTemplateForCv?.groupWeights || {},
+    cvReliability,
+    { maxModelShare: 0.35 }
+  );
 
   if (!HAS_CURRENT_RESULTS) {
     const fallbackTemplate = templateConfigs[CURRENT_EVENT_ID] || Object.values(templateConfigs)[0];
@@ -3385,6 +3729,7 @@ function runAdaptiveOptimizer() {
       currentGeneratedTop20Correlations,
       currentGeneratedTop20Logistic,
       currentGeneratedTop20CvSummary,
+      cvReliability,
       blendSettings: {
         similarCourseIds: normalizeIdList(sharedConfig.similarCourseIds),
         puttingCourseIds: normalizeIdList(sharedConfig.puttingCourseIds),
@@ -3393,6 +3738,7 @@ function runAdaptiveOptimizer() {
       },
       suggestedTop20MetricWeights,
       suggestedTop20GroupWeights,
+      conservativeSuggestedTop20GroupWeights,
       filledGroupWeights,
       filledMetricWeights: filledMetricWeightsWithInversions,
       blendedGroupWeights,
@@ -3406,6 +3752,10 @@ function runAdaptiveOptimizer() {
     };
 
     const outputPath = path.resolve(OUTPUT_DIR, 'adaptive_optimizer_v2_results.json');
+    const backupJsonPath = backupIfExists(outputPath);
+    if (backupJsonPath) {
+      console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
+    }
     fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
 
     const textLines = [];
@@ -3468,6 +3818,16 @@ function runAdaptiveOptimizer() {
       });
     }
     textLines.push('');
+    textLines.push(`CV RELIABILITY (event-based): ${(cvReliability * 100).toFixed(1)}%`);
+    textLines.push(`CONSERVATIVE GROUP WEIGHTS (CV-adjusted, model share ${(conservativeSuggestedTop20GroupWeights.modelShare * 100).toFixed(1)}%):`);
+    if (!conservativeSuggestedTop20GroupWeights.weights.length) {
+      textLines.push('  No CV-adjusted group weights available.');
+    } else {
+      conservativeSuggestedTop20GroupWeights.weights.forEach((entry, idx) => {
+        textLines.push(`  ${idx + 1}. ${entry.groupName}: weight=${entry.weight.toFixed(4)}`);
+      });
+    }
+    textLines.push('');
     textLines.push('FILLED GROUP WEIGHTS (normalized with fallback template):');
     Object.entries(filledGroupWeights).forEach(([groupName, weight]) => {
       textLines.push(`  ${groupName}: ${weight.toFixed(4)}`);
@@ -3495,6 +3855,10 @@ function runAdaptiveOptimizer() {
     textLines.push('');
 
     const textOutputPath = path.resolve(OUTPUT_DIR, 'adaptive_optimizer_v2_results.txt');
+    const backupTextPath = backupIfExists(textOutputPath);
+    if (backupTextPath) {
+      console.log(`🗄️  Backed up previous text results to: ${backupTextPath}`);
+    }
     fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
     console.log('✅ Pre-event training output saved (no rankings).');
@@ -3632,19 +3996,19 @@ function runAdaptiveOptimizer() {
 
   console.log('---');
   console.log('STEP 2: TOP-20 GROUP WEIGHT TUNING');
-  console.log('Tune lower-importance groups for Top-20 outcomes');
+  console.log(`Tune lower-importance groups for Top-20 outcomes (event ${CURRENT_EVENT_ID}, all years)`);
   console.log('---');
 
   const step2BaseTemplate = configTemplateResult || bestTemplate;
   const step2BaseTemplateName = step2BaseTemplate === configTemplateResult ? 'CONFIGURATION_SHEET' : bestTemplate.name;
   const step2MetricWeights = step2BaseTemplate.metricWeights || bestTemplate.metricWeights;
 
-  const groupWeightsSeed = suggestedTop20GroupWeights.weights.length > 0
-    ? buildGroupWeightsMap(suggestedTop20GroupWeights.weights)
+  const groupWeightsSeed = conservativeSuggestedTop20GroupWeights.weights.length > 0
+    ? buildGroupWeightsMap(conservativeSuggestedTop20GroupWeights.weights)
     : step2BaseTemplate.groupWeights;
   const groupWeightsSeedNormalized = normalizeWeights(groupWeightsSeed);
-  const optimizableGroups = selectOptimizableGroups(suggestedTop20GroupWeights.weights.length > 0
-    ? suggestedTop20GroupWeights.weights
+  const optimizableGroups = selectOptimizableGroups(conservativeSuggestedTop20GroupWeights.weights.length > 0
+    ? conservativeSuggestedTop20GroupWeights.weights
     : Object.entries(groupWeightsSeedNormalized).map(([groupName, weight]) => ({ groupName, weight })), 3);
 
   const GROUP_TUNE_RANGE = 0.25; // ±25% adjustments
@@ -3660,16 +4024,27 @@ function runAdaptiveOptimizer() {
     });
     const normalizedCandidate = normalizeWeights(candidate);
 
-    const ranking = runRanking({
-      roundsRawData: getCurrentSeasonRoundsForRanking(
-        resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
-      ),
-      approachRawData: approachData,
-      groupWeights: normalizedCandidate,
-      metricWeights: step2MetricWeights,
-      includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+    const perYear = {};
+    availableYears.forEach(year => {
+      const rounds = roundsByYear[year] || [];
+      const results = resultsByYear[year] || [];
+      if (rounds.length === 0 || results.length === 0) return;
+      const useApproach = String(year) === String(CURRENT_SEASON);
+      const adjustedGroupWeights = useApproach
+        ? normalizedCandidate
+        : removeApproachGroupWeights(normalizedCandidate);
+      const ranking = runRanking({
+        roundsRawData: rounds,
+        approachRawData: useApproach ? approachData : [],
+        groupWeights: adjustedGroupWeights,
+        metricWeights: step2MetricWeights,
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(
+          useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation
+        )
+      });
+      perYear[year] = evaluateRankings(ranking.players, results, { includeTopN: true });
     });
-    const evaluation = evaluateRankings(ranking.players, resultsCurrent, { includeTopN: true });
+    const evaluation = aggregateYearlyEvaluations(perYear);
     tunedResults.push({
       groupWeights: normalizedCandidate,
       evaluation
@@ -3714,9 +4089,7 @@ function runAdaptiveOptimizer() {
   console.log('---');
   console.log('STEP 3: WEIGHT OPTIMIZATION');
   console.log('Randomized search starting from best template baseline');
-  console.log(resultsFileExists
-    ? 'Using current season results for optimization'
-    : 'Using multi-year historical results for optimization');
+  console.log('Using current season results for optimization (current-year field only)');
   console.log('---');
 
   // Random search from best template
@@ -3752,34 +4125,16 @@ function runAdaptiveOptimizer() {
     }
 
     let evaluation;
-    if (resultsFileExists) {
-      const ranking = runRanking({
-        roundsRawData: getCurrentSeasonRoundsForRanking(
-          resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
-        ),
-        approachRawData: approachData,
-        groupWeights: normalizedWeights,
-        metricWeights: adjustedMetricWeights,
-        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
-      });
-      evaluation = evaluateRankings(ranking.players, resultsCurrent, { includeTopN: true });
-    } else {
-      const yearly = {};
-      availableYears.forEach(year => {
-        const rounds = roundsByYear[year] || [];
-        const results = resultsByYear[year] || [];
-        if (rounds.length === 0 || results.length === 0) return;
-        const ranking = runRanking({
-          roundsRawData: rounds,
-          approachRawData: approachData,
-          groupWeights: normalizedWeights,
-          metricWeights: adjustedMetricWeights,
-          includeCurrentEventRounds: resolveIncludeCurrentEventRounds(String(year) === String(CURRENT_SEASON) ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
-        });
-        yearly[year] = evaluateRankings(ranking.players, results, { includeTopN: String(year) === String(CURRENT_SEASON) });
-      });
-      evaluation = aggregateYearlyEvaluations(yearly);
-    }
+    const ranking = runRanking({
+      roundsRawData: getCurrentSeasonRoundsForRanking(
+        resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+      ),
+      approachRawData: approachData,
+      groupWeights: normalizedWeights,
+      metricWeights: adjustedMetricWeights,
+      includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
+    });
+    evaluation = evaluateRankings(ranking.players, resultsCurrent, { includeTopN: true });
 
     const alignmentScore = alignmentMapForOptimization.size > 0
       ? computeMetricAlignmentScore(adjustedMetricWeights, normalizedWeights, alignmentMapForOptimization)
@@ -3818,7 +4173,8 @@ function runAdaptiveOptimizer() {
   console.log(`   Metric Alignment Score (Top-20 KPI blend): ${bestOptimized.alignmentScore.toFixed(4)}`);
   console.log(`   Top-20 Composite Score: ${(bestOptimized.top20Score * 100).toFixed(1)}%`);
   console.log(`   Combined Objective Score: ${bestOptimized.combinedScore.toFixed(4)}`);
-  console.log(`   Improvement: ${((bestOptimized.correlation - baselineEvaluation.correlation) / Math.abs(baselineEvaluation.correlation) * 100).toFixed(2)}%`);
+  const improvement = bestOptimized.correlation - baselineEvaluation.correlation;
+  console.log(`   Improvement: ${((improvement) / Math.abs(baselineEvaluation.correlation) * 100).toFixed(2)}%`);
   const bestOptimizedTop10 = typeof bestOptimized.top10 === 'number' ? `${bestOptimized.top10.toFixed(1)}%` : 'n/a';
   const optimizedTop20Text = typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a';
   const optimizedTop20WeightedText = typeof bestOptimized.top20WeightedScore === 'number' ? `${bestOptimized.top20WeightedScore.toFixed(1)}%` : 'n/a';
@@ -3874,13 +4230,21 @@ function runAdaptiveOptimizer() {
       includeCurrentEventRounds: resolveIncludeCurrentEventRounds(useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
     });
 
-    const evaluation = evaluateRankings(ranking.players, resultsByYear[year] || resultsCurrent, { includeTopN: useApproach });
+    const evaluationResults = resultsByYear[year] && resultsByYear[year].length > 0
+      ? resultsByYear[year]
+      : resultsCurrent;
+    const evaluation = evaluateRankings(ranking.players, evaluationResults, {
+      includeTopN: true,
+      includeTopNDetails: true
+    });
     multiYearResults[year] = evaluation;
     
     const top10Text = typeof evaluation.top10 === 'number' ? `${evaluation.top10.toFixed(1)}%` : 'n/a';
     const top20Text = typeof evaluation.top20 === 'number' ? `${evaluation.top20.toFixed(1)}%` : 'n/a';
     const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
-    console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText}`);
+    const top10OverlapText = evaluation.top10Details ? `${evaluation.top10Details.overlapCount}/10` : 'n/a';
+    const top20OverlapText = evaluation.top20Details ? `${evaluation.top20Details.overlapCount}/20` : 'n/a';
+    console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText} | Top-10 Overlap: ${top10OverlapText} | Top-20 Overlap: ${top20OverlapText}`);
   }
 
   // ============================================================================
@@ -3911,7 +4275,9 @@ function runAdaptiveOptimizer() {
     const top10Text = typeof evalResult.top10 === 'number' ? `${evalResult.top10.toFixed(1)}%` : 'n/a';
     const top20Text = typeof evalResult.top20 === 'number' ? `${evalResult.top20.toFixed(1)}%` : 'n/a';
     const top20WeightedText = typeof evalResult.top20WeightedScore === 'number' ? `${evalResult.top20WeightedScore.toFixed(1)}%` : 'n/a';
-    console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText}`);
+    const top10OverlapText = evalResult.top10Details ? `${evalResult.top10Details.overlapCount}/10` : 'n/a';
+    const top20OverlapText = evalResult.top20Details ? `${evalResult.top20Details.overlapCount}/20` : 'n/a';
+    console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
   });
 
   // Summary output
@@ -3933,10 +4299,7 @@ function runAdaptiveOptimizer() {
   console.log(`   Top-10 Accuracy: ${bestOptimizedTop10}`);
   console.log(`   Top-20 Accuracy: ${bestOptimizedTop20}`);
   console.log(`   Top-20 Weighted Score: ${bestOptimizedTop20Weighted}`);
-  console.log(`   Matched Players (multi-year): ${bestOptimized.matchedPlayers}`);
-  if (optimizedEvaluationCurrent) {
-    console.log(`   Matched Players (current year): ${optimizedEvaluationCurrent.matchedPlayers}`);
-  }
+  console.log(`   Matched Players (current year): ${bestOptimized.matchedPlayers}`);
 
   console.log('\n📈 Optimized Weights:');
   Object.entries(bestOptimized.weights).forEach(([metric, weight]) => {
@@ -3948,11 +4311,12 @@ function runAdaptiveOptimizer() {
     const top10Text = typeof result.top10 === 'number' ? `${result.top10.toFixed(1)}%` : 'n/a';
     const top20Text = typeof result.top20 === 'number' ? `${result.top20.toFixed(1)}%` : 'n/a';
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `${result.top20WeightedScore.toFixed(1)}%` : 'n/a';
-    console.log(`   ${year}: Correlation=${result.correlation.toFixed(4)}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}, Players=${result.matchedPlayers}`);
+    const top10OverlapText = result.top10Details ? `${result.top10Details.overlapCount}/10` : 'n/a';
+    const top20OverlapText = result.top20Details ? `${result.top20Details.overlapCount}/20` : 'n/a';
+    console.log(`   ${year}: Correlation=${result.correlation.toFixed(4)}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}, Top-10 Overlap=${top10OverlapText}, Top-20 Overlap=${top20OverlapText}, Players=${result.matchedPlayers}`);
   });
 
   console.log('\n💡 Recommendation:');
-  const improvement = bestOptimized.correlation - baselineEvaluation.correlation;
   if (improvement > 0.01) {
     console.log(`   ✅ Use optimized weights - shows ${(improvement).toFixed(4)} improvement`);
   } else if (improvement > 0) {
@@ -3969,17 +4333,25 @@ function runAdaptiveOptimizer() {
     minCount: 10
   });
 
+  let eventTemplateAction = null;
+  let eventTemplateTargets = [];
+  const validationTemplateActions = [];
+
   const output = {
     timestamp: new Date().toISOString(),
     eventId: CURRENT_EVENT_ID,
     tournament: TOURNAMENT_NAME || 'Sony Open',
     dryRun: DRY_RUN,
     optSeed: OPT_SEED_RAW || null,
+    runFingerprint,
     historicalMetricCorrelations,
     currentGeneratedMetricCorrelations,
     currentGeneratedTop20Correlations,
+    historicalCoreTop20Correlations,
+    historicalCoreTop20Blend: HISTORICAL_CORE_TOP20_BLEND,
     currentGeneratedTop20Logistic,
     currentGeneratedTop20CvSummary,
+    cvReliability,
     blendSettings: {
       similarCourseIds: normalizeIdList(sharedConfig.similarCourseIds),
       puttingCourseIds: normalizeIdList(sharedConfig.puttingCourseIds),
@@ -3988,6 +4360,7 @@ function runAdaptiveOptimizer() {
     },
     suggestedTop20MetricWeights,
     suggestedTop20GroupWeights,
+    conservativeSuggestedTop20GroupWeights,
     tunedTop20GroupWeights,
     availableYears,
     roundsByYearSummary: Object.fromEntries(Object.entries(roundsByYear).map(([year, rounds]) => [year, rounds.length])),
@@ -4053,6 +4426,10 @@ function runAdaptiveOptimizer() {
   const outputBaseName = `${baseName}${seedSuffix}`;
 
   const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_results.json`);
+  const backupJsonPath = backupIfExists(outputPath);
+  if (backupJsonPath) {
+    console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
+  }
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
 
   const textLines = [];
@@ -4060,6 +4437,7 @@ function runAdaptiveOptimizer() {
   textLines.push('ADAPTIVE WEIGHT OPTIMIZER - FINAL RESULTS');
   textLines.push('='.repeat(100));
   textLines.push(`DRY RUN: ${DRY_RUN ? 'ON (template files not modified)' : 'OFF (templates written)'}`);
+  textLines.push('RUN FINGERPRINT: see JSON output (runFingerprint)');
   if (OPT_SEED_RAW) {
     textLines.push(`OPT_SEED: ${OPT_SEED_RAW}`);
   }
@@ -4087,10 +4465,14 @@ function runAdaptiveOptimizer() {
   textLines.push(`STEP 1b: CURRENT-SEASON GENERATED METRICS (${CURRENT_SEASON}, event + similar + putting)`);
   textLines.push('Functions: runRanking (adaptiveOptimizer_v2.js) -> buildPlayerData (utilities/dataPrep.js) -> generatePlayerRankings (modelCore.js)');
   textLines.push('Additional: computeGeneratedMetricCorrelations, computeGeneratedMetricTopNCorrelations, trainTopNLogisticModel, crossValidateTopNLogisticByEvent, buildSuggestedMetricWeights, buildSuggestedGroupWeights (adaptiveOptimizer_v2.js)');
+  textLines.push(`CURRENT-SEASON means season ${CURRENT_SEASON} only (event + similar + putting events).`);
   const reportSimilarCourseIds = normalizeIdList(sharedConfig.similarCourseIds);
   const reportPuttingCourseIds = normalizeIdList(sharedConfig.puttingCourseIds);
   const reportSimilarBlend = clamp01(sharedConfig.similarCoursesWeight, 0.3);
   const reportPuttingBlend = clamp01(sharedConfig.puttingCoursesWeight, 0.35);
+  const reportEventIds = [String(CURRENT_EVENT_ID), ...reportSimilarCourseIds.map(String), ...reportPuttingCourseIds.map(String)];
+  const reportEventIdList = Array.from(new Set(reportEventIds)).join(', ');
+  textLines.push(`Metric events (current season): [${reportEventIdList}]`);
   textLines.push(`Blend settings: similarCourseEvents=${reportSimilarCourseIds.length}, similarBlend=${reportSimilarBlend.toFixed(2)}, puttingCourseEvents=${reportPuttingCourseIds.length}, puttingBlend=${reportPuttingBlend.toFixed(2)} (SG Putting only)`);
   textLines.push(`CURRENT-SEASON GENERATED METRIC CORRELATIONS (${CURRENT_SEASON}, event + similar + putting):`);
   if (currentGeneratedMetricCorrelations.length === 0) {
@@ -4106,6 +4488,16 @@ function runAdaptiveOptimizer() {
     textLines.push(`  No ${CURRENT_SEASON} top-20 correlations computed.`);
   } else {
     currentGeneratedTop20Correlations.forEach(entry => {
+      textLines.push(`  ${entry.index}. ${entry.label}: Corr=${entry.correlation.toFixed(4)}, Samples=${entry.samples}`);
+    });
+  }
+  textLines.push('');
+  textLines.push('HISTORICAL CORE METRIC TOP-20 SIGNAL (all years, event only):');
+  textLines.push(`Blend weight into top-20 signal: ${(HISTORICAL_CORE_TOP20_BLEND * 100).toFixed(0)}%`);
+  if (historicalCoreTop20Correlations.length === 0) {
+    textLines.push('  No historical core top-20 correlations computed.');
+  } else {
+    historicalCoreTop20Correlations.forEach(entry => {
       textLines.push(`  ${entry.index}. ${entry.label}: Corr=${entry.correlation.toFixed(4)}, Samples=${entry.samples}`);
     });
   }
@@ -4161,6 +4553,16 @@ function runAdaptiveOptimizer() {
     });
   }
   textLines.push('');
+  textLines.push(`CV RELIABILITY (event-based): ${(cvReliability * 100).toFixed(1)}%`);
+  textLines.push(`CONSERVATIVE GROUP WEIGHTS (CV-adjusted, model share ${(conservativeSuggestedTop20GroupWeights.modelShare * 100).toFixed(1)}%):`);
+  if (!conservativeSuggestedTop20GroupWeights.weights.length) {
+    textLines.push('  No CV-adjusted group weights available.');
+  } else {
+    conservativeSuggestedTop20GroupWeights.weights.forEach((entry, idx) => {
+      textLines.push(`  ${idx + 1}. ${entry.groupName}: weight=${entry.weight.toFixed(4)}`);
+    });
+  }
+  textLines.push('');
   textLines.push(`STEP 1c: CURRENT-YEAR TEMPLATE BASELINE (${CURRENT_SEASON})`);
   textLines.push('Functions: runRanking, evaluateRankings, computeTemplateCorrelationAlignment (adaptiveOptimizer_v2.js)');
   textLines.push('VALIDATION / DELTA TREND INTEGRATION SUMMARY:');
@@ -4199,6 +4601,11 @@ function runAdaptiveOptimizer() {
     }
     textLines.push('');
   }
+  textLines.push('TEMPLATES TESTED (Step 1c):');
+  Object.keys(templateConfigs).sort().forEach(name => {
+    textLines.push(`  - ${name}`);
+  });
+  textLines.push('');
   textLines.push(`RAW TEMPLATE RESULTS (${CURRENT_SEASON}, per template):`);
   templateResults.forEach(result => {
     const displayName = result.name === String(CURRENT_EVENT_ID) ? 'CONFIGURATION_SHEET' : result.name;
@@ -4249,6 +4656,7 @@ function runAdaptiveOptimizer() {
   textLines.push('');
   textLines.push('STEP 2: TOP-20 GROUP WEIGHT TUNING');
   textLines.push('Functions: selectOptimizableGroups, runRanking, evaluateRankings (adaptiveOptimizer_v2.js)');
+  textLines.push(`Scope: event ${CURRENT_EVENT_ID} across all years (current-field only)`);
   textLines.push('TUNED TOP-20 GROUP WEIGHTS (BEST CANDIDATE):');
   if (!tunedTop20GroupWeights) {
     textLines.push('  No tuned group weights available.');
@@ -4268,6 +4676,7 @@ function runAdaptiveOptimizer() {
   textLines.push('');
   textLines.push('STEP 3: WEIGHT OPTIMIZATION (2026 with approach metrics)');
   textLines.push('Functions: adjustMetricWeights, computeMetricAlignmentScore, runRanking, evaluateRankings (adaptiveOptimizer_v2.js)');
+  textLines.push('Objective: current-year results only (current-year field)');
   textLines.push(`Baseline Template: ${bestTemplate.name}`);
   textLines.push(`Best Correlation: ${bestOptimized.correlation.toFixed(4)}`);
   textLines.push(`Metric Alignment Score (Top-20 KPI blend): ${bestOptimized.alignmentScore.toFixed(4)}`);
@@ -4282,10 +4691,7 @@ function runAdaptiveOptimizer() {
   textLines.push(`Top-10 Accuracy: ${typeof bestOptimized.top10 === 'number' ? `${bestOptimized.top10.toFixed(1)}%` : 'n/a'}`);
   textLines.push(`Top-20 Accuracy: ${typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a'}`);
   textLines.push(`Top-20 Weighted Score: ${typeof bestOptimized.top20WeightedScore === 'number' ? `${bestOptimized.top20WeightedScore.toFixed(1)}%` : 'n/a'}`);
-  textLines.push(`Matched Players: ${bestOptimized.matchedPlayers}`);
-  if (optimizedEvaluationCurrent) {
-    textLines.push(`Matched Players (current year): ${optimizedEvaluationCurrent.matchedPlayers}`);
-  }
+  textLines.push(`Matched Players (current year): ${bestOptimized.matchedPlayers}`);
   textLines.push('');
   textLines.push('Optimized Group Weights:');
   Object.entries(bestOptimized.weights).forEach(([metric, weight]) => {
@@ -4326,8 +4732,10 @@ function runAdaptiveOptimizer() {
     const top10Text = typeof result.top10 === 'number' ? `, Top-10=${result.top10.toFixed(1)}%` : '';
     const top20Text = typeof result.top20 === 'number' ? `, Top-20=${result.top20.toFixed(1)}%` : '';
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `, Top-20 Weighted=${result.top20WeightedScore.toFixed(1)}%` : '';
+    const top10OverlapText = result.top10Details ? `, Top-10 Overlap=${result.top10Details.overlapCount}/10` : '';
+    const top20OverlapText = result.top20Details ? `, Top-20 Overlap=${result.top20Details.overlapCount}/20` : '';
     textLines.push(
-      `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}, Players=${result.matchedPlayers}`
+      `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}${top10OverlapText}${top20OverlapText}, Players=${result.matchedPlayers}`
     );
   });
   textLines.push('');
@@ -4340,8 +4748,30 @@ function runAdaptiveOptimizer() {
     textLines.push(`No improvement, stick with ${bestTemplate.name}`);
   }
   textLines.push('');
+  textLines.push('TEMPLATE WRITE SUMMARY:');
+  if (eventTemplateAction) {
+    const actionLabel = eventTemplateAction === 'dryRun' ? 'dry-run output' : 'write';
+    textLines.push(`Event template (${optimizedTemplate.name}): ${actionLabel}`);
+    eventTemplateTargets.forEach(target => textLines.push(`  - ${target}`));
+  } else {
+    textLines.push(`Event template (${optimizedTemplate.name}): not written`);
+  }
+  if (validationTemplateActions.length > 0) {
+    validationTemplateActions.forEach(entry => {
+      const actionLabel = entry.action === 'dryRun' ? 'dry-run output' : 'write';
+      textLines.push(`Standard template (${entry.name}): ${actionLabel}`);
+      textLines.push(`  - ${entry.target}`);
+    });
+  } else {
+    textLines.push('Standard templates: no updates');
+  }
+  textLines.push('');
   textLines.push('---');
   const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_results.txt`);
+  const backupTextPath = backupIfExists(textOutputPath);
+  if (backupTextPath) {
+    console.log(`🗄️  Backed up previous text results to: ${backupTextPath}`);
+  }
   fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
   const optimizedTop20Desc = typeof bestOptimized.top20 === 'number' ? `${bestOptimized.top20.toFixed(1)}%` : 'n/a';
@@ -4362,25 +4792,137 @@ function runAdaptiveOptimizer() {
     metricWeights: nestMetricWeights(metricWeightsWithInversions)
   };
 
+  const STANDARD_TEMPLATES = new Set(['POWER', 'BALANCED', 'TECHNICAL']);
+  const baselineTemplateForCompare = {
+    groupWeights: bestTemplate.groupWeights,
+    metricWeights: bestTemplate.metricWeights
+  };
+  const optimizedTemplateForCompare = {
+    groupWeights: bestOptimized.weights,
+    metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
+  };
+  const shouldWriteEventTemplate = templatesAreDifferent(
+    optimizedTemplateForCompare,
+    baselineTemplateForCompare,
+    metricConfig,
+    1e-4
+  );
+  const allowDryRunTemplateOutputs = DRY_RUN;
+  const shouldAttemptEventWrite = shouldWriteEventTemplate && (WRITE_TEMPLATES || allowDryRunTemplateOutputs);
+  if (!shouldWriteEventTemplate) {
+    console.log('ℹ️  Event template not written (optimized weights match baseline).');
+  }
+
+  const validationTemplateSourceLabel = validationData?.weightTemplatesPath
+    ? path.basename(validationData.weightTemplatesPath)
+    : null;
+  const validationTypeToUpdate = validationCourseType && STANDARD_TEMPLATES.has(validationCourseType)
+    ? validationCourseType
+    : null;
+  const validationTemplateResult = validationTemplateName
+    ? templateResults.find(result => result.name === validationTemplateName)
+    : null;
+  const standardTemplateResult = validationTypeToUpdate
+    ? templateResults.find(result => result.name === validationTypeToUpdate)
+    : null;
+  const validationEval = validationTemplateResult?.evaluationCurrent || validationTemplateResult?.evaluation || null;
+  const standardEval = standardTemplateResult?.evaluationCurrent || standardTemplateResult?.evaluation || null;
+  const validationImprovementPct = (validationEval && standardEval && Math.abs(standardEval.correlation) > 0)
+    ? (validationEval.correlation - standardEval.correlation) / Math.abs(standardEval.correlation)
+    : null;
+  const shouldUpdateStandardTemplate = typeof validationImprovementPct === 'number'
+    ? validationImprovementPct >= 0.01
+    : false;
+
+  const validationTemplatesToWrite = ((WRITE_VALIDATION_TEMPLATES || WRITE_TEMPLATES || allowDryRunTemplateOutputs) && validationTypeToUpdate && shouldUpdateStandardTemplate)
+    ? [buildValidationTemplateForType({
+        type: validationTypeToUpdate,
+        metricConfig,
+        validationData,
+        templateConfigs,
+        eventId: CURRENT_EVENT_ID,
+        sourceLabel: validationTemplateSourceLabel
+      })]
+      .filter(Boolean)
+    : [];
+
   const writeBackTargets = [
     path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js'),
     path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
   ];
 
   writeBackTargets.forEach(filePath => {
-    const result = upsertTemplateInFile(filePath, optimizedTemplate, { replaceByEventId: true, dryRun: DRY_RUN });
-    if (result.updated) {
-      if (DRY_RUN && result.content) {
-        const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
-        fs.writeFileSync(dryRunPath, result.content, 'utf8');
-        console.log(`🧪 Dry-run template output saved to: ${dryRunPath}`);
+    if (shouldAttemptEventWrite) {
+      const result = upsertTemplateInFile(filePath, optimizedTemplate, { replaceByEventId: true, dryRun: DRY_RUN });
+      if (result.updated) {
+        if (DRY_RUN && result.content) {
+          const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
+          fs.writeFileSync(dryRunPath, result.content, 'utf8');
+          console.log(`🧪 Dry-run template output saved to: ${dryRunPath}`);
+          eventTemplateAction = 'dryRun';
+          eventTemplateTargets.push(dryRunPath);
+        } else {
+          console.log(`✅ Template written to: ${filePath}`);
+          eventTemplateAction = 'write';
+          eventTemplateTargets.push(filePath);
+        }
       } else {
-        console.log(`✅ Template written to: ${filePath}`);
+        console.warn(`⚠️  Template not written (unable to update): ${filePath}`);
       }
-    } else {
-      console.warn(`⚠️  Template not written (unable to update): ${filePath}`);
+    }
+
+    if (validationTemplatesToWrite.length > 0) {
+      validationTemplatesToWrite.forEach(validationTemplate => {
+        const existingTemplate = templateConfigs?.[validationTemplate.name] || null;
+        const differs = templatesAreDifferent(validationTemplate, existingTemplate, metricConfig, 1e-4);
+        if (!differs) {
+          console.log(`ℹ️  Validation template matches existing ${validationTemplate.name}; skipping update.`);
+          return;
+        }
+        const validationResult = upsertTemplateInFile(filePath, validationTemplate, { replaceByEventId: false, dryRun: DRY_RUN });
+        if (validationResult.updated) {
+          if (DRY_RUN && validationResult.content) {
+            const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${validationTemplate.name}_${path.basename(filePath)}`);
+            fs.writeFileSync(dryRunPath, validationResult.content, 'utf8');
+            console.log(`🧪 Dry-run validation template saved to: ${dryRunPath}`);
+            validationTemplateActions.push({
+              name: validationTemplate.name,
+              action: 'dryRun',
+              target: dryRunPath
+            });
+          } else {
+            console.log(`✅ Validation template written to: ${filePath} (${validationTemplate.name})`);
+            validationTemplateActions.push({
+              name: validationTemplate.name,
+              action: 'write',
+              target: filePath
+            });
+          }
+        } else {
+          console.warn(`⚠️  Validation template not written (unable to update): ${filePath} (${validationTemplate.name})`);
+        }
+      });
     }
   });
+
+  console.log('\n🧾 Template write summary:');
+  if (eventTemplateAction) {
+    const actionLabel = eventTemplateAction === 'dryRun' ? 'dry-run output' : 'write';
+    console.log(`   Event template (${optimizedTemplate.name}): ${actionLabel}`);
+    eventTemplateTargets.forEach(target => console.log(`     - ${target}`));
+  } else {
+    console.log(`   Event template (${optimizedTemplate.name}): not written`);
+  }
+
+  if (validationTemplateActions.length > 0) {
+    validationTemplateActions.forEach(entry => {
+      const actionLabel = entry.action === 'dryRun' ? 'dry-run output' : 'write';
+      console.log(`   Standard template (${entry.name}): ${actionLabel}`);
+      console.log(`     - ${entry.target}`);
+    });
+  } else {
+    console.log('   Standard templates: no updates');
+  }
 
   console.log(`✅ JSON results also saved to: output/${outputBaseName}_results.json`);
   console.log(`✅ Text results saved to: output/${outputBaseName}_results.txt\n`);
