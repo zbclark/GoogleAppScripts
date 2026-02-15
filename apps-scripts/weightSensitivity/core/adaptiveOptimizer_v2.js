@@ -1905,6 +1905,70 @@ function buildTop20CompositeScore(evaluation) {
   return 0;
 }
 
+function compareEvaluations(a, b) {
+  if (!a && !b) return 0;
+  if (!a) return -1;
+  if (!b) return 1;
+
+  const aWeighted = typeof a.top20WeightedScore === 'number' ? a.top20WeightedScore : -Infinity;
+  const bWeighted = typeof b.top20WeightedScore === 'number' ? b.top20WeightedScore : -Infinity;
+  if (aWeighted !== bWeighted) return aWeighted > bWeighted ? 1 : -1;
+
+  const aCorr = typeof a.correlation === 'number' ? a.correlation : -Infinity;
+  const bCorr = typeof b.correlation === 'number' ? b.correlation : -Infinity;
+  if (aCorr !== bCorr) return aCorr > bCorr ? 1 : -1;
+
+  const aTop20 = typeof a.top20 === 'number' ? a.top20 : -Infinity;
+  const bTop20 = typeof b.top20 === 'number' ? b.top20 : -Infinity;
+  if (aTop20 !== bTop20) return aTop20 > bTop20 ? 1 : -1;
+
+  return 0;
+}
+
+function evaluateStressTest(evaluation, options = {}) {
+  if (!evaluation) {
+    return { status: 'n/a', reason: 'no evaluation' };
+  }
+  const {
+    minPlayers = 20,
+    minCorr = 0.1,
+    minTop20Weighted = 60
+  } = options;
+
+  const matchedPlayers = typeof evaluation.matchedPlayers === 'number'
+    ? evaluation.matchedPlayers
+    : null;
+  if (matchedPlayers !== null && matchedPlayers < minPlayers) {
+    return {
+      status: 'insufficient',
+      reason: `players<${minPlayers}`,
+      matchedPlayers
+    };
+  }
+
+  const subsetEval = evaluation.adjusted?.subset || null;
+  const correlation = typeof subsetEval?.correlation === 'number'
+    ? subsetEval.correlation
+    : evaluation.correlation;
+  const top20Weighted = typeof subsetEval?.top20WeightedScore === 'number'
+    ? subsetEval.top20WeightedScore
+    : evaluation.top20WeightedScore;
+
+  const reasons = [];
+  if (typeof correlation === 'number' && correlation < minCorr) {
+    reasons.push(`corr<${minCorr}`);
+  }
+  if (typeof top20Weighted === 'number' && top20Weighted < minTop20Weighted) {
+    reasons.push(`top20W<${minTop20Weighted}%`);
+  }
+
+  return {
+    status: reasons.length ? 'fail' : 'pass',
+    reason: reasons.join(', '),
+    matchedPlayers
+  };
+}
+
 const TEMPLATE_METRIC_MAP = {
   'Driving Distance': 'drivingDistance',
   'Driving Accuracy': 'drivingAccuracy',
@@ -2024,6 +2088,55 @@ function calculateTopNWeightedScore(predictions, actualResults, n) {
   return (dcg / idcg) * 100;
 }
 
+function calculateTopNAccuracyFromActualRanks(predictions, actualRankMap, n) {
+  if (!predictions.length || !actualRankMap || actualRankMap.size === 0) return 0;
+  const hasRank = predictions.some(p => typeof p.rank === 'number');
+  const sortedPredictions = hasRank
+    ? [...predictions].filter(p => typeof p.rank === 'number').sort((a, b) => (a.rank || 0) - (b.rank || 0))
+    : [...predictions];
+  const topPredicted = sortedPredictions.slice(0, n).map(p => String(p.dgId));
+  const topActual = Array.from(actualRankMap.entries())
+    .filter(([, rank]) => typeof rank === 'number' && rank <= n)
+    .map(([dgId]) => String(dgId));
+  const topActualSet = new Set(topActual);
+  const overlap = topPredicted.filter(id => topActualSet.has(id));
+  const denominator = topPredicted.length || n;
+  return denominator === 0 ? 0 : (overlap.length / denominator) * 100;
+}
+
+function calculateTopNWeightedScoreFromActualRanks(predictions, actualRankMap, n) {
+  if (!predictions.length || !actualRankMap || actualRankMap.size === 0) return 0;
+  const hasRank = predictions.some(p => typeof p.rank === 'number');
+  const sortedPredictions = hasRank
+    ? [...predictions].filter(p => typeof p.rank === 'number').sort((a, b) => (a.rank || 0) - (b.rank || 0))
+    : [...predictions];
+
+  const gain = finishRank => {
+    if (!finishRank || Number.isNaN(finishRank) || finishRank > n) return 0;
+    return (n - finishRank + 1);
+  };
+
+  const topPredictions = sortedPredictions.filter(p => actualRankMap.has(String(p.dgId))).slice(0, n);
+  const dcg = topPredictions.reduce((sum, player, index) => {
+    const finishRank = actualRankMap.get(String(player.dgId));
+    const rel = gain(finishRank);
+    return sum + (rel / Math.log2(index + 2));
+  }, 0);
+
+  const ideal = Array.from(actualRankMap.entries())
+    .filter(([, rank]) => typeof rank === 'number' && rank <= n)
+    .sort((a, b) => a[1] - b[1])
+    .slice(0, n);
+
+  const idcg = ideal.reduce((sum, [, rank], index) => {
+    const rel = gain(rank);
+    return sum + (rel / Math.log2(index + 2));
+  }, 0);
+
+  if (idcg === 0) return 0;
+  return (dcg / idcg) * 100;
+}
+
 function parseFinishPosition(posValue) {
   const posStr = String(posValue || '').trim().toUpperCase();
   if (!posStr) return null;
@@ -2033,10 +2146,11 @@ function parseFinishPosition(posValue) {
 }
 
 function evaluateRankings(predictions, actualResults, options = {}) {
-  const { includeTopN = true, includeTopNDetails = false } = options;
+  const { includeTopN = true, includeTopNDetails = false, includeAdjusted = true } = options;
   const scores = [];
   const positions = [];
   const errors = [];
+  const matched = [];
   
   predictions.forEach((pred, idx) => {
     const actual = actualResults.find(a => String(a.dgId) === String(pred.dgId));
@@ -2045,6 +2159,7 @@ function evaluateRankings(predictions, actualResults, options = {}) {
       scores.push(rankValue);
       positions.push(actual.finishPosition);
       errors.push(rankValue - actual.finishPosition);
+      matched.push({ dgId: String(pred.dgId), predRank: rankValue, actualFinish: actual.finishPosition });
     }
   });
   
@@ -2086,6 +2201,74 @@ function evaluateRankings(predictions, actualResults, options = {}) {
     top20WeightedScore: includeTopN ? calculateTopNWeightedScore(predictions, actualResults, 20) : null,
     matchedPlayers: scores.length
   };
+
+  if (includeAdjusted && matched.length > 0) {
+    const sortedByFinish = [...matched].sort((a, b) => a.actualFinish - b.actualFinish);
+    const actualSubsetRankMap = new Map();
+    sortedByFinish.forEach((entry, index) => {
+      actualSubsetRankMap.set(entry.dgId, index + 1);
+    });
+
+    const subsetScores = [];
+    const subsetPositions = [];
+    const subsetErrors = [];
+    matched.forEach(entry => {
+      const actualRank = actualSubsetRankMap.get(entry.dgId);
+      if (!actualRank) return;
+      subsetScores.push(entry.predRank);
+      subsetPositions.push(actualRank);
+      subsetErrors.push(entry.predRank - actualRank);
+    });
+
+    const subsetCorrelation = calculatePearsonCorrelation(subsetScores, subsetPositions);
+    const subsetRmse = Math.sqrt(
+      subsetScores.reduce((sum, s, i) => sum + Math.pow(s - subsetPositions[i], 2), 0) / subsetScores.length
+    );
+    const subsetMeanError = subsetErrors.reduce((sum, value) => sum + value, 0) / subsetErrors.length;
+    const subsetStdDev = Math.sqrt(
+      subsetErrors.reduce((sum, value) => sum + Math.pow(value - subsetMeanError, 2), 0) / subsetErrors.length
+    );
+    const subsetMae = subsetErrors.reduce((sum, value) => sum + Math.abs(value), 0) / subsetErrors.length;
+    const subsetTop10 = includeTopN ? calculateTopNAccuracyFromActualRanks(predictions, actualSubsetRankMap, 10) : null;
+    const subsetTop20 = includeTopN ? calculateTopNAccuracyFromActualRanks(predictions, actualSubsetRankMap, 20) : null;
+    const subsetTop20Weighted = includeTopN ? calculateTopNWeightedScoreFromActualRanks(predictions, actualSubsetRankMap, 20) : null;
+
+    const denom = subsetScores.length > 1 ? (subsetScores.length - 1) : 1;
+    const predPercentiles = subsetScores.map(rank => (rank - 1) / denom);
+    const actualPercentiles = subsetPositions.map(rank => (rank - 1) / denom);
+    const pctErrors = predPercentiles.map((value, idx) => value - actualPercentiles[idx]);
+    const pctCorrelation = calculatePearsonCorrelation(predPercentiles, actualPercentiles);
+    const pctRmse = Math.sqrt(
+      predPercentiles.reduce((sum, value, idx) => sum + Math.pow(value - actualPercentiles[idx], 2), 0) / predPercentiles.length
+    );
+    const pctMeanError = pctErrors.reduce((sum, value) => sum + value, 0) / pctErrors.length;
+    const pctStdDev = Math.sqrt(
+      pctErrors.reduce((sum, value) => sum + Math.pow(value - pctMeanError, 2), 0) / pctErrors.length
+    );
+    const pctMae = pctErrors.reduce((sum, value) => sum + Math.abs(value), 0) / pctErrors.length;
+
+    evaluation.adjusted = {
+      subset: {
+        correlation: subsetCorrelation,
+        rmse: subsetRmse,
+        rSquared: subsetCorrelation * subsetCorrelation,
+        meanError: subsetMeanError,
+        stdDevError: subsetStdDev,
+        mae: subsetMae,
+        top10: subsetTop10,
+        top20: subsetTop20,
+        top20WeightedScore: subsetTop20Weighted
+      },
+      percentile: {
+        correlation: pctCorrelation,
+        rmse: pctRmse,
+        rSquared: pctCorrelation * pctCorrelation,
+        meanError: pctMeanError,
+        stdDevError: pctStdDev,
+        mae: pctMae
+      }
+    };
+  }
 
   if (includeTopN && includeTopNDetails) {
     const hasRank = predictions.some(p => typeof p.rank === 'number');
@@ -4235,7 +4418,8 @@ function runAdaptiveOptimizer() {
       : resultsCurrent;
     const evaluation = evaluateRankings(ranking.players, evaluationResults, {
       includeTopN: true,
-      includeTopNDetails: true
+      includeTopNDetails: true,
+      includeAdjusted: true
     });
     multiYearResults[year] = evaluation;
     
@@ -4244,7 +4428,23 @@ function runAdaptiveOptimizer() {
     const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
     const top10OverlapText = evaluation.top10Details ? `${evaluation.top10Details.overlapCount}/10` : 'n/a';
     const top20OverlapText = evaluation.top20Details ? `${evaluation.top20Details.overlapCount}/20` : 'n/a';
-    console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText} | Top-10 Overlap: ${top10OverlapText} | Top-20 Overlap: ${top20OverlapText}`);
+    const stress = evaluateStressTest(evaluation, {
+      minPlayers: 20,
+      minCorr: 0.1,
+      minTop20Weighted: 60
+    });
+    const stressText = stress.status
+      ? `${stress.status.toUpperCase()}${stress.reason ? ` (${stress.reason})` : ''}`
+      : 'n/a';
+    const subsetEval = evaluation.adjusted?.subset || null;
+    const percentileEval = evaluation.adjusted?.percentile || null;
+    const subsetTop10Text = subsetEval && typeof subsetEval.top10 === 'number' ? `${subsetEval.top10.toFixed(1)}%` : 'n/a';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+    const pctTop10Text = percentileEval && typeof percentileEval.top10 === 'number' ? `${percentileEval.top10.toFixed(1)}%` : 'n/a';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+    console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText} | Subset RMSE: ${subsetRmseText} | Subset Top-10: ${subsetTop10Text} | Subset Top-20: ${subsetTop20Text} | Pct RMSE: ${pctRmseText} | Pct Top-10: ${pctTop10Text} | Pct Top-20: ${pctTop20Text} | Stress: ${stressText} | Top-10 Overlap: ${top10OverlapText} | Top-20 Overlap: ${top20OverlapText}`);
   }
 
   // ============================================================================
@@ -4277,7 +4477,13 @@ function runAdaptiveOptimizer() {
     const top20WeightedText = typeof evalResult.top20WeightedScore === 'number' ? `${evalResult.top20WeightedScore.toFixed(1)}%` : 'n/a';
     const top10OverlapText = evalResult.top10Details ? `${evalResult.top10Details.overlapCount}/10` : 'n/a';
     const top20OverlapText = evalResult.top20Details ? `${evalResult.top20Details.overlapCount}/20` : 'n/a';
-    console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
+    const subsetEval = evalResult.adjusted?.subset || null;
+    const percentileEval = evalResult.adjusted?.percentile || null;
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+    console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Subset RMSE=${subsetRmseText} | Subset Top-20=${subsetTop20Text} | Pct RMSE=${pctRmseText} | Pct Top-20=${pctTop20Text} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
   });
 
   // Summary output
@@ -4313,7 +4519,13 @@ function runAdaptiveOptimizer() {
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `${result.top20WeightedScore.toFixed(1)}%` : 'n/a';
     const top10OverlapText = result.top10Details ? `${result.top10Details.overlapCount}/10` : 'n/a';
     const top20OverlapText = result.top20Details ? `${result.top20Details.overlapCount}/20` : 'n/a';
-    console.log(`   ${year}: Correlation=${result.correlation.toFixed(4)}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}, Top-10 Overlap=${top10OverlapText}, Top-20 Overlap=${top20OverlapText}, Players=${result.matchedPlayers}`);
+    const subsetEval = result.adjusted?.subset || null;
+    const percentileEval = result.adjusted?.percentile || null;
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+    console.log(`   ${year}: Correlation=${result.correlation.toFixed(4)}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}, Subset RMSE=${subsetRmseText}, Subset Top-20=${subsetTop20Text}, Pct RMSE=${pctRmseText}, Pct Top-20=${pctTop20Text}, Top-10 Overlap=${top10OverlapText}, Top-20 Overlap=${top20OverlapText}, Players=${result.matchedPlayers}`);
   });
 
   console.log('\n💡 Recommendation:');
@@ -4336,6 +4548,8 @@ function runAdaptiveOptimizer() {
   let eventTemplateAction = null;
   let eventTemplateTargets = [];
   const validationTemplateActions = [];
+
+  const optimizedTemplateName = courseTemplateKey || String(CURRENT_EVENT_ID);
 
   const output = {
     timestamp: new Date().toISOString(),
@@ -4431,6 +4645,30 @@ function runAdaptiveOptimizer() {
     console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
   }
   fs.writeFileSync(outputPath, JSON.stringify(output, null, 2));
+
+  const STANDARD_TEMPLATES = new Set(['POWER', 'BALANCED', 'TECHNICAL']);
+
+  const validationTemplateSourceLabel = validationData?.weightTemplatesPath
+    ? path.basename(validationData.weightTemplatesPath)
+    : null;
+  const validationTypeToUpdate = validationCourseType && STANDARD_TEMPLATES.has(validationCourseType)
+    ? validationCourseType
+    : null;
+  const validationTemplateResult = validationTemplateName
+    ? templateResults.find(result => result.name === validationTemplateName)
+    : null;
+  const standardTemplateResult = validationTypeToUpdate
+    ? templateResults.find(result => result.name === validationTypeToUpdate)
+    : null;
+  const validationEval = validationTemplateResult?.evaluationCurrent || validationTemplateResult?.evaluation || null;
+  const standardEval = standardTemplateResult?.evaluationCurrent || standardTemplateResult?.evaluation || null;
+  const validationImprovementPct = (validationEval && standardEval && Math.abs(standardEval.correlation) > 0)
+    ? (validationEval.correlation - standardEval.correlation) / Math.abs(standardEval.correlation)
+    : null;
+  const validationIsRecommendation = validationTemplateName && bestTemplate.name === validationTemplateName;
+  const shouldUpdateStandardTemplate = typeof validationImprovementPct === 'number'
+    ? validationImprovementPct >= 0.01
+    : false;
 
   const textLines = [];
   textLines.push('='.repeat(100));
@@ -4734,8 +4972,22 @@ function runAdaptiveOptimizer() {
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `, Top-20 Weighted=${result.top20WeightedScore.toFixed(1)}%` : '';
     const top10OverlapText = result.top10Details ? `, Top-10 Overlap=${result.top10Details.overlapCount}/10` : '';
     const top20OverlapText = result.top20Details ? `, Top-20 Overlap=${result.top20Details.overlapCount}/20` : '';
+    const subsetEval = result.adjusted?.subset || null;
+    const percentileEval = result.adjusted?.percentile || null;
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? `, Subset RMSE=${subsetEval.rmse.toFixed(2)}` : '';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `, Subset Top-20=${subsetEval.top20.toFixed(1)}%` : '';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? `, Pct RMSE=${percentileEval.rmse.toFixed(2)}` : '';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `, Pct Top-20=${percentileEval.top20.toFixed(1)}%` : '';
+    const stress = evaluateStressTest(result, {
+      minPlayers: 20,
+      minCorr: 0.1,
+      minTop20Weighted: 60
+    });
+    const stressText = stress.status
+      ? `, Stress=${stress.status.toUpperCase()}${stress.reason ? ` (${stress.reason})` : ''}`
+      : '';
     textLines.push(
-      `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}${top10OverlapText}${top20OverlapText}, Players=${result.matchedPlayers}`
+      `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}${subsetRmseText}${subsetTop20Text}${pctRmseText}${pctTop20Text}${stressText}${top10OverlapText}${top20OverlapText}, Players=${result.matchedPlayers}`
     );
   });
   textLines.push('');
@@ -4751,10 +5003,10 @@ function runAdaptiveOptimizer() {
   textLines.push('TEMPLATE WRITE SUMMARY:');
   if (eventTemplateAction) {
     const actionLabel = eventTemplateAction === 'dryRun' ? 'dry-run output' : 'write';
-    textLines.push(`Event template (${optimizedTemplate.name}): ${actionLabel}`);
+    textLines.push(`Event template (${optimizedTemplateName}): ${actionLabel}`);
     eventTemplateTargets.forEach(target => textLines.push(`  - ${target}`));
   } else {
-    textLines.push(`Event template (${optimizedTemplate.name}): not written`);
+    textLines.push(`Event template (${optimizedTemplateName}): not written`);
   }
   if (validationTemplateActions.length > 0) {
     validationTemplateActions.forEach(entry => {
@@ -4763,7 +5015,11 @@ function runAdaptiveOptimizer() {
       textLines.push(`  - ${entry.target}`);
     });
   } else {
-    textLines.push('Standard templates: no updates');
+    if (validationIsRecommendation && typeof validationImprovementPct === 'number' && validationImprovementPct < 0.01) {
+      textLines.push('Standard templates: no updates (validation improvement < 1%)');
+    } else {
+      textLines.push('Standard templates: no updates');
+    }
   }
   textLines.push('');
   textLines.push('---');
@@ -4792,7 +5048,6 @@ function runAdaptiveOptimizer() {
     metricWeights: nestMetricWeights(metricWeightsWithInversions)
   };
 
-  const STANDARD_TEMPLATES = new Set(['POWER', 'BALANCED', 'TECHNICAL']);
   const baselineTemplateForCompare = {
     groupWeights: bestTemplate.groupWeights,
     metricWeights: bestTemplate.metricWeights
@@ -4801,7 +5056,8 @@ function runAdaptiveOptimizer() {
     groupWeights: bestOptimized.weights,
     metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
   };
-  const shouldWriteEventTemplate = templatesAreDifferent(
+  const optimizedBeatsBaseline = compareEvaluations(bestOptimized, baselineEvaluation) > 0;
+  const shouldWriteEventTemplate = optimizedBeatsBaseline && templatesAreDifferent(
     optimizedTemplateForCompare,
     baselineTemplateForCompare,
     metricConfig,
@@ -4812,27 +5068,6 @@ function runAdaptiveOptimizer() {
   if (!shouldWriteEventTemplate) {
     console.log('ℹ️  Event template not written (optimized weights match baseline).');
   }
-
-  const validationTemplateSourceLabel = validationData?.weightTemplatesPath
-    ? path.basename(validationData.weightTemplatesPath)
-    : null;
-  const validationTypeToUpdate = validationCourseType && STANDARD_TEMPLATES.has(validationCourseType)
-    ? validationCourseType
-    : null;
-  const validationTemplateResult = validationTemplateName
-    ? templateResults.find(result => result.name === validationTemplateName)
-    : null;
-  const standardTemplateResult = validationTypeToUpdate
-    ? templateResults.find(result => result.name === validationTypeToUpdate)
-    : null;
-  const validationEval = validationTemplateResult?.evaluationCurrent || validationTemplateResult?.evaluation || null;
-  const standardEval = standardTemplateResult?.evaluationCurrent || standardTemplateResult?.evaluation || null;
-  const validationImprovementPct = (validationEval && standardEval && Math.abs(standardEval.correlation) > 0)
-    ? (validationEval.correlation - standardEval.correlation) / Math.abs(standardEval.correlation)
-    : null;
-  const shouldUpdateStandardTemplate = typeof validationImprovementPct === 'number'
-    ? validationImprovementPct >= 0.01
-    : false;
 
   const validationTemplatesToWrite = ((WRITE_VALIDATION_TEMPLATES || WRITE_TEMPLATES || allowDryRunTemplateOutputs) && validationTypeToUpdate && shouldUpdateStandardTemplate)
     ? [buildValidationTemplateForType({

@@ -92,71 +92,77 @@ const WEIGHT_TEMPLATES = {
   },
   TECHNICAL: {
     name: "TECHNICAL",
-    description: "Data-driven weights for precision courses (LOW Distance: 0.06, HIGH Accuracy: 0.25, Around Green: 0.33)",
+    description: "Validation CSV TECHNICAL template (2026 Validation - Weight Templates.csv)",
     groupWeights: {
-      "Driving Performance": 0.065,      // Distance 0.06 is negligible
-      "Approach - Short (<100)": 0.148,  // SG T2G 0.70
-      "Approach - Mid (100-150)": 0.185, // SG Approach 0.42
-      "Approach - Long (150-200)": 0.167,
-      "Approach - Very Long (>200)": 0.037,
-      "Putting": 0.107,                  // SG Putting 0.39
-      "Around the Green": 0.125,         // SG Around Green 0.33 (HIGH!)
-      "Scoring": 0.097,                  // Score 0.97
-      "Course Management": 0.069         // Model Rank 0.17
+      "Driving Performance": 0.06149975751697382,
+      "Approach - Short (<100)": 0.06612209020368574,
+      "Approach - Mid (100-150)": 0.16038736663433562,
+      "Approach - Long (150-200)": 0.16875303103782735,
+      "Approach - Very Long (>200)": 0.08679376818622696,
+      "Putting": 0.025430407371484,
+      "Around the Green": 0.004425315227934045,
+      "Scoring": 0.17587596993210478,
+      "Course Management": 0.2507122938894278
     },
     metricWeights: {
       "Driving Performance": {
-        "Driving Distance": { weight: 0.086 },
-        "Driving Accuracy": { weight: 0.354 },
-        "SG OTT": { weight: 0.560 }
+        "Driving Distance": { weight: 0.11474316210807203 },
+        "Driving Accuracy": { weight: 0.28739159439626416 },
+        "SG OTT": { weight: 0.5978652434956637 }
       },
       "Approach - Short (<100)": {
-        "Approach <100 GIR": { weight: 0.09 },
-        "Approach <100 SG": { weight: 0.32 },
-        "Approach <100 Prox": { weight: 0.59 }
+        "Approach <100 GIR": { weight: 0.12888443362451668 },
+        "Approach <100 SG": { weight: 0.09351281684089932 },
+        "Approach <100 Prox": { weight: 0.777602749534584 }
       },
       "Approach - Mid (100-150)": {
-        "Approach <150 FW GIR": { weight: 0.09 },
-        "Approach <150 FW SG": { weight: 0.29 },
-        "Approach <150 FW Prox": { weight: 0.62 }
+        "Approach <150 FW GIR": { weight: 0.11734028683181226 },
+        "Approach <150 FW SG": { weight: 0.19335071707953064 },
+        "Approach <150 FW Prox": { weight: 0.6893089960886571 },
+        "Approach <150 Rough GIR": { weight: 0 },
+        "Approach <150 Rough SG": { weight: 0 },
+        "Approach <150 Rough Prox": { weight: 0 }
       },
       "Approach - Long (150-200)": {
-        "Approach <200 FW GIR": { weight: 0.08 },
-        "Approach <200 FW SG": { weight: 0.27 },
-        "Approach <200 FW Prox": { weight: 0.65 }
+        "Approach <200 FW GIR": { weight: 0.10435349747268874 },
+        "Approach <200 FW SG": { weight: 0.3277352030001631 },
+        "Approach <200 FW Prox": { weight: 0.5679112995271483 },
+        "Approach >150 Rough GIR": { weight: 0 },
+        "Approach >150 Rough SG": { weight: 0 },
+        "Approach >150 Rough Prox": { weight: 0 }
       },
       "Approach - Very Long (>200)": {
-        "Approach >200 FW GIR": { weight: 0.08 },
-        "Approach >200 FW SG": { weight: 0.22 },
-        "Approach >200 FW Prox": { weight: 0.70 }
+        "Approach >200 FW GIR": { weight: 0.09394081728511038 },
+        "Approach >200 FW SG": { weight: 0.15089243776420855 },
+        "Approach >200 FW Prox": { weight: 0.755166744950681 }
       },
       "Putting": {
-        "SG Putting": { weight: 1.0 }
+        "SG Putting": { weight: 1 }
       },
       "Around the Green": {
-        "SG Around Green": { weight: 1.0 }
+        "SG Around Green": { weight: 1 }
       },
       "Scoring": {
-        "SG T2G": { weight: 0.18 },
-        "Scoring Average": { weight: 0.12 },
-        "Birdie Chances Created": { weight: 0.10 },
-        "Scoring: Approach <100 SG": { weight: 0.15 },
-        "Scoring: Approach <150 FW SG": { weight: 0.15 },
-        "Scoring: Approach <150 Rough SG": { weight: 0.15 },
-        "Scoring: Approach >150 Rough SG": { weight: 0.10 },
-        "Scoring: Approach <200 FW SG": { weight: 0.05 },
-        "Scoring: Approach >200 FW SG": { weight: 0.00, year: 2025 }
+        "SG T2G": { weight: 0.40277466994853434 },
+        "Scoring Average": { weight: 0.18550011188185275 },
+        "Birdie Chances Created": { weight: 0.18371000223763706 },
+        "Scoring: Approach <100 SG": { weight: 0.06645782054150817 },
+        "Scoring: Approach <150 FW SG": { weight: 0.14499888118147236 },
+        "Scoring: Approach <150 Rough SG": { weight: 0.0165585142089953 },
+        "Scoring: Approach <200 FW SG": { weight: 0 },
+        "Scoring: Approach >200 FW SG": { weight: 0 },
+        "Scoring: Approach >150 Rough SG": { weight: 0 }
       },
       "Course Management": {
-        "Scrambling": { weight: 0.12 },
-        "Great Shots": { weight: 0.08 },
-        "Poor Shot Avoidance": { weight: 0.08 },
-        "Course Management: Approach <100 Prox": { weight: 0.10 },
-        "Course Management: Approach <150 FW Prox": { weight: 0.10 },
-        "Course Management: Approach <150 Rough Prox": { weight: 0.15 },
-        "Course Management: Approach >150 Rough Prox": { weight: 0.20 },
-        "Course Management: Approach <200 FW Prox": { weight: 0.12 },
-        "Course Management: Approach >200 FW Prox": { weight: 0.05 }
+        "Scrambling": { weight: 0.12983536340516666 },
+        "Great Shots": { weight: 0.10708071208673539 },
+        "Poor Shot Avoidance": { weight: 0.06715031454959175 },
+        "Course Management: Approach <100 Prox": { weight: 0.10279748360326597 },
+        "Course Management: Approach <150 FW Prox": { weight: 0.12434747691072147 },
+        "Course Management: Approach <150 Rough Prox": { weight: 0.1489760406906706 },
+        "Course Management: Approach >150 Rough Prox": { weight: 0.25351358586534606 },
+        "Course Management: Approach <200 FW Prox": { weight: 0.08914469281220723 },
+        "Course Management: Approach >200 FW Prox": { weight: 0.05715433007629502 }
       }
     }
   },
