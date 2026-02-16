@@ -22,8 +22,6 @@ function runCompleteModelAnalysis() {
     const ui = SpreadsheetApp.getUi();
     const masterSs = SpreadsheetApp.getActiveSpreadsheet();
     
-    ui.alert("🏌️ Starting COMPREHENSIVE Model Analysis...\n\nThis will run ALL validation functions:\n1. Post-Tournament Calibration\n2. Metric Correlation Analysis\n3. Course Type Classification\n\nThis may take 3-5 minutes.");
-    
     console.log("\n" + "=".repeat(90));
     console.log("🎯 COMPREHENSIVE MODEL ANALYSIS - COMPLETE WORKFLOW STARTING");
     console.log("=".repeat(90));

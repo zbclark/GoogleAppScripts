@@ -184,23 +184,6 @@ function analyzePostTournamentCalibration() {
     
     createCalibrationReport(masterSs, calibrationData);
     
-    let top5Accuracy = calibrationData.totalTop5 > 0 
-      ? (calibrationData.predictedTop5InTop20 / calibrationData.totalTop5 * 100).toFixed(1)
-      : "N/A";
-    let top10Accuracy = calibrationData.totalTop10 > 0
-      ? (calibrationData.predictedTop10InTop30 / calibrationData.totalTop10 * 100).toFixed(1)
-      : "N/A";
-    
-    let msg = `🎯 POST-TOURNAMENT CALIBRATION COMPLETE\n\n`;
-    msg += `Winner Prediction Accuracy:\n`;
-    msg += `  Top 5 finishers predicted in top 20: ${top5Accuracy}%\n`;
-    msg += `  Top 10 finishers predicted in top 30: ${top10Accuracy}%\n\n`;
-    msg += `Tournaments analyzed: ${calibrationData.tournaments.length}\n`;
-    msg += `Top finishers analyzed: ${calibrationData.tournaments.reduce((s, t) => s + t.topFinishers.length, 0)}\n\n`;
-    msg += `✅ Created calibration report sheets`;
-    
-    SpreadsheetApp.getUi().alert(msg);
-    
   } catch (e) {
     SpreadsheetApp.getUi().alert(`ERROR: ${e.message}\n\n${e.stack}`);
   }

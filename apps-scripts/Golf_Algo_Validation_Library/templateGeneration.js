@@ -121,206 +121,76 @@ function generateWeightTemplates() {
       metrics: createMetricBuckets()
     });
 
-    // Initialize template analysis data structure
-    let templateAnalysis = {
-      POWER: initCourseTypeBucket(),
-      TECHNICAL: initCourseTypeBucket(),
-      BALANCED: initCourseTypeBucket()
+    // --- NEW LOGIC: Aggregate from all 02_ sheets by template type ---
+    console.log("=== PHASE 1: WEIGHT TEMPLATE GENERATION (from 02_ sheets) ===\n");
+    const templateAnalysis = {
+      POWER: { tournaments: [], metrics: {} },
+      TECHNICAL: { tournaments: [], metrics: {} },
+      BALANCED: { tournaments: [], metrics: {} }
     };
+    NORMALIZED_METRICS.forEach(metric => {
+      templateAnalysis.POWER.metrics[metric] = [];
+      templateAnalysis.TECHNICAL.metrics[metric] = [];
+      templateAnalysis.BALANCED.metrics[metric] = [];
+    });
 
-    console.log("=== PHASE 1: WEIGHT TEMPLATE GENERATION ===\n");
-    console.log("Analyzing tournaments to generate optimal weight profiles...\n");
+    // Find all 02_ sheets in the master spreadsheet
+    const allSheets = masterSs.getSheets();
+    allSheets.forEach(sheet => {
+      const name = sheet.getName();
+      if (!name.startsWith('02_')) return;
+      // Read header for course type (row 1) and config type (in parenthesis)
+      const header = sheet.getRange(1, 1).getValue();
+      // Example: "American Express (2026) - Metric Analysis (TECHNICAL Course) (Config: TECHNICAL)"
+      let courseType = 'BALANCED';
+      const match = header.match(/\((POWER|TECHNICAL|BALANCED) Course\)/i);
+      if (match) courseType = match[1].toUpperCase();
+      // Only use sheets with a valid course type
+      if (!["POWER","TECHNICAL","BALANCED"].includes(courseType)) return;
 
-    let tournamentCount = 0;
-    let skippedTournaments = [];
-
-    while (workbookFiles.hasNext()) {
-      const file = workbookFiles.next();
-      const fileName = file.getName();
-      const ss = SpreadsheetApp.open(file);
-      
-      tournamentCount++;
-      console.log(`\n📋 Processing: ${fileName}`);
-
-      // STEP 1: Read course type from Configuration Sheet (user must enter manually)
-      // For now, try to get it from a cell in the tournament workbook's config
-      let courseType = getCourseTypeFromTournament(ss, fileName);
-      
-      if (!courseType) {
-        console.log(`⚠️ ${fileName}: No course type found. Skipping.`);
-        skippedTournaments.push(fileName);
-        continue;
-      }
-
-      console.log(`   Course Type: ${courseType}`);
-
-      // STEP 2: Get actual tournament results
-      const resultsSheet = ss.getSheetByName("Tournament Results");
-      if (!resultsSheet) {
-        console.log(`⚠️ ${fileName}: No Tournament Results sheet`);
-        skippedTournaments.push(fileName);
-        continue;
-      }
-
-      // STEP 3: Get player metrics from Player Ranking Model
-      const rankingSheet = ss.getSheetByName("Player Ranking Model");
-      if (!rankingSheet) {
-        console.log(`⚠️ ${fileName}: No Player Ranking Model sheet`);
-        skippedTournaments.push(fileName);
-        continue;
-      }
-
-      // Read actual results
-      const resultsData = resultsSheet.getRange("A5:AB500").getValues();
-      const resultsHeaders = resultsData[0];
-      
-      let resultsCols = {};
-      for (let i = 0; i < resultsHeaders.length; i++) {
-        const h = String(resultsHeaders[i] || "").toLowerCase().trim();
-        if (h === "dg id") resultsCols.dgId = i;
-        if (h === "player name") resultsCols.name = i;
-        if (h === "finish position") resultsCols.finishPos = i;
-      }
-
-      // Get top 10 actual finishers
-      let topFinishers = [];
-      for (let i = 1; i < resultsData.length; i++) {
-        const row = resultsData[i];
-        const dgId = String(row[resultsCols.dgId] || "").trim();
-        if (!dgId) break;
-
-        const finishStr = String(row[resultsCols.finishPos] || "").trim();
-        let finishPos = 999;
-        if (!isNaN(parseInt(finishStr))) {
-          finishPos = parseInt(finishStr);
-        } else if (finishStr.includes("T")) {
-          finishPos = parseInt(finishStr.replace("T", ""));
-        }
-
-        if (finishPos <= 10) {
-          topFinishers.push({
-            dgId: dgId,
-            name: String(row[resultsCols.name] || "").trim(),
-            finishPos: finishPos
-          });
+      // Find the metrics table header row (look for "Metric" in col 1)
+      let metricsHeaderRow = 0;
+      for (let r = 1; r <= 10; r++) {
+        if (sheet.getRange(r, 1).getValue() === "Metric") {
+          metricsHeaderRow = r;
+          break;
         }
       }
+      if (!metricsHeaderRow) return;
 
-      console.log(`   Top 10 finishers: ${topFinishers.length}`);
-
-      // Read player metrics from ranking model - expand range to capture all columns
-      const rankingData = rankingSheet.getRange("A5:AK500").getValues();
-      const rankingHeaders = rankingData[0];
-      
-      console.log(`   Ranking sheet headers: ${rankingHeaders.slice(0, 20).map(h => String(h).trim()).join(" | ")}`);
-      
-      let rankingCols = {};
-      const headerMap = buildHeaderMap(rankingHeaders);
-      if (headerMap["DG ID"] !== undefined) {
-        rankingCols.dgId = headerMap["DG ID"];
-      }
-
-      NORMALIZED_METRICS.forEach(metricName => {
-        const colIdx = resolveMetricColumn(metricName, headerMap);
-        if (colIdx !== undefined) {
-          rankingCols[metricName] = colIdx;
+      // Read all metric rows until blank
+      let row = metricsHeaderRow + 1;
+      while (true) {
+        const metricName = sheet.getRange(row, 1).getValue();
+        if (!metricName) break;
+        if (!NORMALIZED_METRICS.includes(metricName)) {
+          row++;
+          continue;
         }
-      });
-
-      console.log(`   Found columns for: ${Object.keys(rankingCols).filter(k => k !== 'dgId').join(", ")}`);
-      if (!rankingCols["Birdie Chances Created"]) {
-        console.log(`   ⚠️ BCC not found at expected column`);
+        const avgValue = parseFloat(sheet.getRange(row, 2).getValue()) || 0;
+        templateAnalysis[courseType].metrics[metricName].push(avgValue);
+        row++;
       }
+      templateAnalysis[courseType].tournaments.push(name);
+    });
 
-      // STEP 4: Analyze which metrics were strongest for top finishers in this tournament
-      let topFinisherMetrics = {};
-      NORMALIZED_METRICS.forEach(metricName => {
-        topFinisherMetrics[metricName] = [];
-      });
-
-      for (let i = 1; i < rankingData.length; i++) {
-        const row = rankingData[i];
-        const dgId = String(row[rankingCols.dgId] || "").trim();
-        if (!dgId) break;
-
-        // Check if this player is a top finisher
-        const finisher = topFinishers.find(f => f.dgId === dgId);
-        if (finisher) {
-          // Collect their metric values
-          NORMALIZED_METRICS.forEach(metricName => {
-            const colIdx = rankingCols[metricName];
-            if (colIdx !== undefined) {
-              topFinisherMetrics[metricName].push({
-                finishPos: finisher.finishPos,
-                value: parseFloat(row[colIdx]) || 0
-              });
-            }
-          });
-        }
-      }
-
-      // STEP 5: Calculate average metric values for top finishers
-      let avgMetrics = {};
-      Object.keys(topFinisherMetrics).forEach(metric => {
-        const values = topFinisherMetrics[metric];
-        if (values.length > 0) {
-          const avg = values.reduce((sum, v) => sum + v.value, 0) / values.length;
-          avgMetrics[metric] = avg;
-          console.log(`   ${metric}: Avg = ${avg.toFixed(3)}`);
-        } else {
-          avgMetrics[metric] = 0;
-          console.log(`   ${metric}: No data collected`);
-        }
-      });
-
-      // STEP 6: Store data for this tournament in the appropriate course type bucket
-      templateAnalysis[courseType].tournaments.push({
-        name: fileName,
-        metrics: avgMetrics
-      });
-
-      // Aggregate metrics by course type
-      NORMALIZED_METRICS.forEach(metricName => {
-        templateAnalysis[courseType].metrics[metricName].push(avgMetrics[metricName] || 0);
-      });
-
-      console.log(`   ✓ Data collected for ${courseType} template`);
-    }
-
-    console.log(`\n=== ANALYSIS COMPLETE ===`);
-    console.log(`Processed: ${tournamentCount - skippedTournaments.length} / ${tournamentCount} tournaments`);
-    if (skippedTournaments.length > 0) {
-      console.log(`Skipped: ${skippedTournaments.join(", ")}`);
-    }
-
-    // STEP 7: Generate templates from aggregated data
-    console.log("\n=== GENERATING TEMPLATES ===\n");
-    
+    // Calculate averages for each metric by type
     let templates = {};
     Object.keys(templateAnalysis).forEach(courseType => {
       const data = templateAnalysis[courseType];
-      
       if (data.tournaments.length === 0) {
         console.log(`⚠️ ${courseType}: No tournaments classified - skipping`);
         return;
       }
-
-      console.log(`${courseType} (${data.tournaments.length} tournaments):`);
-      console.log(`  Tournaments: ${data.tournaments.map(t => t.name).join(", ")}`);
-
-      // Calculate averages
       const calcAvg = (arr) => arr.length > 0 ? arr.reduce((a, b) => a + b, 0) / arr.length : 0;
-
       const metricAverages = {};
       NORMALIZED_METRICS.forEach(metricName => {
         metricAverages[metricName] = calcAvg(data.metrics[metricName]);
       });
-
       templates[courseType] = {
         metrics: metricAverages,
         tournamentCount: data.tournaments.length
       };
-
       [
         "Driving Distance",
         "Driving Accuracy",
@@ -334,12 +204,10 @@ function generateWeightTemplates() {
       console.log("");
     });
 
-
-    // STEP 8: Weight Templates sheet now generated by analyzeMetricCorrelations()
-    // (old storeWeightTemplates call removed - comprehensive sheet is created there)
-
-    console.log("✅ Templates generated (Weight Templates sheet updated by metric correlation analysis)");
-    SpreadsheetApp.getUi().alert("Weight templates generated successfully!\n\nCheck 'Weight Templates' sheet for detailed results.");
+    // Store templates as before
+    storeWeightTemplates(masterSs, templates);
+    console.log("✅ Templates generated from 02_ sheets");
+    SpreadsheetApp.getUi().alert("Weight templates generated from 02_ sheets!\n\nCheck 'Weight Templates' sheet for detailed results.");
   } catch (e) {
     console.error("Error in generateWeightTemplates: " + e.message);
     SpreadsheetApp.getUi().alert("Error: " + e.message);
@@ -398,7 +266,6 @@ function storeWeightTemplates(masterSs, templates) {
     let currentRow = 3;
     Object.keys(templates).forEach(courseType => {
       const template = templates[courseType];
-      
       // Course type header
       templateSheet.getRange(`A${currentRow}`).setValue(courseType);
       templateSheet.getRange(`A${currentRow}`).setFontWeight("bold").setBackground("#E3F2FD");
@@ -410,30 +277,18 @@ function storeWeightTemplates(masterSs, templates) {
       templateSheet.getRange(`C${currentRow}`).setValue("Source Tournaments");
       currentRow++;
 
-      templateSheet.getRange(`A${currentRow}`).setValue("Driving Distance");
-      templateSheet.getRange(`B${currentRow}`).setValue(template.drivingDistance.toFixed(3));
-      templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
-      currentRow++;
+      // Output only metrics with nonzero average value
+      Object.keys(template.metrics).forEach(metricName => {
+        const avgValue = template.metrics[metricName];
+        if (avgValue && Math.abs(avgValue) > 0.0001) { // filter out zero/near-zero
+          templateSheet.getRange(`A${currentRow}`).setValue(metricName);
+          templateSheet.getRange(`B${currentRow}`).setValue(avgValue.toFixed(3));
+          templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
+          currentRow++;
+        }
+      });
 
-      templateSheet.getRange(`A${currentRow}`).setValue("Driving Accuracy");
-      templateSheet.getRange(`B${currentRow}`).setValue(template.drivingAccuracy.toFixed(3));
-      templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
-      currentRow++;
-
-      templateSheet.getRange(`A${currentRow}`).setValue("SG OTT");
-      templateSheet.getRange(`B${currentRow}`).setValue(template.sgOTT.toFixed(3));
-      templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
-      currentRow++;
-
-      templateSheet.getRange(`A${currentRow}`).setValue("SG Total");
-      templateSheet.getRange(`B${currentRow}`).setValue(template.sgTotal.toFixed(3));
-      templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
-      currentRow++;
-
-      templateSheet.getRange(`A${currentRow}`).setValue("Birdie Chances Created");
-      templateSheet.getRange(`B${currentRow}`).setValue(template.bcc.toFixed(3));
-      templateSheet.getRange(`C${currentRow}`).setValue(template.tournamentCount);
-      currentRow += 3; // Space between course types
+      currentRow += 2; // Space between course types
     });
 
     templateSheet.setColumnWidth(1, 200);
