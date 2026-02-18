@@ -1,48 +1,20 @@
 async function updateDataSheets() {
-  // Initialize all statuses
   const sheets = [
-    "Tournament Field", 
-    "Historical Data",
-    "Approach Skill",
-    "ALL Tournaments",
-    "PGA Tournaments",
+    "Tournament Field",
+    "Approach Skill"
   ];
 
-  const courseData = PropertiesService.getScriptProperties().getProperty('COURSE_EVENTS');
-  if (!courseData) {
-    try {
-      sheets.forEach(sheet => updateCentralStatus(sheet, "Pending start..."));
+  try {
+    sheets.forEach(sheet => updateCentralStatus(sheet, "Pending start..."));
 
-      // Sequential execution for first three
-      await updateTournamentsDataFromButton();
-      await getCourseNameAndNum();
-      await setSimilarCourseDropdowns();
-
-      // Parallel execution for remaining functions
-      await Promise.all([
-        updateTournamentFieldDataFromButton(),
-        updateApproachSkillDataFromButton()
-      ]);
-
-    } catch (error) {
-      console.error("Update failed:", error);
-      updateCentralStatus("SYSTEM", `Error: ${error.message}`);
-      throw error; // Preserve error stack
-    }
-
-  } else {
-    try {
-      // Parallel execution for remaining functions
-      await Promise.all([
-        updateTournamentFieldDataFromButton(),
-        updateApproachSkillDataFromButton()
-      ]);
-
-    } catch (error) {
-      console.error("Update failed:", error);
-      updateCentralStatus("SYSTEM", `Error: ${error.message}`);
-      throw error; // Preserve error stack
-    }
+    await Promise.all([
+      updateTournamentFieldDataFromButton(),
+      updateApproachSkillDataFromButton()
+    ]);
+  } catch (error) {
+    console.error("Update failed:", error);
+    updateCentralStatus("SYSTEM", `Error: ${error.message}`);
+    throw error; // Preserve error stack
   }
 }
 

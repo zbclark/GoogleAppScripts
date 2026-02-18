@@ -1,11 +1,10 @@
 #!/bin/bash
 TOURNAMENT="${1:-WM Phoenix Open}"
-LOGPREFIX="${2:-phoenix2026}"
-SEEDS=("${@:3}")
+SEEDS=("${@:2}")
 SESSION="all_tails"
 
 # Sample usage:
-# cd /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity && bash ../../setup_all_tails.sh "WM Phoenix Open" "phoenix2026" a b c d e
+# cd /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity && bash ../../setup_all_tails.sh "WM Phoenix Open" a b c d e
 
 tmux kill-session -t $SESSION 2>/dev/null
 cd /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity
@@ -15,7 +14,7 @@ PREFIX=$(echo "$TOURNAMENT" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
 
 # Touch log files to ensure they exist
 for seed in "${SEEDS[@]}"; do
-  touch output/${PREFIX}_seed-${LOGPREFIX}_${seed}.log
+  touch output/${PREFIX}_seed-${seed}_run.log
 done
 
 tmux new-session -d -s $SESSION
@@ -40,7 +39,7 @@ PANES=( $(tmux list-panes -t $SESSION -F '#{pane_id}') )
 
 # Assign logs to available panes
 for idx in "${!SEEDS[@]}"; do
-  tmux send-keys -t ${PANES[$idx]} "tail -F output/${PREFIX}_seed-${LOGPREFIX}_${SEEDS[$idx]}.log" C-m
+  tmux send-keys -t ${PANES[$idx]} "tail -F output/${PREFIX}_seed-${SEEDS[$idx]}_run.log" C-m
 done
 
 # Auto-close the last (empty) pane if more panes than seeds

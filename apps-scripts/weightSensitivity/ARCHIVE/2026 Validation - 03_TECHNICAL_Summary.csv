@@ -1,0 +1,49 @@
+TECHNICAL - Aggregated Metric Analysis,,,
+"Tournaments: Sony Open (2026), Waste Management (2026), American Express (2026), Farmers (2026)",,,
+ ,,,
+Metric,Avg Delta (Top 10 vs Field),Avg Correlation,Tournament Count
+Driving Distance,25.958,0.1685,4
+Approach >150 Rough Prox,6.613,0.2331,4
+Course Management: Approach >150 Rough Prox,6.613,0.2331,4
+Approach >200 FW Prox,4.378,0.2102,4
+Course Management: Approach >200 FW Prox,4.378,0.2102,4
+Approach <150 FW Prox,2.891,0.2286,4
+Course Management: Approach <150 FW Prox,2.891,0.2286,4
+Approach <200 FW Prox,1.944,0.1365,4
+Course Management: Approach <200 FW Prox,1.944,0.1365,4
+Approach <150 Rough Prox,1.875,0.1825,4
+Course Management: Approach <150 Rough Prox,1.875,0.1825,4
+Scoring Average,1.342,0.1461,4
+Approach <100 Prox,1.279,0.189,4
+Course Management: Approach <100 Prox,1.279,0.189,4
+Birdie Chances Created,0.823,0.1736,4
+Great Shots,0.474,0.2461,4
+Birdies or Better,0.244,0.0894,4
+Approach <200 FW SG,0.212,0.1896,4
+Scoring: Approach <200 FW SG,0.212,0.1896,4
+SG Putting,0.21,0.1678,4
+Approach >200 FW SG,0.192,0.1336,4
+Scoring: Approach >200 FW SG,0.192,0.1336,4
+Poor Shot Avoidance,0.187,-0.0294,4
+SG T2G,0.179,0.2114,4
+Approach >150 Rough SG,0.17,0.0959,4
+Scoring: Approach >150 Rough SG,0.17,0.0959,4
+Approach <150 FW GIR,0.125,0.268,4
+Approach <150 Rough SG,0.117,0.0313,4
+Scoring: Approach <150 Rough SG,0.117,0.0313,4
+Approach <100 SG,0.102,0.0419,4
+Scoring: Approach <100 SG,0.102,0.0419,4
+Approach <150 FW SG,0.082,0.1371,4
+Scoring: Approach <150 FW SG,0.082,0.1371,4
+Scrambling,0.081,0.1989,4
+Approach <100 GIR,0.077,0.2054,4
+Approach <200 FW GIR,0.064,0.2037,4
+Approach >200 FW GIR,0.057,0.2289,4
+Approach >150 Rough GIR,0.052,0.2547,4
+Greens in Regulation,0.049,0.1583,4
+Driving Accuracy,0.041,0.1025,4
+SG Around Green,-0.037,-0.0292,4
+Approach <150 Rough GIR,0.034,0.2108,4
+SG OTT,0.034,0.1348,4
+ ,,,
+Note: Metrics show average delta and correlation across all tournaments of this type,,,

@@ -2435,14 +2435,12 @@ function aggregatePlayerData(metricGroups) {
           console.log(`Added similar course round for ${players[dgId].name}, event ${eventId}`);
       }
       
-      // Add to historicalRounds if NOT similar AND NOT putting-specific
-      if (!eventType.isSimilar && !eventType.isPuttingSpecific) {
-          players[dgId].historicalRounds.push(roundData);
-          
-          // Log trace player's historical rounds details
-          if (shouldTracePlayer(players[dgId].name)) {
-            console.log(`[SNAPSHOT] GAS trace historical round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
-          }
+      // Always add to historicalRounds so the most recent rounds are included
+      players[dgId].historicalRounds.push(roundData);
+      
+      // Log trace player's historical rounds details
+      if (shouldTracePlayer(players[dgId].name)) {
+        console.log(`[SNAPSHOT] GAS trace historical round added: event=${eventId}, year=${roundYear}, sg_putt=${roundData.metrics.strokesGainedPutt}, round=${roundData.roundNum}`);
       }
       });
 
@@ -2658,11 +2656,13 @@ function calculateMetricsWithData(historicalRounds, similarRounds = [], puttingR
 function calculateHistoricalAverages(historicalRounds, similarRounds = [], puttingRounds = [], options = {}) {
   // Default options
   const {
-    lambda = 0.2, // Exponential decay factor for recency
+    lambda = 0.25, // Exponential decay factor for recency
     lambdaPutting = 0.3, // Faster decay for putting-specific data
     minHistoricalPoints = 2, // Min points needed for historical data (lowered from 10)
     minSimilarPoints = 2, // Min points needed for similar course data (lowered from 5)
     minPuttingPoints = 2, // Min points needed for putting-specific data (lowered from 5)
+    minSimilarRoundsForFullWeight = 12, // Min similar rounds before full weight applies
+    similarHalfLifeYears = 2, // Recency half-life for similar-course rounds
     similarWeight = 0.6, // Weight for similar course data (0.0-1.0)
     puttingWeight = 0.7 // Weight for putting-specific data (0.0-1.0)
   } = options;
@@ -2696,6 +2696,8 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
                 - Lambda Putting (recency factor): ${lambdaPutting}
                 - Min data points: Historical=${minHistoricalPoints}, Similar=${minSimilarPoints}, Putting=${minPuttingPoints}
                 - Blending weights: Similar=${similarWeight.toFixed(2)}, Putting=${puttingWeight.toFixed(2)}
+                - Similar min rounds (full weight): ${minSimilarRoundsForFullWeight}
+                - Similar recency half-life (years): ${similarHalfLifeYears}
                 - Available rounds: Historical=${historicalRounds.length}, Similar=${similarRounds.length}, Putting=${puttingRounds.length}
                 =============================================`);
  
@@ -2730,7 +2732,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   }
  
   // Calculate weighted average for a set of values
-  const calculateWeightedAverage = (values, decayFactor = lambda) => {
+  const calculateWeightedAverage = (values, decayFactor = lambda, dates = null, halfLifeYears = null) => {
     if (!values || values.length === 0) return null;
     
     let sumWeighted = 0;
@@ -2747,7 +2749,16 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
     }
     
     values.forEach((value, i) => {
-      const weight = Math.exp(-decayFactor * i); // Newest first
+      let weight = Math.exp(-decayFactor * i); // Newest first
+
+      // Apply time-based decay (for similar-course rounds)
+      if (dates && halfLifeYears && dates[i] instanceof Date && !isNaN(dates[i])) {
+        const ageMs = Date.now() - dates[i].getTime();
+        const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
+        const timeWeight = Math.pow(2, -ageYears / halfLifeYears);
+        weight *= timeWeight;
+      }
+
       sumWeighted += weight * value;
       sumWeights += weight;
       
@@ -2770,22 +2781,34 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   };
  
     // Helper function to calculate average for a specific metric
-  const calculateMetricAverage = (rounds, metricKey, isVirtualMetric = false, minPoints = 0, decayFactor = lambda) => {
+  const calculateMetricAverage = (rounds, metricKey, isVirtualMetric = false, minPoints = 0, decayFactor = lambda, useTimeDecay = false, halfLifeYears = null) => {
     if (!rounds || rounds.length < minPoints) return null;
     
     // Extract values based on metric type
     let values = [];
+    let dates = [];
     
     if (isVirtualMetric) {
       // Special case for birdies or better
       values = rounds
         .map(round => (round.metrics.eagles || 0) + (round.metrics.birdies || 0))
         .filter(v => typeof v === 'number' && !isNaN(v));
+      if (useTimeDecay) {
+        dates = rounds.map(round => round.date).filter(d => d instanceof Date && !isNaN(d));
+      }
     } else {
       // Normal metrics
-      values = rounds
-        .map(round => round.metrics?.[metricKey])
-        .filter(v => typeof v === 'number' && !isNaN(v));
+      values = [];
+      dates = [];
+      rounds.forEach(round => {
+        const value = round.metrics?.[metricKey];
+        if (typeof value === 'number' && !isNaN(value)) {
+          values.push(value);
+          if (useTimeDecay) {
+            dates.push(round.date);
+          }
+        }
+      });
     }
     
     if (values.length < minPoints) return null;
@@ -2797,7 +2820,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       return v > 1 ? v/100 : v; // Convert 0-100% to 0-1 decimal
     });
     
-    return calculateWeightedAverage(adjustedValues, decayFactor);
+    return calculateWeightedAverage(adjustedValues, decayFactor, useTimeDecay ? dates : null, useTimeDecay ? halfLifeYears : null);
   };
  
   // Prepare all rounds datasets
@@ -2847,7 +2870,10 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       sortedSimilar, 
       metricKey, 
       isVirtualMetric, 
-      minSimilarPoints
+      minSimilarPoints,
+      lambda,
+      true,
+      similarHalfLifeYears
     );
     
     const puttingAvg = isPuttingMetric ? calculateMetricAverage(
@@ -2928,9 +2954,13 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
           sortedSimilar.length,
           minSimilarPoints
         );
+
+        // Additional scaling for limited similar-course samples
+        const similarSampleScale = Math.min(1, sortedSimilar.length / minSimilarRoundsForFullWeight);
+        const effectiveSimilarWeight = dynamicSimilarWeight * similarSampleScale;
         
         // Blend similar with historical data
-        finalValue = (similarAvg * dynamicSimilarWeight) + (historicalAvg * (1 - dynamicSimilarWeight));
+        finalValue = (similarAvg * effectiveSimilarWeight) + (historicalAvg * (1 - effectiveSimilarWeight));
         
         if (shouldTracePlayer(playerName) && metricKey === 'drivingDistance') {
           console.log(`\n📊 DETAILED BLENDING FOR ${playerName} - ${metricKey}:`);
@@ -2941,16 +2971,18 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
           console.log(`    - Rounds: ${sortedHistorical.length}`);
           console.log(`    - Weighted Average: ${historicalAvg.toFixed(4)} yards`);
           console.log(`  Dynamic Weight (based on ${sortedSimilar.length} similar rounds):`);
-          console.log(`    - Similar Weight: ${dynamicSimilarWeight.toFixed(4)} (${(dynamicSimilarWeight * 100).toFixed(1)}%)`);
-          console.log(`    - Historical Weight: ${(1 - dynamicSimilarWeight).toFixed(4)} (${((1 - dynamicSimilarWeight) * 100).toFixed(1)}%)`);
+          console.log(`    - Similar Weight (dynamic): ${dynamicSimilarWeight.toFixed(4)} (${(dynamicSimilarWeight * 100).toFixed(1)}%)`);
+          console.log(`    - Similar Sample Scale: ${similarSampleScale.toFixed(4)} (${(similarSampleScale * 100).toFixed(1)}%)`);
+          console.log(`    - Similar Weight (effective): ${effectiveSimilarWeight.toFixed(4)} (${(effectiveSimilarWeight * 100).toFixed(1)}%)`);
+          console.log(`    - Historical Weight: ${(1 - effectiveSimilarWeight).toFixed(4)} (${((1 - effectiveSimilarWeight) * 100).toFixed(1)}%)`);
           console.log(`  BLENDING CALCULATION:`);
-          console.log(`    ${similarAvg.toFixed(4)} × ${dynamicSimilarWeight.toFixed(4)} = ${(similarAvg * dynamicSimilarWeight).toFixed(4)}`);
-          console.log(`    ${historicalAvg.toFixed(4)} × ${(1 - dynamicSimilarWeight).toFixed(4)} = ${(historicalAvg * (1 - dynamicSimilarWeight)).toFixed(4)}`);
+          console.log(`    ${similarAvg.toFixed(4)} × ${effectiveSimilarWeight.toFixed(4)} = ${(similarAvg * effectiveSimilarWeight).toFixed(4)}`);
+          console.log(`    ${historicalAvg.toFixed(4)} × ${(1 - effectiveSimilarWeight).toFixed(4)} = ${(historicalAvg * (1 - effectiveSimilarWeight)).toFixed(4)}`);
           console.log(`    BLENDED RESULT: ${finalValue.toFixed(4)} yards\n`);
         }
         
-        console.log(`${playerName} - ${metricKey}: BLENDED: ${similarAvg.toFixed(3)} × weight ${dynamicSimilarWeight.toFixed(2)} = ${(similarAvg * dynamicSimilarWeight).toFixed(3)}
-          Historical: ${historicalAvg.toFixed(3)} × weight ${(1-dynamicSimilarWeight).toFixed(2)} = ${(historicalAvg * (1-dynamicSimilarWeight)).toFixed(3)}
+        console.log(`${playerName} - ${metricKey}: BLENDED: ${similarAvg.toFixed(3)} × weight ${effectiveSimilarWeight.toFixed(2)} = ${(similarAvg * effectiveSimilarWeight).toFixed(3)}
+          Historical: ${historicalAvg.toFixed(3)} × weight ${(1-effectiveSimilarWeight).toFixed(2)} = ${(historicalAvg * (1-effectiveSimilarWeight)).toFixed(3)}
           Final value: ${finalValue.toFixed(3)}`);
         
         metricSources.blended++;

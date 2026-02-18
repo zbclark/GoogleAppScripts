@@ -12,6 +12,7 @@ const MAX_RUNTIME = 300000; // 5 minutes max runtime
 const API_CALL_DELAY_MS = 3000; // 3 seconds between API calls (increased from 1 second for stability)
 const API_TIMEOUT_MS = 30000; // 30 second timeout per API call
 const SHEET_WRITE_DELAY_MS = 500; // Delay between batch writes
+const MAX_EVENT_RETRIES = 3;
 
 const PERIOD_MAPPING= {
   'last 3 months': 'l12',
@@ -42,6 +43,33 @@ const MAIN_HEADERS = Object.freeze([
 const HISTORICAL_START_ROW = 5;
 const HISTORICAL_START_COL = 2;
 
+function ensureHistoricalHeaders(historicalSheet) {
+  if (!historicalSheet) return;
+  const headerRange = historicalSheet.getRange(
+    HISTORICAL_START_ROW,
+    HISTORICAL_START_COL,
+    1,
+    MAIN_HEADERS.length
+  );
+  const headerValues = headerRange.getValues()[0];
+  const normalized = headerValues.map(value => (value ? value.toString().trim().toLowerCase() : ''));
+  const headerMatches = MAIN_HEADERS.every((header, index) => normalized[index] === header.toLowerCase());
+  if (!headerMatches) {
+    headerRange.setValues([MAIN_HEADERS]);
+    headerRange.setNumberFormat('@');
+  }
+}
+
+function getHistoricalDataStartRow(historicalSheet) {
+  if (!historicalSheet) return HISTORICAL_START_ROW;
+  const headerValues = historicalSheet
+    .getRange(HISTORICAL_START_ROW, HISTORICAL_START_COL, 1, MAIN_HEADERS.length)
+    .getValues()[0];
+  const normalized = headerValues.map(value => (value ? value.toString().trim().toLowerCase() : ''));
+  const headerMatches = MAIN_HEADERS.every((header, index) => normalized[index] === header.toLowerCase());
+  return headerMatches ? HISTORICAL_START_ROW + 1 : HISTORICAL_START_ROW;
+}
+
 function getHistoricalColumnIndex(header) {
   const headerIndex = MAIN_HEADERS.indexOf(header);
   if (headerIndex === -1) return null;
@@ -54,66 +82,203 @@ function buildRequiredEventKeys(filteredEvents) {
   );
 }
 
-function cleanupHistoricalSheet(historicalSheet, requiredEventKeys) {
+function cleanupHistoricalSheet(historicalSheet, requiredEventKeys, allowedCourseIds = new Set(), specialEventKeys = new Set()) {
   if (!historicalSheet) return;
   if (!requiredEventKeys || requiredEventKeys.size === 0) {
     logDebug('Skipping historical cleanup: no required events provided.');
     return;
   }
 
+  ensureHistoricalHeaders(historicalSheet);
+  const dataStartRow = getHistoricalDataStartRow(historicalSheet);
   const lastRow = historicalSheet.getLastRow();
-  if (lastRow < HISTORICAL_START_ROW) return;
+  if (lastRow < dataStartRow) return;
 
   const yearCol = getHistoricalColumnIndex('year');
   const eventIdCol = getHistoricalColumnIndex('event_id');
+  const eventNameCol = getHistoricalColumnIndex('event_name');
+  const courseNumCol = getHistoricalColumnIndex('course_num');
 
-  if (!yearCol || !eventIdCol) {
+  if (!yearCol || !eventIdCol || !eventNameCol || !courseNumCol) {
     logDebug('Historical cleanup skipped: year/event_id columns not found in headers.');
     return;
   }
 
-  const numRows = lastRow - HISTORICAL_START_ROW + 1;
-  const yearValues = historicalSheet.getRange(HISTORICAL_START_ROW, yearCol, numRows, 1).getValues();
-  const eventValues = historicalSheet.getRange(HISTORICAL_START_ROW, eventIdCol, numRows, 1).getValues();
+  const numRows = lastRow - dataStartRow + 1;
+  const yearValues = historicalSheet.getRange(dataStartRow, yearCol, numRows, 1).getValues();
+  const eventValues = historicalSheet.getRange(dataStartRow, eventIdCol, numRows, 1).getValues();
+  const eventNameValues = historicalSheet.getRange(dataStartRow, eventNameCol, numRows, 1).getValues();
+  const courseNumValues = historicalSheet.getRange(dataStartRow, courseNumCol, numRows, 1).getValues();
 
   const rowsToDelete = [];
+  const currentEvents = new Map();
+  const keptEvents = new Map();
+  const deletedEvents = new Map();
   for (let i = 0; i < numRows; i++) {
     const year = yearValues[i][0] ? yearValues[i][0].toString().trim() : '';
     const eventId = eventValues[i][0] ? eventValues[i][0].toString().trim() : '';
+    const eventName = eventNameValues[i][0] ? eventNameValues[i][0].toString().trim() : '';
+    const courseNum = courseNumValues[i][0] ? courseNumValues[i][0].toString().trim() : '';
     const key = `${eventId}-${year}`;
-    if (!eventId || !year || !requiredEventKeys.has(key)) {
-      rowsToDelete.push(HISTORICAL_START_ROW + i);
+    if (eventId || year || eventName) {
+      currentEvents.set(key, eventName || '(no name)');
+    }
+    const isSpecial = specialEventKeys.has(key);
+    const shouldFilterByCourse = isSpecial && allowedCourseIds && allowedCourseIds.size > 0;
+    const courseAllowed = !shouldFilterByCourse || (courseNum && allowedCourseIds.has(courseNum));
+
+    if (!eventId || !year || !requiredEventKeys.has(key) || !courseAllowed) {
+      rowsToDelete.push(dataStartRow + i);
+      if (eventId || year || eventName) {
+        deletedEvents.set(key, eventName || '(no name)');
+      }
+    } else {
+      keptEvents.set(key, eventName || '(no name)');
     }
   }
 
   if (rowsToDelete.length === 0) {
     logDebug('Historical cleanup: no rows to delete.');
-    return;
   }
 
-  // Delete from bottom to top to avoid index shift
-  rowsToDelete.sort((a, b) => b - a).forEach(row => {
-    historicalSheet.deleteRow(row);
-  });
+  if (rowsToDelete.length > 0) {
+    // Collapse contiguous rows into ranges for batched deletion
+    rowsToDelete.sort((a, b) => a - b);
+    const ranges = [];
+    let start = rowsToDelete[0];
+    let prev = rowsToDelete[0];
 
+    for (let i = 1; i < rowsToDelete.length; i++) {
+      const row = rowsToDelete[i];
+      if (row === prev + 1) {
+        prev = row;
+        continue;
+      }
+      ranges.push({ start, count: prev - start + 1 });
+      start = row;
+      prev = row;
+    }
+    ranges.push({ start, count: prev - start + 1 });
+
+    const originalFrozenRows = historicalSheet.getFrozenRows();
+    const originalFrozenCols = historicalSheet.getFrozenColumns();
+    const rowsToDeleteCount = rowsToDelete.length;
+
+    try {
+      // Temporarily unfreeze to allow full-range deletions
+      historicalSheet.setFrozenRows(0);
+      historicalSheet.setFrozenColumns(0);
+
+      const maxRows = historicalSheet.getMaxRows();
+      const deletableStart = dataStartRow;
+      const deletableCount = Math.max(0, maxRows - (dataStartRow - 1));
+
+      // If we'd delete all rows from start to bottom, keep one row to avoid delete-all error
+      if (rowsToDeleteCount >= deletableCount && deletableCount > 0) {
+        const lastRowToKeep = deletableStart + deletableCount - 1;
+        const adjustedRowsToDelete = rowsToDelete.filter(row => row !== lastRowToKeep);
+
+        if (adjustedRowsToDelete.length > 0) {
+          adjustedRowsToDelete.sort((a, b) => a - b);
+          const adjustedRanges = [];
+          let adjStart = adjustedRowsToDelete[0];
+          let adjPrev = adjustedRowsToDelete[0];
+          for (let i = 1; i < adjustedRowsToDelete.length; i++) {
+            const row = adjustedRowsToDelete[i];
+            if (row === adjPrev + 1) {
+              adjPrev = row;
+              continue;
+            }
+            adjustedRanges.push({ start: adjStart, count: adjPrev - adjStart + 1 });
+            adjStart = row;
+            adjPrev = row;
+          }
+          adjustedRanges.push({ start: adjStart, count: adjPrev - adjStart + 1 });
+
+          for (let i = adjustedRanges.length - 1; i >= 0; i--) {
+            const { start, count } = adjustedRanges[i];
+            historicalSheet.deleteRows(start, count);
+            Utilities.sleep(150);
+          }
+        }
+
+        // Clear the kept row's contents so the sheet is effectively empty below headers
+        historicalSheet.getRange(lastRowToKeep, 1, 1, historicalSheet.getMaxColumns()).clearContent();
+      } else {
+        // Delete from bottom to top to avoid index shift
+        for (let i = ranges.length - 1; i >= 0; i--) {
+          const { start, count } = ranges[i];
+          historicalSheet.deleteRows(start, count);
+          Utilities.sleep(150);
+        }
+      }
+    } finally {
+      // Restore original frozen panes
+      historicalSheet.setFrozenRows(originalFrozenRows);
+      historicalSheet.setFrozenColumns(originalFrozenCols);
+    }
+  }
+
+  const currentList = Array.from(currentEvents.entries()).map(([key, name]) => `${key} - ${name}`);
+  const expectedList = Array.from(requiredEventKeys).map(key => `${key} - ${currentEvents.get(key) || '(not in sheet)'}`);
+  const keptList = Array.from(keptEvents.entries()).map(([key, name]) => `${key} - ${name}`);
+  const deletedList = Array.from(deletedEvents.entries()).map(([key, name]) => `${key} - ${name}`);
+
+  const MAX_DEBUG_EVENTS = 40;
+  const sliceForLog = (list) => list.length > MAX_DEBUG_EVENTS
+    ? list.slice(0, MAX_DEBUG_EVENTS).concat([`... +${list.length - MAX_DEBUG_EVENTS} more`])
+    : list;
+
+  logDebug(`Historical cleanup: current events in sheet (${currentList.length}).`);
+  if (currentList.length > 0) {
+    logDebug(`Current events: ${currentList.join(' | ')}`);
+  }
+  logDebug(`Historical cleanup: expected events (${expectedList.length}).`);
+  if (expectedList.length > 0) {
+    logDebug(`Expected events: ${expectedList.join(' | ')}`);
+  }
+
+  logDebug(`Historical cleanup: kept ${keptList.length} events.`);
+  if (keptList.length > 0) {
+    logDebug(`Kept events: ${keptList.join(' | ')}`);
+  }
   logDebug(`Historical cleanup: deleted ${rowsToDelete.length} rows not in required events.`);
+  if (deletedList.length > 0) {
+    logDebug(`Deleted events: ${deletedList.join(' | ')}`);
+  }
+
+  appendDebugExecutionLog(`Historical cleanup summary: current=${currentList.length}, expected=${expectedList.length}, kept=${keptList.length}, deleted=${deletedList.length}`);
+  if (currentList.length > 0) {
+    appendDebugExecutionLog(`Current events: ${sliceForLog(currentList).join(' | ')}`);
+  }
+  if (expectedList.length > 0) {
+    appendDebugExecutionLog(`Expected events: ${sliceForLog(expectedList).join(' | ')}`);
+  }
+  if (keptList.length > 0) {
+    appendDebugExecutionLog(`Kept events: ${sliceForLog(keptList).join(' | ')}`);
+  }
+  if (deletedList.length > 0) {
+    appendDebugExecutionLog(`Deleted events: ${sliceForLog(deletedList).join(' | ')}`);
+  }
 }
 
 function rebuildProcessedEventKeysFromSheet(historicalSheet) {
   const processed = new Set();
   if (!historicalSheet) return processed;
 
+  ensureHistoricalHeaders(historicalSheet);
+  const dataStartRow = getHistoricalDataStartRow(historicalSheet);
   const lastRow = historicalSheet.getLastRow();
-  if (lastRow < HISTORICAL_START_ROW) return processed;
+  if (lastRow < dataStartRow) return processed;
 
   const yearCol = getHistoricalColumnIndex('year');
   const eventIdCol = getHistoricalColumnIndex('event_id');
 
   if (!yearCol || !eventIdCol) return processed;
 
-  const numRows = lastRow - HISTORICAL_START_ROW + 1;
-  const yearValues = historicalSheet.getRange(HISTORICAL_START_ROW, yearCol, numRows, 1).getValues();
-  const eventValues = historicalSheet.getRange(HISTORICAL_START_ROW, eventIdCol, numRows, 1).getValues();
+  const numRows = lastRow - dataStartRow + 1;
+  const yearValues = historicalSheet.getRange(dataStartRow, yearCol, numRows, 1).getValues();
+  const eventValues = historicalSheet.getRange(dataStartRow, eventIdCol, numRows, 1).getValues();
 
   for (let i = 0; i < numRows; i++) {
     const year = yearValues[i][0] ? yearValues[i][0].toString().trim() : '';
@@ -234,14 +399,23 @@ function calculateDateRange(period) {
 
 function extractCourseIdsFromConfig(values) {
   const ids = new Set();
-  const regex = /\(ID:\s*(\d+)\)/g;
+  const singleIdRegex = /\(ID:\s*(\d+)\)/gi;
+  const multiIdRegex = /\(IDs?:\s*([^)]+)\)/gi;
 
   values.flat().forEach(cellValue => {
     if (!cellValue) return;
     const text = cellValue.toString();
     let match;
-    while ((match = regex.exec(text)) !== null) {
+
+    while ((match = singleIdRegex.exec(text)) !== null) {
       ids.add(match[1]);
+    }
+
+    while ((match = multiIdRegex.exec(text)) !== null) {
+      const raw = match[1];
+      raw.split(/[^0-9]+/).forEach(token => {
+        if (token) ids.add(token);
+      });
     }
   });
 
@@ -1042,12 +1216,14 @@ async function writeHistoricalDataIncremental(historicalSheet, allData) {
     SpreadsheetApp.getUi().alert(`Sheet named ${historicalSheet} not found.`);
   }
 
+    ensureHistoricalHeaders(historicalSheet);
     const headers = allData[0];
     const newRows = allData.slice(1);
     
     // Find the last row with data
     const lastRow = historicalSheet.getLastRow();
-    const startCell = historicalSheet.getRange("B5");
+    const dataStartRow = getHistoricalDataStartRow(historicalSheet);
+    const startCell = historicalSheet.getRange(dataStartRow, HISTORICAL_START_COL);
     const startRow = startCell.getRow();
     const startCol = startCell.getColumn();
     
@@ -1139,7 +1315,15 @@ async function writeHistoricalDataIncremental(historicalSheet, allData) {
  * - Modifies Script Properties with API key
  * - Writes debug info to Logger when DEBUG=true
  */
-async function updateHistoricalDataFromButton() {  
+async function resumeHistoricalDataUpdate() {
+  return updateHistoricalDataFromButton({ resume: true });
+}
+
+async function updateHistoricalDataFromMenu() {
+  return updateHistoricalDataFromButton({ forceReset: true });
+}
+
+async function updateHistoricalDataFromButton(options = {}) {  
   var sheetName = "Historical Data";  
   const ss = SpreadsheetApp.getActiveSpreadsheet();  
   const historicalSheet = ss.getSheetByName(sheetName);  
@@ -1149,8 +1333,18 @@ async function updateHistoricalDataFromButton() {
     updateCentralStatus(sheetName, 'start');  
     SpreadsheetApp.flush();  
     logDebug("Starting updateHistoricalDataFromButton function");  
-  
+ 
     const props = PropertiesService.getScriptProperties();  
+    const resumeMode = Boolean(options && options.resume);  
+    const forceReset = Boolean(options && options.forceReset);  
+    const shouldReset = forceReset || !resumeMode;  
+    if (shouldReset) {  
+      props.deleteProperty('filteredEvents');  
+      props.deleteProperty('expectedEvents');  
+      props.deleteProperty('processedEventKeys');  
+      props.deleteProperty('eventRetryCounts');
+      logDebug('Resetting historical update state (full rebuild).');  
+    }
   
     // 1) Config + date range  
     const configSheet = ss.getSheetByName("Configuration Sheet");  
@@ -1182,16 +1376,37 @@ async function updateHistoricalDataFromButton() {
     let processedEventKeys = new Set();  
   
     const filteredEventsStr = props.getProperty('filteredEvents');  
+    const expectedEventsStr = props.getProperty('expectedEvents');
     const processedEventKeysStr = props.getProperty('processedEventKeys');  
+    const retryCountsStr = props.getProperty('eventRetryCounts');
   
+    let expectedEvents = [];
+    let retryCounts = {};
     if (filteredEventsStr) {  
       filteredEvents = JSON.parse(filteredEventsStr);  
       logDebug(`Loaded filteredEvents queue from props: ${filteredEvents.length}`);  
     }  
+    if (expectedEventsStr) {
+      expectedEvents = JSON.parse(expectedEventsStr);
+      logDebug(`Loaded expectedEvents from props: ${expectedEvents.length}`);
+    }
     if (processedEventKeysStr) {  
       processedEventKeys = new Set(JSON.parse(processedEventKeysStr));  
       logDebug(`Loaded processedEventKeys from props: ${processedEventKeys.size}`);  
     }  
+    if (retryCountsStr) {
+      retryCounts = JSON.parse(retryCountsStr);
+      logDebug(`Loaded event retry counts: ${Object.keys(retryCounts).length}`);
+    }
+  
+    const hasCachedQueue = resumeMode && filteredEventsStr && filteredEvents.length > 0;
+    if (hasCachedQueue) {
+      logDebug(`Resume mode: using cached queue (${filteredEvents.length}). Skipping rebuild + cleanup.`);
+    } else if (resumeMode && !processedEventKeysStr) {
+      processedEventKeys = rebuildProcessedEventKeysFromSheet(historicalSheet);
+      props.setProperty('processedEventKeys', JSON.stringify([...processedEventKeys]));
+      logDebug(`Resume mode: rebuilt processedEventKeys from sheet (${processedEventKeys.size}).`);
+    }
   
     // These ARE the "code to tell the script what to do":  
     // Each one is an arrow function that runs props.setProperty(...)  
@@ -1204,9 +1419,14 @@ async function updateHistoricalDataFromButton() {
       props.setProperty('processedEventKeys', JSON.stringify([...processedEventKeys]));  
       logDebug(`(props) saved processedEventKeys size: ${processedEventKeys.size}`);  
     };  
+
+    const saveRetryCounts = () => {
+      props.setProperty('eventRetryCounts', JSON.stringify(retryCounts));
+    };
   
     // If no cached queue, compute ONCE (expensive), then persist  
-    if (!filteredEventsStr) {  
+    if (!hasCachedQueue && (!filteredEventsStr || !expectedEventsStr)) {  
+      updateCentralStatus(sheetName, 'Building event queue...');
       const eventIds = getEventIds(startDate, endDate);  
       logDebug(`Found ${eventIds.length} events in date range`);  
       if (eventIds.length === 0) return "No events found in selected date range";  
@@ -1219,6 +1439,17 @@ async function updateHistoricalDataFromButton() {
       if (!tournamentSheet) throw new Error("ALL Tournaments sheet not found");  
       const tournamentData = tournamentSheet.getRange("B6:H" + tournamentSheet.getLastRow()).getValues();  
       logDebug(`Loaded ${tournamentData.length} tournament records`);  
+
+      const headerRow = tournamentSheet.getRange("B5:H5").getValues()[0] || [];
+      const normalizeHeader = (value) => String(value || '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, '_');
+      const headerIndex = new Map(headerRow.map((value, idx) => [normalizeHeader(value), idx]));
+      const getIndex = (key, fallback) => (headerIndex.has(key) ? headerIndex.get(key) : fallback);
+      const tourIndex = getIndex('tour', 0);
+      const dateIndex = getIndex('date', 1);
+      const eventIdIndex = getIndex('event_id', 3);
   
       // Initialize processed keys from sheet if we don't already have them  
       if (!processedEventKeysStr) {  
@@ -1227,34 +1458,46 @@ async function updateHistoricalDataFromButton() {
         logDebug(`Initialized processedEventKeys from sheet: ${processedEventKeys.size}`);  
       }  
   
-      // Build queue  
+      // Build full expected list (includes already-processed events)
       const toursSet = new Set(tours);  
       const eventIdsSet = new Set(eventIds);  
       const existing = new Set();  
-      filteredEvents = [];  
+      const expected = [];
+      const specialIdYears = new Map();
       const currentYear = new Date().getFullYear();  
   
       tournamentData.forEach(row => {  
-        const tour = row[0]?.toString().trim();  
-        const eventId = row[3]?.toString().trim();  
-        const eventDate = new Date(row[1]);  
+        const tour = row[tourIndex]?.toString().trim();  
+        const rawEventId = row[eventIdIndex];
+        const eventId = rawEventId !== undefined && rawEventId !== null
+          ? rawEventId.toString().trim()
+          : '';
+        const eventDate = new Date(row[dateIndex]);  
   
         if (!tour || !eventId) return;  
+        if (!/^\d+$/.test(eventId)) {
+          logDebug(`Skipping row with invalid event ID: ${eventId}`);
+          return;
+        }
         if (isNaN(eventDate.getTime())) return;  
   
         const year = eventDate.getFullYear();  
         const key = `${eventId}-${year}`;  
   
-        if (processedEventKeys.has(key)) return;  
         if (existing.has(key)) return;  
   
+        if (uniqueSpecialEventIds.includes(eventId)) {
+          if (!specialIdYears.has(eventId)) specialIdYears.set(eventId, new Set());
+          specialIdYears.get(eventId).add(year);
+        }
+
         const isSpecialEvent =  
           uniqueSpecialEventIds.includes(eventId) &&  
           toursSet.has(tour) &&  
           (year >= currentYear - 5);  
   
         if (isSpecialEvent) {  
-          filteredEvents.push({ tour, eventId, year, isSpecial: true });  
+          expected.push({ tour, eventId, year, isSpecial: true });
           existing.add(key);  
           return;  
         }  
@@ -1267,31 +1510,65 @@ async function updateHistoricalDataFromButton() {
           t <= endDate.getTime();  
   
         if (isValidRegularEvent) {  
-          filteredEvents.push({ tour, eventId, year, isSpecial: false });  
+          expected.push({ tour, eventId, year, isSpecial: false });  
           existing.add(key);  
         }  
       });  
-  
+
+      // Ensure special event IDs are included even if missing from ALL Tournaments
+      const primaryTour = tours[0] || 'pga';
+      uniqueSpecialEventIds.forEach(eventId => {
+        const years = specialIdYears.get(eventId);
+        const yearList = years && years.size > 0
+          ? Array.from(years).filter(year => year >= currentYear - 5)
+          : Array.from({ length: 6 }, (_, idx) => currentYear - idx);
+
+        yearList.forEach(year => {
+          const key = `${eventId}-${year}`;
+          if (existing.has(key)) return;
+          expected.push({ tour: primaryTour, eventId, year, isSpecial: true });
+          existing.add(key);
+        });
+      });
+
+      expectedEvents = expected;
+      props.setProperty('expectedEvents', JSON.stringify(expectedEvents));
+      logDebug(`Computed + cached expectedEvents: ${expectedEvents.length}`);
+
+      // Filter expected list by processed keys for the active queue
+      filteredEvents = expectedEvents.filter(event => {
+        const key = `${event.eventId}-${event.year}`;
+        return !processedEventKeys.has(key);
+      });
+
       saveFilteredEvents(); // <-- THIS writes the computed queue to Script Properties  
       logDebug(`Computed + cached filteredEvents queue: ${filteredEvents.length}`);  
+      updateCentralStatus(sheetName, `Queue built: ${filteredEvents.length} events`);
     }  
 
-    // Cleanup historical sheet to keep only required events
-    const requiredEventKeys = buildRequiredEventKeys(filteredEvents);
-    cleanupHistoricalSheet(historicalSheet, requiredEventKeys);
+    if (!hasCachedQueue) {
+      updateCentralStatus(sheetName, 'Cleanup: evaluating historical rows...');
+      // Cleanup historical sheet to keep only required events
+      const requiredEventKeys = new Set([
+        ...buildRequiredEventKeys(expectedEvents.length > 0 ? expectedEvents : filteredEvents)
+      ]);
+      const specialEventKeys = buildRequiredEventKeys((expectedEvents.length > 0 ? expectedEvents : filteredEvents).filter(event => event.isSpecial));
+      cleanupHistoricalSheet(historicalSheet, requiredEventKeys, allowedCourseIds, specialEventKeys);
+      updateCentralStatus(sheetName, `Cleanup complete: ${requiredEventKeys.size} events retained`);
 
-    // Rebuild processed keys after cleanup to avoid stale entries
-    processedEventKeys = rebuildProcessedEventKeysFromSheet(historicalSheet);
-    saveProcessedKeys();
+      // Rebuild processed keys after cleanup to avoid stale entries
+      processedEventKeys = rebuildProcessedEventKeysFromSheet(historicalSheet);
+      saveProcessedKeys();
 
-    // Remove already-processed events from the queue
-    if (filteredEvents.length > 0) {
-      filteredEvents = filteredEvents.filter(event => {
-        const eventKey = `${event.eventId}-${event.year}`;
-        return !processedEventKeys.has(eventKey);
-      });
-      saveFilteredEvents();
-      logDebug(`Queue filtered after cleanup: ${filteredEvents.length} events remaining`);
+      // Remove already-processed events from the queue
+      if (filteredEvents.length > 0) {
+        filteredEvents = filteredEvents.filter(event => {
+          const eventKey = `${event.eventId}-${event.year}`;
+          return !processedEventKeys.has(eventKey);
+        });
+        saveFilteredEvents();
+        logDebug(`Queue filtered after cleanup: ${filteredEvents.length} events remaining`);
+      }
     }
   
     const headers = MAIN_HEADERS;  
@@ -1350,10 +1627,40 @@ async function updateHistoricalDataFromButton() {
           filteredEvents.splice(i, 1);  
           i--;  
           saveFilteredEvents();  
+
+          if (retryCounts[eventKey]) {
+            delete retryCounts[eventKey];
+            saveRetryCounts();
+          }
   
           logDebug(`✅ Wrote + removed ${eventKey}. Queue now ${filteredEvents.length}`);  
         } else {  
-          logDebug(`No data for ${eventKey}. Leaving in queue (will retry next run).`);  
+          const allowedIdsText = (event.isSpecial && allowedCourseIds && allowedCourseIds.size > 0)
+            ? [...allowedCourseIds].join(', ')
+            : 'n/a';
+          const message = `No data for ${eventKey}. Leaving in queue (will retry next run). Allowed courses: ${allowedIdsText}`;
+          const attempts = (retryCounts[eventKey] || 0) + 1;
+          retryCounts[eventKey] = attempts;
+          saveRetryCounts();
+
+          if (attempts >= MAX_EVENT_RETRIES) {
+            const skipMessage = `No data for ${eventKey} after ${attempts} attempts. Skipping and removing from queue. Allowed courses: ${allowedIdsText}`;
+            logDebug(skipMessage);
+            appendDebugExecutionLog(skipMessage);
+
+            processedEventKeys.add(eventKey);
+            saveProcessedKeys();
+
+            filteredEvents.splice(i, 1);
+            i--;
+            saveFilteredEvents();
+
+            delete retryCounts[eventKey];
+            saveRetryCounts();
+          } else {
+            logDebug(message);  
+            appendDebugExecutionLog(message);
+          }
         }  
       } catch (error) {  
         logDebug(`Error processing ${eventKey}: ${error.message} (leaving in queue to retry)`);  
@@ -1608,11 +1915,12 @@ async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers, a
 
         if (allowedCourseIds && allowedCourseIds.size > 0) {
           const observedCourseIds = new Set();
-          const courseNum = responseData.course_num ? responseData.course_num.toString().trim() : '';
+          const payload = responseData?.data || {};
+          const courseNum = payload.course_num ? payload.course_num.toString().trim() : '';
           if (courseNum) observedCourseIds.add(courseNum);
 
-          if (responseData.scores && responseData.scores.length > 0) {
-            responseData.scores.forEach(player => {
+          if (payload.scores && payload.scores.length > 0) {
+            payload.scores.forEach(player => {
               Object.keys(player).forEach(key => {
                 if (!key.startsWith('round_')) return;
                 const round = player[key];
@@ -1639,9 +1947,21 @@ async function fetchHistoricalDataBatch(tours, eventId, year, apiKey, headers, a
           }
         }
 
-        const processedData = Array.isArray(responseData.data) ? 
+        let processedData = Array.isArray(responseData.data) ? 
           responseData.data.flatMap(item => processDataItem(item, headers)) :
           processDataItem(responseData.data, headers);
+
+        if (allowedCourseIds && allowedCourseIds.size > 0 && processedData.length > 0) {
+          const courseNumIndex = headers.indexOf('course_num');
+          if (courseNumIndex === -1) {
+            logDebug('Course filter skipped: course_num header not found.');
+          } else {
+            processedData = processedData.filter(row => {
+              const courseNum = row[courseNumIndex] ? row[courseNumIndex].toString().trim() : '';
+              return courseNum && allowedCourseIds.has(courseNum);
+            });
+          }
+        }
 
         // Deduplicate and validate
         processedData.forEach(row => {

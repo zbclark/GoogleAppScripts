@@ -8,6 +8,24 @@ function getG9WithRetry(sheet, retries = 5, delay = 500) {
   return null;
 }
 
+function columnToLetter(column) {
+  let temp = "";
+  let letter = "";
+  let col = column;
+  while (col > 0) {
+    temp = (col - 1) % 26;
+    letter = String.fromCharCode(temp + 65) + letter;
+    col = (col - temp - 1) / 26;
+  }
+  return letter;
+}
+
+function deleteSheet(sheet) {
+  if (!sheet) return;
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+  ss.deleteSheet(sheet);
+}
+
 
 function setupSheet() {
   const ui = SpreadsheetApp.getUi();
@@ -129,6 +147,7 @@ function clearConfig() {
   const resultsSheet = ss.getSheetByName("Tournament Results");
   const historicalDataSheet = ss.getSheetByName("Historical Data");
   const debugSheet = ss.getSheetByName("🔧 Debug - Calculations")
+  const debugExecutionLogSheet = ss.getSheetByName("Debug Execution Log");
   
   // Confirm action with user
   const ui = SpreadsheetApp.getUi();
@@ -147,6 +166,7 @@ function clearConfig() {
   
   // 1. Clear content from specified ranges
   const rangesToClear = [
+    "F2:F7",
     "G16:Q24", 
     "G27", 
     "G33:G37", 
@@ -160,6 +180,9 @@ function clearConfig() {
     const configRange = configSheet.getRange(rangeA1);
     configRange.clearContent();
   });
+
+  // Clear formatting for specific config cells
+  configSheet.getRange("F2:F7").clearFormat();
 
   const rangesToClearTournaments = [
     "C2:C4",
@@ -285,6 +308,35 @@ function clearConfig() {
     }
   } catch (e) {
     console.error("Error deleting Debug sheet:", e);
+  }
+
+  // 6b. Delete Debug Execution Log sheet
+  try {
+    if (debugExecutionLogSheet) {
+      deleteSheet(debugExecutionLogSheet);
+    } else {
+      console.log("Debug Execution Log sheet not found");
+    }
+  } catch (e) {
+    console.error("Error deleting Debug Execution Log sheet:", e);
+  }
+
+  // 6c. Delete *_Metric Validation* sheets (singular/plural)
+  try {
+    const sheets = ss.getSheets();
+    const metricValidationSheets = sheets.filter(sheet =>
+      /_Metric Validation(s)?/i.test(sheet.getName())
+    );
+
+    if (metricValidationSheets.length === 0) {
+      console.log("No _Metric Validation sheets found");
+    } else {
+      metricValidationSheets.forEach(sheet => {
+        deleteSheet(sheet);
+      });
+    }
+  } catch (e) {
+    console.error("Error deleting _Metric Validations sheets:", e);
   }
   
   // 7. Show confirmation to user
@@ -474,6 +526,7 @@ async function onEditInstallableTrigger(e) {
           
           // Set the event IDs (comma-separated if multiple)
           const eventIds = course.eventIds.join(", ");
+          idCell.setNumberFormat("@");
           idCell.setValue(eventIds);
           console.log(`Updated cell ${idCell.getA1Notation()} with value: ${eventIds}`);
           
@@ -494,6 +547,7 @@ async function onEditInstallableTrigger(e) {
             const idCell = sheet.getRange(range.getRow(), range.getColumn() + 1);
             idCell.clearContent();
             const eventIds = partialMatch.eventIds.join(", ");
+            idCell.setNumberFormat("@");
             idCell.setValue(eventIds);
             console.log(`Updated cell ${idCell.getA1Notation()} with value: ${eventIds}`);
             
@@ -569,11 +623,12 @@ function clearAndSetHistoricalTrigger() {
   // Remove existing triggers for updateHistoricalDataFromButton
   const triggers = ScriptApp.getProjectTriggers();
   for (let i = 0; i < triggers.length; i++) {
-    if (triggers[i].getHandlerFunction() === 'updateHistoricalDataFromButton') {
+    const handler = triggers[i].getHandlerFunction();
+    if (handler === 'updateHistoricalDataFromButton' || handler === 'resumeHistoricalDataUpdate') {
       ScriptApp.deleteTrigger(triggers[i]);
     }
   }
-  ScriptApp.newTrigger('updateHistoricalDataFromButton')
+  ScriptApp.newTrigger('resumeHistoricalDataUpdate')
     .timeBased()
     .after(60 * 1000)
     .create();

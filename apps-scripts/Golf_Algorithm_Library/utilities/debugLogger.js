@@ -1,8 +1,12 @@
 const DEBUG_LOG_SHEET_NAME = "🔧 Debug - Calculations";
+const DEBUG_EXECUTION_LOG_SHEET_NAME = "Debug Execution Log";
+const DEBUG_LOG_RESET_PENDING_KEY = 'DOC_DEBUG_LOG_RESET_PENDING';
 const LOGGING_ENABLED = false;
+const DEFAULT_DEBUG_LOGGING = 'false';
 const DEFAULT_TRACE_PLAYER = '';
 const DEFAULT_TRACE_GROUP_STATS = 'true';
 const DEFAULT_DEBUG_CALC_SHEET = 'false';
+const DEFAULT_DEBUG_LOGGING_SETTING = DEFAULT_DEBUG_LOGGING;
 let TRACE_PLAYER_NAME = '';
 let TRACE_PLAYER_NAME_LOWER = '';
 let TRACE_ENABLED = false;
@@ -10,6 +14,8 @@ let TRACE_GROUP_STATS_RAW = '';
 let TRACE_GROUP_STATS = false;
 let DEBUG_CALC_SHEET_RAW = '';
 let DEBUG_CALC_SHEET_ENABLED = false;
+let DEBUG_LOGGING_RAW = '';
+let DEBUG_LOGGING_ENABLED = false;
 
 const normalizeTraceValue = (value) => {
   const raw = String(value ?? '').trim();
@@ -50,25 +56,109 @@ const refreshTraceConfig = () => {
     || DEFAULT_DEBUG_CALC_SHEET
   );
   DEBUG_CALC_SHEET_ENABLED = parseTraceBoolean(DEBUG_CALC_SHEET_RAW, false);
+
+  DEBUG_LOGGING_RAW = normalizeTraceValue(
+    PropertiesService.getDocumentProperties().getProperty('DOC_DEBUG_LOGGING')
+    || PropertiesService.getScriptProperties().getProperty('SCRIPT_DEBUG_LOGGING')
+    || DEFAULT_DEBUG_LOGGING_SETTING
+  );
+  DEBUG_LOGGING_ENABLED = parseTraceBoolean(DEBUG_LOGGING_RAW, false);
 };
 
 const shouldTracePlayer = (name) => TRACE_ENABLED && String(name || '').toLowerCase().includes(TRACE_PLAYER_NAME_LOWER);
 
-const isDebugCalculationSheetEnabled = () => DEBUG_CALC_SHEET_ENABLED;
+const isDebugCalculationSheetEnabled = () => {
+  refreshTraceConfig();
+  return DEBUG_CALC_SHEET_ENABLED;
+};
+const isDebugLoggingEnabled = () => {
+  refreshTraceConfig();
+  return DEBUG_LOGGING_ENABLED;
+};
+
+function getDebugLoggingSettings() {
+  refreshTraceConfig();
+  return { enabled: DEBUG_LOGGING_ENABLED };
+}
+
+function setDebugLoggingSettings(enabled) {
+  const value = enabled ? 'true' : 'false';
+  const docProps = PropertiesService.getDocumentProperties();
+  docProps.setProperty('DOC_DEBUG_LOGGING', value);
+  docProps.setProperty('DOC_DEBUG_CALC_SHEET', value);
+
+  if (enabled) {
+    const ss = SpreadsheetApp.getActive();
+    ensureDebugLogSheet(ss, DEBUG_LOG_SHEET_NAME);
+  }
+
+  refreshTraceConfig();
+  return { enabled: DEBUG_LOGGING_ENABLED };
+}
+
+function markDebugLogsForReset() {
+  PropertiesService.getDocumentProperties().setProperty(DEBUG_LOG_RESET_PENDING_KEY, 'true');
+  resetDebugLogsIfPending();
+}
+
+function resetDebugLogsIfPending() {
+  if (!isDebugLoggingEnabled()) return;
+  const docProps = PropertiesService.getDocumentProperties();
+  const pending = docProps.getProperty(DEBUG_LOG_RESET_PENDING_KEY);
+  if (pending !== 'true') return;
+
+  const ss = SpreadsheetApp.getActive();
+  if (!ss) return;
+
+  const calcSheet = ensureDebugLogSheet(ss, DEBUG_LOG_SHEET_NAME);
+
+  if (calcSheet) {
+    calcSheet.clearContents();
+    calcSheet.setFrozenRows(1);
+  }
+
+  docProps.deleteProperty(DEBUG_LOG_RESET_PENDING_KEY);
+}
+
+const ensureDebugLogSheet = (ss, sheetName) => {
+  if (!ss) return null;
+  let sheet = ss.getSheetByName(sheetName);
+  if (!sheet) {
+    sheet = ss.insertSheet(sheetName);
+  }
+  const lastRow = sheet.getLastRow();
+  if (lastRow === 0) {
+    sheet.appendRow(["— Debug Log —", ""]);
+    sheet.appendRow(["Time", "Message"]);
+  } else {
+    const lastValues = sheet.getRange(lastRow, 1, 1, 2).getValues()[0];
+    const hasHeader = String(lastValues[0]) === 'Time' && String(lastValues[1]) === 'Message';
+    if (!hasHeader) {
+      sheet.appendRow(['', '']);
+      sheet.appendRow(["— Debug Log —", ""]);
+      sheet.appendRow(["Time", "Message"]);
+    }
+  }
+  return sheet;
+};
 
 function appendDebugExecutionLog(message, context = {}) {
   try {
+    if (!isDebugLoggingEnabled()) return;
     const ss = SpreadsheetApp.getActive();
     if (!ss) return;
-    const sheetName = DEBUG_LOG_SHEET_NAME;
-    let sheet = ss.getSheetByName(sheetName);
-    if (!sheet) {
-      sheet = ss.insertSheet(sheetName);
-    }
+    resetDebugLogsIfPending();
+    const calcSheet = ensureDebugLogSheet(ss, DEBUG_LOG_SHEET_NAME);
 
     if (context.reset) {
-      sheet.clearContents();
-      sheet.setFrozenRows(1);
+      if (calcSheet) {
+        calcSheet.clearContents();
+        calcSheet.setFrozenRows(1);
+      }
+      if (execSheet) {
+        execSheet.clearContents();
+        execSheet.setFrozenRows(1);
+      }
       if (!message) return;
     }
 
@@ -82,21 +172,8 @@ function appendDebugExecutionLog(message, context = {}) {
     if (context.allowedCourseIds) detailParts.push(`allowed=${context.allowedCourseIds}`);
     const detailText = detailParts.length ? ` | ${detailParts.join(' | ')}` : '';
 
-    const lastRow = sheet.getLastRow();
-    if (lastRow === 0) {
-      sheet.appendRow(["— Debug Log —", ""]);
-      sheet.appendRow(["Time", "Message"]);
-    } else {
-      const lastValues = sheet.getRange(lastRow, 1, 1, 2).getValues()[0];
-      const hasHeader = String(lastValues[0]) === 'Time' && String(lastValues[1]) === 'Message';
-      if (!hasHeader) {
-        sheet.appendRow(['', '']);
-        sheet.appendRow(["— Debug Log —", ""]);
-        sheet.appendRow(["Time", "Message"]);
-      }
-    }
-
-    sheet.appendRow([new Date().toLocaleTimeString(), `${message}${detailText}`]);
+    const row = [new Date().toLocaleTimeString(), `${message}${detailText}`];
+    if (calcSheet) calcSheet.appendRow(row);
   } catch (error) {
     Logger.log(`Debug log write failed: ${error}`);
   }

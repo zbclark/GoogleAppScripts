@@ -195,9 +195,47 @@ function analyzeMetricCorrelations() {
       }
       
       console.log(`DG ID column index: ${dgIdIdx}, Finish Position column index: ${positionIdx}`);
+
+      // Optional fallback: load Player Ranking Model metrics (used when Tournament Results is missing a value)
+      let playerMetricsMap = null;
+      const playerStatsSheet = ss.getSheetByName("Player Ranking Model");
+      if (playerStatsSheet) {
+        const playerData = playerStatsSheet.getDataRange().getValues();
+        if (playerData.length > 5) {
+          const playerHeaderRow = playerData[4];
+          const playerHeaderMap = {};
+          playerHeaderRow.forEach((header, idx) => {
+            if (header) playerHeaderMap[header.toString().trim()] = idx;
+          });
+
+          if (playerHeaderMap['DG ID'] !== undefined) {
+            playerMetricsMap = new Map();
+            for (let i = 5; i < playerData.length; i++) {
+              const row = playerData[i];
+              if (!row || row.length === 0) continue;
+              const dgId = row[playerHeaderMap['DG ID']];
+              if (!dgId) continue;
+              const metrics = {};
+              allMetrics.forEach(metric => {
+                const colIdx = resolveMetricColumn(metric, playerHeaderMap);
+                if (colIdx !== undefined) {
+                  const value = row[colIdx];
+                  const parsed = parseFloat(value);
+                  if (!Number.isNaN(parsed)) {
+                    metrics[metric] = parsed;
+                  }
+                }
+              });
+              playerMetricsMap.set(dgId.toString(), metrics);
+            }
+            console.log(`Fallback metrics loaded: ${playerMetricsMap.size} players from Player Ranking Model`);
+          }
+        }
+      }
       
-      // Collect winner/finisher data - starts at row 6 (index 5)
+      // Collect winner/finisher data with metrics from Tournament Results
       let tournamentFinishers = [];
+      let matchedCount = 0;
       
       for (let i = 5; i < Math.min(resultsData.length, 500); i++) {
         const row = resultsData[i];
@@ -228,11 +266,65 @@ function analyzeMetricCorrelations() {
         // Only include valid positions
         if (pos === null || isNaN(pos) || pos <= 0) continue;
         
+        const playerMetrics = {};
+        let hasMetricData = false;
+        const fallbackMetrics = playerMetricsMap ? playerMetricsMap.get(dgId.toString()) : null;
+        allMetrics.forEach(metric => {
+          const colIdx = resolveMetricColumn(metric, headerMap);
+          let value = undefined;
+          if (colIdx !== undefined) {
+            value = row[colIdx];
+          }
+          let parsed = parseFloat(value);
+          if (Number.isNaN(parsed) || parsed === undefined) {
+            const fallbackValue = fallbackMetrics ? fallbackMetrics[metric] : undefined;
+            parsed = Number.isFinite(fallbackValue) ? fallbackValue : NaN;
+          }
+          if (!Number.isNaN(parsed)) {
+            playerMetrics[metric] = parsed;
+            hasMetricData = true;
+          }
+        });
+        
         tournamentFinishers.push({
           dgId: dgId,
           position: pos,
-          metrics: {}
+          metrics: playerMetrics
         });
+        
+        if (hasMetricData) {
+          matchedCount++;
+          correlationData.finisherMetrics.push({
+            tournament: fileName,
+            dgId: dgId,
+            position: pos,
+            isTop10: pos <= 10,
+            ...playerMetrics
+          });
+          
+          // Add to both aggregate and per-tournament correlation data
+          allMetrics.forEach(metric => {
+            const value = playerMetrics[metric];
+            // Include all numeric values (including 0) - 0 is a valid metric value
+            if (value !== undefined && !isNaN(value)) {
+              const isTop10 = pos <= 10;
+              
+              // Aggregate data
+              correlationData.metricCorrelations[metric].values.push({
+                position: pos,
+                value: value,
+                isTop10: isTop10
+              });
+              
+              // Per-tournament data
+              tournamentMetrics[metric].values.push({
+                position: pos,
+                value: value,
+                isTop10: isTop10
+              });
+            }
+          });
+        }
       }
       
       // Validate we have finishers
@@ -243,109 +335,6 @@ function analyzeMetricCorrelations() {
       
       console.log(`Found ${tournamentFinishers.length} finishers with valid positions`);
       filesProcessed++;
-      
-      // Now get player stats from the same workbook
-      const playerStatsSheet = ss.getSheetByName("Player Ranking Model");
-      if (!playerStatsSheet) {
-        console.log(`⚠️ ${fileName}: No Player Ranking Model sheet found`);
-        continue;
-      }
-      
-      const playerData = playerStatsSheet.getDataRange().getValues();
-      console.log(`Player Ranking Model has ${playerData.length} rows, ${playerData[0] ? playerData[0].length : 0} columns`);
-      
-      // Validate player data has rows
-      if (playerData.length <= 5) {
-        console.log(`⚠️ ${fileName}: Player data too short (${playerData.length} rows)`);
-        continue;
-      }
-      
-      // Headers are on row 5 (index 4)
-      const playerHeaderRow = playerData[4];
-      const playerHeaderMap = {};
-      playerHeaderRow.forEach((header, idx) => {
-        if (header) playerHeaderMap[header.toString().trim()] = idx;
-      });
-      
-      // Validate DG ID column exists in player data
-      if (playerHeaderMap['DG ID'] === undefined) {
-        console.log(`⚠️ ${fileName}: DG ID column not found in Player Ranking Model`);
-        continue;
-      }
-      
-      console.log(`Player metric columns found:`, Object.keys(playerHeaderMap).filter(h => allMetrics.includes(h)).slice(0, 10));
-      
-      // Map player DG IDs to their metrics
-      const playerMetricsMap = new Map();
-      
-      // Data starts at row 6 (index 5)
-      for (let i = 5; i < playerData.length; i++) {
-        const row = playerData[i];
-        if (!row || row.length === 0) continue;
-        
-        const dgId = row[playerHeaderMap['DG ID']];
-        
-        if (!dgId) continue;
-        
-        const playerMetrics = {};
-        allMetrics.forEach(metric => {
-          const colIdx = resolveMetricColumn(metric, playerHeaderMap);
-          if (colIdx !== undefined) {
-            const value = row[colIdx];
-            playerMetrics[metric] = parseFloat(value) || 0;
-          }
-        });
-        
-        playerMetricsMap.set(dgId.toString(), playerMetrics);
-      }
-      
-      console.log(`Found ${playerMetricsMap.size} players with metric data`);
-      
-      // Validate we have player data
-      if (playerMetricsMap.size === 0) {
-        console.log(`⚠️ ${fileName}: No player metric data found`);
-        continue;
-      }
-      
-      // Match finishers with their metrics
-      let matchedCount = 0;
-      tournamentFinishers.forEach(finisher => {
-        const metrics = playerMetricsMap.get(finisher.dgId.toString());
-        if (metrics) {
-          finisher.metrics = metrics;
-          matchedCount++;
-          correlationData.finisherMetrics.push({
-            tournament: fileName,
-            dgId: finisher.dgId,
-            position: finisher.position,
-            isTop10: finisher.position <= 10,
-            ...metrics
-          });
-          
-          // Add to both aggregate and per-tournament correlation data
-          allMetrics.forEach(metric => {
-            const value = metrics[metric];
-            // Include all numeric values (including 0) - 0 is a valid metric value
-            if (value !== undefined && !isNaN(value)) {
-              const isTop10 = finisher.position <= 10;
-              
-              // Aggregate data
-              correlationData.metricCorrelations[metric].values.push({
-                position: finisher.position,
-                value: value,
-                isTop10: isTop10
-              });
-              
-              // Per-tournament data
-              tournamentMetrics[metric].values.push({
-                position: finisher.position,
-                value: value,
-                isTop10: isTop10
-              });
-            }
-          });
-        }
-      });
       
       console.log(`Matched ${matchedCount} of ${tournamentFinishers.length} finishers with metrics`);
       
@@ -565,7 +554,6 @@ function analyzeMetricCorrelations() {
       "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
       "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
       "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox",
       "SG Putting", "SG Around Green", "SG T2G", "Scoring Average", "Birdie Chances Created",
       "Birdies or Better", "Greens in Regulation", "Scoring: Approach <100 SG",
       "Scoring: Approach <150 FW SG", "Scoring: Approach <150 Rough SG", "Scoring: Approach >150 Rough SG",
@@ -652,6 +640,9 @@ function analyzeMetricCorrelations() {
       updateProcessedTournaments(masterSs, newTournamentsProcessed);
       console.log(`✅ Added ${newTournamentsProcessed.length} tournaments to processing log`);
     }
+
+    // Reorder tabs for readability
+    reorderAnalysisSheets(masterSs);
     
   } catch (e) {
     console.error("Error in analyzeMetricCorrelations:", e);
@@ -973,6 +964,8 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
     }
     // Defensive: always use safeCourseType
     const safeCourseType = tournamentType || "BALANCED";
+    const configTemplateName = getTournamentConfigurationTemplateName(tournamentWorkbook);
+    const headerTemplateLabel = configTemplateName || safeCourseType;
     
     const sheetName = `02_${tournament.name}`.substring(0, 49);  // Sheet name limit
     const sheet = masterSs.insertSheet(sheetName);
@@ -985,7 +978,7 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       detectedType = correlationData.hybridTypeValidation[tournament.name].detectedType || 'UNKNOWN';
     }
     // Show config template in parenthesis
-    sheet.appendRow([`${tournament.name} - Metric Analysis (${safeCourseType} Course)`]);
+    sheet.appendRow([`${tournament.name} - Metric Analysis (${headerTemplateLabel})`]);
     sheet.getRange(1, 1).setFontWeight("bold").setFontSize(12);
 
     // Add validation line below header
@@ -1031,7 +1024,6 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
       "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
       "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox",
       "SG Putting", "SG Around Green", "SG T2G", "Scoring Average", "Birdie Chances Created",
       "Birdies or Better", "Greens in Regulation", "Scoring: Approach <100 SG",
       "Scoring: Approach <150 FW SG", "Scoring: Approach <150 Rough SG", "Scoring: Approach >150 Rough SG",
@@ -1041,18 +1033,18 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       "Course Management: Approach <200 FW Prox", "Course Management: Approach >200 FW Prox"
     ];
     const sortIndex = new Map(sortOrder.map((metric, index) => [metric, index]));
-    const sortedMetrics = Object.values(breakdown.metricAverages)
-      .map((data, idx) => ({
-        metric: Object.keys(breakdown.metricAverages)[idx],
+    const sortedMetrics = sortOrder.map(metricName => {
+      const data = breakdown.metricAverages[metricName] || {
+        top10Avg: 0,
+        fieldAvg: 0,
+        delta: 0,
+        correlation: 0
+      };
+      return {
+        metric: metricName,
         ...data
-      }))
-      .filter(m => m.delta !== undefined && m.fieldAvg !== 0)
-      .sort((a, b) => {
-        const indexA = sortIndex.has(a.metric) ? sortIndex.get(a.metric) : Number.MAX_SAFE_INTEGER;
-        const indexB = sortIndex.has(b.metric) ? sortIndex.get(b.metric) : Number.MAX_SAFE_INTEGER;
-        if (indexA !== indexB) return indexA - indexB;
-        return a.metric.localeCompare(b.metric);
-      });
+      };
+    });
     
     // Calculate recommended weights based on correlation strength within each group
     // Group metrics and find max correlation per group
@@ -1077,6 +1069,28 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
     // Get group weights for this course type
     const groupWeights = getGroupWeights(tournamentType);
     
+    const recommendedWeightsByMetric = {};
+    const recommendedGroupTotals = {};
+
+    sortedMetrics.forEach((m) => {
+      const correlation = m.correlation !== undefined ? m.correlation : 0;
+      const templateWeight = getTemplateWeightForMetric(tournamentType, m.metric);
+      const recommendedWeight = calculateRecommendedWeight(m.metric, correlation, {
+        templateWeight,
+        configWeight: configWeights[m.metric],
+        groupMaxCorrelations
+      });
+
+      const groupName = getMetricGroup(m.metric) || "__UNGROUPED__";
+      const normalizedBase = Math.abs(Number(recommendedWeight) || 0);
+      recommendedWeightsByMetric[m.metric] = {
+        raw: recommendedWeight,
+        base: normalizedBase,
+        groupName
+      };
+      recommendedGroupTotals[groupName] = (recommendedGroupTotals[groupName] || 0) + normalizedBase;
+    });
+
     sortedMetrics.forEach((m, idx) => {
       // Find matching config weight for this metric (explicit match only)
       let configWeight = configWeights[m.metric];
@@ -1102,14 +1116,12 @@ function createIndividualTournamentSheets(masterSs, correlationData, courseTypes
       // Use absolute correlation for normalization to ensure lower-is-better metrics are handled correctly
       const correlation = m.correlation !== undefined ? m.correlation : 0;
       const templateWeight = getTemplateWeightForMetric(tournamentType, m.metric);
+      const weightInfo = recommendedWeightsByMetric[m.metric] || { raw: 0, base: 0, groupName: "__UNGROUPED__" };
+      const groupTotal = recommendedGroupTotals[weightInfo.groupName] || 0;
+      const normalizedRecommendedWeight = groupTotal > 0 ? weightInfo.base / groupTotal : 0;
 
-      const recommendedWeight = calculateRecommendedWeight(m.metric, correlation, {
-        templateWeight,
-        configWeight,
-        groupMaxCorrelations
-      });
       const templateWeightValue = (templateWeight !== undefined && !isNaN(templateWeight)) ? templateWeight.toFixed(4) : "";
-      const recommendedWeightValue = Number(recommendedWeight).toFixed(4);
+      const recommendedWeightValue = Number(normalizedRecommendedWeight).toFixed(4);
 
       sheet.appendRow([
         m.metric,
@@ -1544,6 +1556,7 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
   // Get tournament files to read config weights from each
   const folderName = getGolfFolderName();
   const folders = DriveApp.getFoldersByName(folderName);
+  const configTemplateByTournament = {};
   if (folders.hasNext()) {
     const golfFolder = folders.next();
     const workbookFiles = golfFolder.getFilesByType(MimeType.GOOGLE_SHEETS);
@@ -1558,6 +1571,10 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
       if (tourFiles[tournament.name]) {
         const tourSs = SpreadsheetApp.open(tourFiles[tournament.name]);
         const weights = getTournamentConfigurationWeights(tourSs);
+        const templateName = getTournamentConfigurationTemplateName(tourSs);
+        if (templateName) {
+          configTemplateByTournament[tournament.name] = templateName;
+        }
         if (Object.keys(weights).length > 0) {
           Object.entries(weights).forEach(([metric, weight]) => {
             if (!allConfigWeights[metric]) {
@@ -1580,51 +1597,6 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
     }
   });
 
-  // --- Aggregate recommended weights from 02_ sheets ---
-  const allSheets = masterSs.getSheets();
-  const recommendedWeightsByType = { POWER: {}, TECHNICAL: {}, BALANCED: {} };
-  const templateWeightsByType = { POWER: {}, TECHNICAL: {}, BALANCED: {} };
-  const recWeightCountsByType = { POWER: {}, TECHNICAL: {}, BALANCED: {} };
-  allSheets.forEach(sheet => {
-    const name = sheet.getName();
-    if (!name.startsWith('02_')) return;
-    // Read header for course type (row 1)
-    const header = sheet.getRange(1, 1).getValue();
-    let courseType = 'BALANCED';
-    const match = header.match(/\((POWER|TECHNICAL|BALANCED) Course\)/i);
-    if (match) courseType = match[1].toUpperCase();
-    if (!['POWER','TECHNICAL','BALANCED'].includes(courseType)) return;
-    // Find the metrics table header row (look for "Metric" in col 1)
-    let metricsHeaderRow = 0;
-    for (let r = 1; r <= 10; r++) {
-      if (sheet.getRange(r, 1).getValue() === "Metric") {
-        metricsHeaderRow = r;
-        break;
-      }
-    }
-    if (!metricsHeaderRow) return;
-    // Read all metric rows until blank
-    let row = metricsHeaderRow + 1;
-    while (true) {
-      const metricName = sheet.getRange(row, 1).getValue();
-      if (!metricName) break;
-      const templateWeight = parseFloat(sheet.getRange(row, 8).getValue()) || 0;
-      const recommendedWeight = parseFloat(sheet.getRange(row, 9).getValue());
-      if (!isNaN(recommendedWeight)) {
-        if (!recommendedWeightsByType[courseType][metricName]) {
-          recommendedWeightsByType[courseType][metricName] = 0;
-          recWeightCountsByType[courseType][metricName] = 0;
-        }
-        recommendedWeightsByType[courseType][metricName] += recommendedWeight;
-        recWeightCountsByType[courseType][metricName] += 1;
-      }
-      if (!isNaN(templateWeight)) {
-        templateWeightsByType[courseType][metricName] = templateWeight; // last seen
-      }
-      row++;
-    }
-  });
-
   displayOrder.forEach(typeName => {
       if (!courseTypes[typeName] || courseTypes[typeName].tournaments.length === 0) return;
       const safeCourseType = typeName || "BALANCED";
@@ -1633,6 +1605,20 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
         `${safeCourseType} COURSES (${courseType.tournaments.length} tournaments)`
       ).setFontWeight("bold").setFontSize(11).setBackground("#4472C4").setFontColor("white");
       currentRow++;
+
+      // Show per-tournament configuration template name from Configuration Sheet (Q27)
+      sheet.appendRow(["Tournament", "Config Template (Q27)"]);
+      const templateHeaderRange = sheet.getRange(currentRow, 1, 1, 2);
+      templateHeaderRange.setBackground("#f3f4f6").setFontWeight("bold");
+      currentRow++;
+      courseType.tournaments.forEach(tournamentName => {
+        const templateName = configTemplateByTournament[tournamentName] || "";
+        sheet.appendRow([tournamentName, templateName]);
+        currentRow++;
+      });
+      sheet.appendRow([" "]);
+      currentRow++;
+
       sheet.appendRow([
         "Metric",
         "Config Weight",
@@ -1706,17 +1692,57 @@ function createComprehensiveWeightTemplatesSheet(masterSs, courseTypes, correlat
         if (indexA !== indexB) return indexA - indexB;
         return a.name.localeCompare(b.name);
       });
+      // Pull avg correlations from the 03 summary sheet (same driver as 04)
+      const typeSummarySheet = masterSs.getSheetByName(`03_${safeCourseType}_Summary`);
+      const typeCorrelations = {};
+      if (typeSummarySheet) {
+        const data = typeSummarySheet.getRange("A1:D200").getValues();
+        for (let i = 4; i < data.length; i++) {
+          const metricName = data[i][0];
+          const avgCorr = parseFloat(data[i][2]);
+          if (metricName) {
+            typeCorrelations[String(metricName).trim()] = Number.isFinite(avgCorr) ? avgCorr : 0;
+          }
+        }
+      }
+
+      // Build group max correlations for normalization
+      const groupMaxCorrelations = {};
+      for (const [groupName, metrics] of Object.entries(allMetrics)) {
+        let maxCorrelation = 0;
+        metrics.forEach(metricName => {
+          const corr = Math.abs(typeCorrelations[metricName] || 0);
+          if (corr > maxCorrelation) maxCorrelation = corr;
+        });
+        groupMaxCorrelations[groupName] = maxCorrelation;
+      }
+
+      const recommendedWeightsByMetric = {};
+      const recommendedGroupTotals = {};
+
+      metricsList.forEach(m => {
+        const templateWeight = getTemplateWeightForMetric(safeCourseType, m.name) || 0;
+        const avgCorrelation = typeCorrelations[m.name] || 0;
+        const recommendedWeight = calculateRecommendedWeight(m.name, avgCorrelation, {
+          templateWeight,
+          groupMaxCorrelations
+        });
+        const groupName = m.group || getMetricGroup(m.name) || "__UNGROUPED__";
+        const normalizedBase = Math.abs(Number(recommendedWeight) || 0);
+        recommendedWeightsByMetric[m.name] = {
+          raw: recommendedWeight,
+          base: normalizedBase,
+          groupName
+        };
+        recommendedGroupTotals[groupName] = (recommendedGroupTotals[groupName] || 0) + normalizedBase;
+      });
+
       metricsList.forEach(m => {
         const configWeight = configWeights[m.name] || 0;
-        const templateWeight = templateWeightsByType[safeCourseType][m.name] || 0;
-        let recommendedWeight = 0;
-        if (recWeightCountsByType[safeCourseType][m.name] > 0) {
-          recommendedWeight = recommendedWeightsByType[safeCourseType][m.name] / recWeightCountsByType[safeCourseType][m.name];
-        }
-        // Defensive: SG Around Green and SG Putting should not be negative
-        if ((m.name === "SG Around Green" || m.name === "SG Putting") && recommendedWeight < 0) {
-          recommendedWeight = Math.abs(recommendedWeight);
-        }
+        const templateWeight = getTemplateWeightForMetric(safeCourseType, m.name) || 0;
+        const weightInfo = recommendedWeightsByMetric[m.name] || { raw: 0, base: 0, groupName: m.group || "__UNGROUPED__" };
+        const groupTotal = recommendedGroupTotals[weightInfo.groupName] || 0;
+        const recommendedWeight = groupTotal > 0 ? weightInfo.base / groupTotal : 0;
         // Defensive: If configWeight is undefined, try to load from tournament config sheets
         let displayConfigWeight = configWeight;
         if (displayConfigWeight === undefined) displayConfigWeight = "";
@@ -1824,7 +1850,6 @@ function createTypeSpecificSummaries(masterSs, courseTypes, correlationData) {
       "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
       "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
       "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox",
       "SG Putting", "SG Around Green", "SG T2G", "Scoring Average", "Birdie Chances Created",
       "Birdies or Better", "Greens in Regulation", "Scoring: Approach <100 SG",
       "Scoring: Approach <150 FW SG", "Scoring: Approach <150 Rough SG", "Scoring: Approach >150 Rough SG",
@@ -1875,6 +1900,8 @@ function createTypeSpecificSummaries(masterSs, courseTypes, correlationData) {
  * Create course type classification sheet
  */
 function createCourseTypeSheet(masterSs, courseTypes, correlationData) {
+  const existing = masterSs.getSheetByName("00_Course_Type_Classification");
+  if (existing) masterSs.deleteSheet(existing);
   const sheet = masterSs.insertSheet("00_Course_Type_Classification");
   
   sheet.appendRow(["COURSE TYPE CLASSIFICATION (Based on Correlation Patterns)"]);
@@ -2011,7 +2038,6 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
       "Approach <200 FW GIR", "Approach <200 FW SG", "Approach <200 FW Prox",
       "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox",
       "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox",
       "SG Putting", "SG Around Green", "SG T2G", "Scoring Average", "Birdie Chances Created",
       "Birdies or Better", "Greens in Regulation", "Scoring: Approach <100 SG",
       "Scoring: Approach <150 FW SG", "Scoring: Approach <150 Rough SG", "Scoring: Approach >150 Rough SG",
@@ -2043,16 +2069,34 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
       groupMaxCorrelations[groupName] = maxCorrelation;
     }
 
-    // Add rows for each metric (ALL metrics, not just top 15)
+    const recommendedWeightsByMetric = {};
+    const recommendedGroupTotals = {};
+
     metricsData.forEach(m => {
-      // Get template weight
       const templateWeight = getTemplateWeightForMetric(typeName, m.metric);
-      // Recommended weight aligned with 02_ sheet logic
       const recommendedWeight = calculateRecommendedWeight(m.metric, m.correlation, {
         templateWeight,
         configWeight: 0,
         groupMaxCorrelations
       });
+      const groupName = getMetricGroup(m.metric) || "__UNGROUPED__";
+      const normalizedBase = Math.abs(Number(recommendedWeight) || 0);
+      recommendedWeightsByMetric[m.metric] = {
+        raw: recommendedWeight,
+        base: normalizedBase,
+        groupName
+      };
+      recommendedGroupTotals[groupName] = (recommendedGroupTotals[groupName] || 0) + normalizedBase;
+    });
+
+    // Add rows for each metric (ALL metrics, not just top 15)
+    metricsData.forEach(m => {
+      // Get template weight
+      const templateWeight = getTemplateWeightForMetric(typeName, m.metric);
+      const weightInfo = recommendedWeightsByMetric[m.metric] || { raw: 0, base: 0, groupName: "__UNGROUPED__" };
+      const groupTotal = recommendedGroupTotals[weightInfo.groupName] || 0;
+      const recommendedWeight = groupTotal > 0 ? weightInfo.base / groupTotal : 0;
+
       // Calculate gap
       const gap = (recommendedWeight - templateWeight).toFixed(4);
       const pctChange = templateWeight > 0 ? ((gap / templateWeight) * 100).toFixed(1) : "N/A";
@@ -2068,20 +2112,72 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
       if (gapVal > 0.1) {
         sheet.getRange(currentRow, 3).setBackground("#FFE699");  // Yellow for significant gaps
       }
+  
       currentRow++;
     });
-    // Remove unnecessary blank lines after each course type
+    sheet.appendRow([" ", " ", " ", " ", " "]);
+    currentRow++;
   });
   
-  // Add legend/notes in first column only to avoid trailing zeros
+  // Add legend/notes with a blank row above and clear trailing columns
   let legendRow = sheet.getLastRow() + 1;
-  sheet.getRange(legendRow, 1).setValue("*Recommended weights are normalized from tournament correlation values (absolute)");
+  sheet.getRange(legendRow, 1, 1, 5).setValues([["", "", "", "", ""]]);
   legendRow++;
-  sheet.getRange(legendRow, 1).setValue("Gap = Recommended - Template (positive = increase weight, negative = decrease)");
+  sheet.getRange(legendRow, 1, 1, 5).setValues([["*Recommended weights are normalized from tournament correlation values (absolute)", "", "", "", ""]]);
   legendRow++;
-  sheet.getRange(legendRow, 1).setValue("% Change = (Gap / Template Weight) × 100");
+  sheet.getRange(legendRow, 1, 1, 5).setValues([["Gap = Recommended - Template (positive = increase weight, negative = decrease)", "", "", "", ""]]);
+  legendRow++;
+  sheet.getRange(legendRow, 1, 1, 5).setValues([["% Change = (Gap / Template Weight) × 100", "", "", "", ""]]);
   
   sheet.autoResizeColumns(1, 5);
+}
+
+/**
+ * Reorder analysis sheets into a consistent tab order.
+ * Order: Comprehensive Analysis Summary, Calibration Report, Weight Templates, 00, 04, 03 (POWER/TECH/BAL), 05, 02 (alpha), Processing Log, then others.
+ */
+function reorderAnalysisSheets(masterSs) {
+  if (!masterSs) return;
+  const sheets = masterSs.getSheets();
+  const byName = new Map(sheets.map(s => [s.getName(), s]));
+  const orderedNames = [];
+
+  const pushIfExists = name => {
+    if (byName.has(name)) orderedNames.push(name);
+  };
+
+  pushIfExists("Comprehensive Analysis Summary");
+  pushIfExists("Calibration Report");
+  pushIfExists("Weight Templates");
+  pushIfExists("00_Course_Type_Classification");
+  pushIfExists("04_Weight_Calibration_Guide");
+
+  displayOrder.forEach(typeName => {
+    pushIfExists(`03_${typeName}_Summary`);
+  });
+
+  pushIfExists("05_Model_Delta_Trends");
+
+  const twoSheets = sheets
+    .map(s => s.getName())
+    .filter(name => name.startsWith("02_"))
+    .sort((a, b) => a.localeCompare(b));
+  twoSheets.forEach(name => orderedNames.push(name));
+
+  pushIfExists("_Processing_Log");
+
+  const used = new Set(orderedNames);
+  sheets.forEach(s => {
+    const name = s.getName();
+    if (!used.has(name)) orderedNames.push(name);
+  });
+
+  orderedNames.forEach((name, index) => {
+    const sheet = byName.get(name);
+    if (!sheet) return;
+    masterSs.setActiveSheet(sheet);
+    masterSs.moveActiveSheet(index + 1);
+  });
 }
 
 /**
@@ -2090,208 +2186,15 @@ function createWeightCalibrationSheet(masterSs, courseTypes, correlationData) {
  * Returns the individual metric weight (distribution within group, not multiplied by group weight)
  */
 function getTemplateWeightForMetric(courseType, metricName) {
-  // Individual metric weights from WEIGHT_TEMPLATES in templateLoader.js
-  // These are the distribution percentages within each group (before multiplying by group weight)
-  const METRIC_TEMPLATES = {
-    POWER: {
-      // Driving Performance [0.404, 0.123, 0.472]
-      "Driving Distance": 0.404,
-      "Driving Accuracy": 0.123,
-      "SG OTT": 0.472,
-      
-      // Approach <100 [0.14, 0.33, 0.53]
-      "Approach <100 GIR": 0.14,
-      "Approach <100 SG": 0.33,
-      "Approach <100 Prox": 0.53,
-      
-      // Approach 100-150 [0.12, 0.32, 0.56]
-      "Approach <150 FW GIR": 0.12,
-      "Approach <150 FW SG": 0.32,
-      "Approach <150 FW Prox": 0.56,
-      "Approach <150 Rough GIR": 0.0,
-      "Approach <150 Rough SG": 0.0,
-      "Approach <150 Rough Prox": 0.0,
-      
-      // Approach 150-200 [0.11, 0.30, 0.59]
-      "Approach <200 FW GIR": 0.11,
-      "Approach <200 FW SG": 0.30,
-      "Approach <200 FW Prox": 0.59,
-      "Approach >150 Rough GIR": 0.0,
-      "Approach >150 Rough SG": 0.0,
-      "Approach >150 Rough Prox": 0.0,
-      
-      // Approach >200 [0.10, 0.25, 0.65]
-      "Approach >200 FW GIR": 0.10,
-      "Approach >200 FW SG": 0.25,
-      "Approach >200 FW Prox": 0.65,
-      "Approach >200 FW Rough GIR": 0.0,
-      "Approach >200 FW Rough SG": 0.0,
-      "Approach >200 FW Rough Prox": 0.0,
-      
-      // Putting [1.0]
-      "SG Putting": 1.0,
-      
-      // Around Green [1.0]
-      "SG Around Green": 1.0,
-      
-      // Scoring [0.20, 0.10, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
-      "SG T2G": 0.20,
-      "Scoring Average": 0.10,
-      "Birdie Chances Created": 0.10,
-      "Birdies or Better": 0.15,
-      "Greens in Regulation": 0.15,
-      "Scoring: Approach <100 SG": 0.15,
-      "Scoring: Approach <150 FW SG": 0.10,
-      "Scoring: Approach <150 Rough SG": 0.05,
-      "Scoring: Approach >150 Rough SG": 0.0,
-      "Scoring: Approach <200 FW SG": 0.0,
-      "Scoring: Approach >200 FW SG": 0.0,
-      
-      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
-      "Scrambling": 0.12,
-      "Great Shots": 0.08,
-      "Poor Shot Avoidance": 0.08,
-      "Course Management: Approach <100 Prox": 0.10,
-      "Course Management: Approach <150 FW Prox": 0.10,
-      "Course Management: Approach <150 Rough Prox": 0.15,
-      "Course Management: Approach >150 Rough Prox": 0.20,
-      "Course Management: Approach <200 FW Prox": 0.12,
-      "Course Management: Approach >200 FW Prox": 0.05
-    },
-    TECHNICAL: {
-      // Driving Performance [0.086, 0.354, 0.560]
-      "Driving Distance": 0.086,
-      "Driving Accuracy": 0.354,
-      "SG OTT": 0.560,
-      
-      // Approach <100 [0.09, 0.32, 0.59]
-      "Approach <100 GIR": 0.09,
-      "Approach <100 SG": 0.32,
-      "Approach <100 Prox": 0.59,
-      
-      // Approach 100-150 [0.09, 0.29, 0.62]
-      "Approach <150 FW GIR": 0.09,
-      "Approach <150 FW SG": 0.29,
-      "Approach <150 FW Prox": 0.62,
-      "Approach <150 Rough GIR": 0.0,
-      "Approach <150 Rough SG": 0.0,
-      "Approach <150 Rough Prox": 0.0,
-      
-      // Approach 150-200 [0.08, 0.27, 0.65]
-      "Approach <200 FW GIR": 0.08,
-      "Approach <200 FW SG": 0.27,
-      "Approach <200 FW Prox": 0.65,
-      "Approach >150 Rough GIR": 0.0,
-      "Approach >150 Rough SG": 0.0,
-      "Approach >150 Rough Prox": 0.0,
-      
-      // Approach >200 [0.08, 0.22, 0.70]
-      "Approach >200 FW GIR": 0.08,
-      "Approach >200 FW SG": 0.22,
-      "Approach >200 FW Prox": 0.70,
-      "Approach >200 FW Rough GIR": 0.0,
-      "Approach >200 FW Rough SG": 0.0,
-      "Approach >200 FW Rough Prox": 0.0,
-      
-      // Putting [1.0]
-      "SG Putting": 1.0,
-      
-      // Around Green [1.0]
-      "SG Around Green": 1.0,
-      
-      // Scoring [0.18, 0.12, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
-      "SG T2G": 0.18,
-      "Scoring Average": 0.12,
-      "Birdie Chances Created": 0.10,
-      "Birdies or Better": 0.15,
-      "Greens in Regulation": 0.15,
-      "Scoring: Approach <100 SG": 0.15,
-      "Scoring: Approach <150 FW SG": 0.10,
-      "Scoring: Approach <150 Rough SG": 0.05,
-      "Scoring: Approach >150 Rough SG": 0.0,
-      "Scoring: Approach <200 FW SG": 0.0,
-      "Scoring: Approach >200 FW SG": 0.0,
-      
-      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
-      "Scrambling": 0.12,
-      "Great Shots": 0.08,
-      "Poor Shot Avoidance": 0.08,
-      "Course Management: Approach <100 Prox": 0.10,
-      "Course Management: Approach <150 FW Prox": 0.10,
-      "Course Management: Approach <150 Rough Prox": 0.15,
-      "Course Management: Approach >150 Rough Prox": 0.20,
-      "Course Management: Approach <200 FW Prox": 0.12,
-      "Course Management: Approach >200 FW Prox": 0.05
-    },
-    BALANCED: {
-      // Driving Performance [0.061, 0.410, 0.529]
-      "Driving Distance": 0.061,
-      "Driving Accuracy": 0.410,
-      "SG OTT": 0.529,
-      
-      // Approach <100 [0.12, 0.34, 0.54]
-      "Approach <100 GIR": 0.12,
-      "Approach <100 SG": 0.34,
-      "Approach <100 Prox": 0.54,
-      
-      // Approach 100-150 [0.11, 0.35, 0.54]
-      "Approach <150 FW GIR": 0.11,
-      "Approach <150 FW SG": 0.35,
-      "Approach <150 FW Prox": 0.54,
-      "Approach <150 Rough GIR": 0.0,
-      "Approach <150 Rough SG": 0.0,
-      "Approach <150 Rough Prox": 0.0,
-      
-      // Approach 150-200 [0.10, 0.32, 0.58]
-      "Approach <200 FW GIR": 0.10,
-      "Approach <200 FW SG": 0.32,
-      "Approach <200 FW Prox": 0.58,
-      "Approach >150 Rough GIR": 0.0,
-      "Approach >150 Rough SG": 0.0,
-      "Approach >150 Rough Prox": 0.0,
-      
-      // Approach >200 [0.09, 0.27, 0.64]
-      "Approach >200 FW GIR": 0.09,
-      "Approach >200 FW SG": 0.27,
-      "Approach >200 FW Prox": 0.64,
-      "Approach >200 FW Rough GIR": 0.0,
-      "Approach >200 FW Rough SG": 0.0,
-      "Approach >200 FW Rough Prox": 0.0,
-      
-      // Putting [1.0]
-      "SG Putting": 1.0,
-      
-      // Around Green [1.0]
-      "SG Around Green": 1.0,
-      
-      // Scoring [0.19, 0.11, 0.10, 0.15, 0.15, 0.15, 0.10, 0.05, 0.00]
-      "SG T2G": 0.19,
-      "Scoring Average": 0.11,
-      "Birdie Chances Created": 0.10,
-      "Birdies or Better": 0.15,
-      "Greens in Regulation": 0.15,
-      "Scoring: Approach <100 SG": 0.15,
-      "Scoring: Approach <150 FW SG": 0.10,
-      "Scoring: Approach <150 Rough SG": 0.05,
-      "Scoring: Approach >150 Rough SG": 0.0,
-      "Scoring: Approach <200 FW SG": 0.0,
-      "Scoring: Approach >200 FW SG": 0.0,
-      
-      // Course Management [0.12, 0.08, 0.08, 0.10, 0.10, 0.15, 0.20, 0.12, 0.05]
-      "Scrambling": 0.12,
-      "Great Shots": 0.08,
-      "Poor Shot Avoidance": 0.08,
-      "Course Management: Approach <100 Prox": 0.10,
-      "Course Management: Approach <150 FW Prox": 0.10,
-      "Course Management: Approach <150 Rough Prox": 0.15,
-      "Course Management: Approach >150 Rough Prox": 0.20,
-      "Course Management: Approach <200 FW Prox": 0.12,
-      "Course Management: Approach >200 FW Prox": 0.05
-    }
-  };
-  
-  // Return the individual metric weight for the given course type and metric
-  return METRIC_TEMPLATES[courseType]?.[metricName] || 0;
+  if (typeof GolfAlgorithm === "undefined" || !GolfAlgorithm || typeof GolfAlgorithm.getWeightTemplates !== "function") {
+    throw new Error("GolfAlgorithm library is not available. Add the Golf_Algorithm_Library as a dependency and ensure it exposes getWeightTemplates().");
+  }
+
+  const WEIGHT_TEMPLATES = GolfAlgorithm.getWeightTemplates();
+  const group = getMetricGroup(metricName);
+  const template = WEIGHT_TEMPLATES[courseType];
+  const metricWeight = template?.metricWeights?.[group]?.[metricName]?.weight;
+  return Number.isFinite(metricWeight) ? metricWeight : 0;
 }
 
 /**
@@ -2382,6 +2285,25 @@ function getTournamentConfigurationWeights(tournamentWorkbook) {
   } catch (e) {
     console.log(`Error reading tournament config weights: ${e.message}`);
     return {};
+  }
+}
+
+/**
+ * Read configuration template name from a tournament's Configuration Sheet (cell Q27).
+ * Expected format: "Template: WAIALAE_COUNTRY_CLUB" or similar.
+ */
+function getTournamentConfigurationTemplateName(tournamentWorkbook) {
+  try {
+    if (!tournamentWorkbook) return "";
+    const configSheet = tournamentWorkbook.getSheetByName("Configuration Sheet");
+    if (!configSheet) return "";
+    const rawValue = String(configSheet.getRange("Q27").getDisplayValue() || "").trim();
+    if (!rawValue) return "";
+    const match = rawValue.match(/Template\s*:\s*(.+)$/i);
+    return match ? match[1].trim() : rawValue;
+  } catch (e) {
+    console.log(`Error reading configuration template name: ${e.message}`);
+    return "";
   }
 }
     
@@ -2547,8 +2469,7 @@ function getMetricGroupings() {
       "Approach >150 Rough GIR", "Approach >150 Rough SG", "Approach >150 Rough Prox"
     ],
     "Approach - Very Long (>200)": [
-      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox",
-      "Approach >200 FW Rough GIR", "Approach >200 FW Rough SG", "Approach >200 FW Rough Prox"
+      "Approach >200 FW GIR", "Approach >200 FW SG", "Approach >200 FW Prox"
     ],
     "Putting": [
       "SG Putting"
@@ -2587,7 +2508,6 @@ function getMetricGroup(metricName) {
 
 function calculateRecommendedWeight(metricName, correlation, options = {}) {
   const templateWeight = options.templateWeight || 0;
-  const configWeight = options.configWeight || 0;
   const groupMaxCorrelations = options.groupMaxCorrelations || {};
 
   const safeCorrelation = Number.isFinite(correlation) ? correlation : 0;
@@ -2601,8 +2521,6 @@ function calculateRecommendedWeight(metricName, correlation, options = {}) {
   let baseWeight = 0;
   if (templateWeight && templateWeight > 0) {
     baseWeight = templateWeight;
-  } else if (configWeight && configWeight > 0) {
-    baseWeight = configWeight;
   }
 
   let recommendedWeight = baseWeight > 0 ? baseWeight * ratio : safeCorrelation;

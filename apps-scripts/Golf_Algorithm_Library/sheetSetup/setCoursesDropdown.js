@@ -75,17 +75,39 @@ async function setSimilarCourseDropdowns() {
         const match = `${namePart} ${idYearsPart}`.trim().match(/^\s*([^\d]+?)\s+(\d+)\s*(.*?)\s*$/i);
         if (match) {
           const [_, name, num, years] = match;
-          const courseKey = `${name}|${num}`;
+          const rawName = name.toString().replace(/\s+/g, ' ').trim();
+          const cleanedName = rawName
+            .replace(/[-–—]+\s*PGA\s+Championship\s*/i, ' ')
+            .replace(/\bPGA\s+Championship\b/gi, ' ')
+            .replace(/\s+Club$/i, '')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+          const displayName = cleanedName || rawName;
+          const courseKey = displayName.toLowerCase();
           const cleanYears = years.replace(/[()]/g, '').trim();
-          const displayText = `${name} (ID: ${num}) [${cleanYears || 'no years'}]`;
+          const parsedYears = cleanYears
+            ? cleanYears.split(',').map(y => parseInt(y.trim(), 10)).filter(y => !Number.isNaN(y))
+            : [];
+
+          const numText = num.toString().trim();
+          const normalizedNum = Number.isNaN(parseInt(numText, 10)) ? numText : String(parseInt(numText, 10));
 
           if (!courseMap.has(courseKey)) {
             courseMap.set(courseKey, {
-              display: displayText,
+              name: displayName,
+              courseNums: new Set(),
+              years: new Set(),
               eventIds: new Set()
             });
           }
-          courseMap.get(courseKey).eventIds.add(eventId);
+          const entry = courseMap.get(courseKey);
+          if (displayName.length > entry.name.length) {
+            entry.name = displayName;
+          }
+          entry.courseNums.add(normalizedNum);
+          parsedYears.forEach(year => entry.years.add(year));
+          entry.eventIds.add(eventId);
           processedCount++;
         } else if (namePart || idYearsPart) {
           console.warn(`⚠️ Failed to parse course entry at row ${rowIndex + START_ROW}, columns ${i}-${i+1}: "${namePart}" / "${idYearsPart}"`);
@@ -97,11 +119,17 @@ async function setSimilarCourseDropdowns() {
 
     // Convert map to sorted array with validation
     const courses = Array.from(courseMap.values())
-      .sort((a, b) => a.display.localeCompare(b.display))
-      .map(c => ({
-        display: c.display,
-        eventIds: Array.from(c.eventIds)
-      }));
+      .map(c => {
+        const courseNums = Array.from(c.courseNums).sort((a, b) => parseInt(a, 10) - parseInt(b, 10));
+        const years = Array.from(c.years).sort((a, b) => b - a);
+        const yearsText = years.length > 0 ? years.join(', ') : 'no years';
+        const display = `${c.name} (IDs: ${courseNums.join(', ')}) [${yearsText}]`;
+        return {
+          display,
+          eventIds: Array.from(c.eventIds)
+        };
+      })
+      .sort((a, b) => a.display.localeCompare(b.display));
 
     // Debug course count
     console.log(`📋 Found ${courses.length} unique courses`);

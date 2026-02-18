@@ -69,7 +69,7 @@ async function getCourseNameAndNum() {
         
         // Determine year range to process
         let startYear = lastYear ? lastYear - 1 : currentYear;
-        let endYear = Math.max(2004, startYear - 4); // Process max 5 years at a time
+        let endYear = Math.max(2004, startYear - 6); // Process max 7 years at a time
         
         // Year processing
         for (let year = startYear; year >= endYear; year--) {

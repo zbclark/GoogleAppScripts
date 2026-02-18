@@ -190,6 +190,8 @@ function analyzePostTournamentCalibration() {
 }
 
 function createCalibrationReport(masterSs, calibrationData) {
+  const existing = masterSs.getSheetByName("Calibration Report");
+  if (existing) masterSs.deleteSheet(existing);
   let sheet = masterSs.insertSheet("Calibration Report");
   
   sheet.appendRow(["🎯 POST-TOURNAMENT CALIBRATION ANALYSIS"]);
@@ -243,6 +245,11 @@ function createCalibrationReport(masterSs, calibrationData) {
   sheet.appendRow(["1. Review individual 02_Tournament_* sheets for detailed analysis"]);
   sheet.appendRow(["2. Compare Config vs Template vs Recommended weights"]);
   sheet.appendRow(["3. Adjust weights for metrics with high correlation but low current weight"]);
+
+  // Reorder tabs after report creation
+  if (typeof reorderAnalysisSheets === "function") {
+    reorderAnalysisSheets(masterSs);
+  }
 }
 
 /**
