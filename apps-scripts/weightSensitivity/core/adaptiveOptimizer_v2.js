@@ -19,11 +19,12 @@ const { generatePlayerRankings, cleanMetricValue } = require('./modelCore');
 const { getSharedConfig } = require('../utilities/configParser');
 const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
 const { WEIGHT_TEMPLATES } = require('../utilities/weightTemplates');
+const { getDeltaPlayerScoresForEvent } = require('../utilities/deltaPlayerScores');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const DATA_DIR = ROOT_DIR;
-const DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
-const OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
+let DATA_DIR = ROOT_DIR;
+let DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
+let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
 let LOGGING_ENABLED = false;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
@@ -32,6 +33,15 @@ const MIN_METRIC_COVERAGE = 0.70;
 const VALIDATION_RANGE_PCT = 0.20;
 const VALIDATION_PRIOR_WEIGHT = 0.25;
 const DELTA_TREND_PRIOR_WEIGHT = 0.15;
+const APPROACH_DELTA_PRIOR_WEIGHT = 0.15;
+const APPROACH_DELTA_PRIOR_LABEL = 'approachDeltaPrior';
+const APPROACH_DELTA_ROLLING_DEFAULT = 4;
+let APPROACH_DELTA_ROLLING_EVENTS = (() => {
+  const parsed = parseInt(String(process.env.APPROACH_DELTA_ROLLING_EVENTS || '').trim(), 10);
+  if (Number.isNaN(parsed)) return APPROACH_DELTA_ROLLING_DEFAULT;
+  if (parsed < 0) return APPROACH_DELTA_ROLLING_DEFAULT;
+  return parsed;
+})();
 const DELTA_TREND_RANGE = {
   STABLE: 0.10,
   WATCH: 0.20,
@@ -98,6 +108,10 @@ let INCLUDE_CURRENT_EVENT_ROUNDS = null;
 let MAX_TESTS_OVERRIDE = null;
 let WRITE_VALIDATION_TEMPLATES = false;
 let WRITE_TEMPLATES = false;
+let OVERRIDE_DIR = null;
+let OVERRIDE_DATA_DIR = null;
+let OVERRIDE_OUTPUT_DIR = null;
+let OVERRIDE_ROLLING_DELTAS = null;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--template' && args[i + 1]) {
@@ -119,6 +133,19 @@ for (let i = 0; i < args.length; i++) {
   }
   if (args[i] === '--log' || args[i] === '--verbose') {
     LOGGING_ENABLED = true;
+  }
+  if ((args[i] === '--dir' || args[i] === '--folder') && args[i + 1]) {
+    OVERRIDE_DIR = String(args[i + 1]).trim();
+  }
+  if ((args[i] === '--dataDir' || args[i] === '--data-dir') && args[i + 1]) {
+    OVERRIDE_DATA_DIR = String(args[i + 1]).trim();
+  }
+  if ((args[i] === '--outputDir' || args[i] === '--output-dir') && args[i + 1]) {
+    OVERRIDE_OUTPUT_DIR = String(args[i + 1]).trim();
+  }
+  if ((args[i] === '--rollingDeltas' || args[i] === '--rolling-deltas') && args[i + 1]) {
+    const parsedRolling = parseInt(String(args[i + 1]).trim(), 10);
+    OVERRIDE_ROLLING_DELTAS = Number.isNaN(parsedRolling) ? null : parsedRolling;
   }
   if (args[i] === '--writeTemplates') {
     DRY_RUN = false;
@@ -152,6 +179,35 @@ const writeTemplatesEnv = String(process.env.WRITE_TEMPLATES || '').trim().toLow
 if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesEnv === 'yes') {
   WRITE_TEMPLATES = true;
   DRY_RUN = false;
+}
+
+if (OVERRIDE_DIR) {
+  const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
+  const dataFolder = path.resolve(ROOT_DIR, 'data', normalizedDir);
+  const outputFolder = path.resolve(ROOT_DIR, 'output', normalizedDir);
+  if (!fs.existsSync(dataFolder)) {
+    fs.mkdirSync(dataFolder, { recursive: true });
+  }
+  if (!fs.existsSync(outputFolder)) {
+    fs.mkdirSync(outputFolder, { recursive: true });
+  }
+  DATA_DIR = dataFolder;
+  DEFAULT_DATA_DIR = dataFolder;
+  OUTPUT_DIR = outputFolder;
+}
+
+if (OVERRIDE_DATA_DIR) {
+  const resolvedDataDir = path.resolve(OVERRIDE_DATA_DIR);
+  DATA_DIR = resolvedDataDir;
+  DEFAULT_DATA_DIR = resolvedDataDir;
+}
+
+if (OVERRIDE_OUTPUT_DIR) {
+  OUTPUT_DIR = path.resolve(OVERRIDE_OUTPUT_DIR);
+}
+
+if (typeof OVERRIDE_ROLLING_DELTAS === 'number' && OVERRIDE_ROLLING_DELTAS >= 0) {
+  APPROACH_DELTA_ROLLING_EVENTS = OVERRIDE_ROLLING_DELTAS;
 }
 
 if (!LOGGING_ENABLED) {
@@ -704,6 +760,337 @@ function loadValidationOutputs(metricConfig, dirs) {
     deltaTrends,
     deltaTrendsPath
   };
+}
+
+function findApproachDeltaFile(dirs, tournamentName, fallbackName) {
+  const normalized = normalizeTemplateKey(tournamentName || fallbackName);
+  const candidates = [];
+
+  (dirs || []).forEach(dir => {
+    if (!dir || !fs.existsSync(dir)) return;
+    fs.readdirSync(dir).forEach(file => {
+      if (!file.toLowerCase().endsWith('.json')) return;
+      const lower = file.toLowerCase();
+      if (!lower.includes('approach_deltas')) return;
+      candidates.push({ file, path: path.resolve(dir, file) });
+    });
+  });
+
+  if (candidates.length === 0) return null;
+
+  if (normalized) {
+    const matches = candidates.filter(candidate => {
+      const baseName = candidate.file.replace(/\.json$/i, '').replace(/^approach_deltas?_?/i, '');
+      const normalizedFile = normalizeTemplateKey(baseName);
+      return normalizedFile.includes(normalized);
+    });
+    if (matches.length > 0) {
+      matches.sort((a, b) => a.file.localeCompare(b.file));
+      return matches[0].path;
+    }
+  }
+
+  if (candidates.length === 1) return candidates[0].path;
+  candidates.sort((a, b) => a.file.localeCompare(b.file));
+  return candidates[0].path;
+}
+
+function loadApproachDeltaRows(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return { meta: null, rows: [] };
+  try {
+    const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    if (Array.isArray(raw)) return { meta: null, rows: raw };
+    if (raw && typeof raw === 'object') {
+      return { meta: raw.meta || null, rows: Array.isArray(raw.rows) ? raw.rows : [] };
+    }
+  } catch (error) {
+    console.warn(`⚠️  Failed to parse approach delta JSON: ${error.message}`);
+  }
+  return { meta: null, rows: [] };
+}
+
+function listApproachDeltaFiles(dirs) {
+  const files = new Set();
+  (dirs || []).forEach(dir => {
+    if (!dir || !fs.existsSync(dir)) return;
+    fs.readdirSync(dir).forEach(file => {
+      const lower = file.toLowerCase();
+      if (!lower.endsWith('.json')) return;
+      if (!lower.includes('approach_deltas')) return;
+      files.add(path.resolve(dir, file));
+    });
+  });
+  return Array.from(files);
+}
+
+function resolveApproachDeltaTimestamp(filePath, meta) {
+  const metaTime = meta?.generatedAt ? Date.parse(meta.generatedAt) : NaN;
+  if (!Number.isNaN(metaTime)) return metaTime;
+  try {
+    return fs.statSync(filePath).mtimeMs;
+  } catch (error) {
+    return 0;
+  }
+}
+
+function buildRollingApproachDeltaRows(entries, metricSpecs, fieldIdSet, maxFiles = APPROACH_DELTA_ROLLING_EVENTS) {
+  const filesToUse = entries.slice(0, Math.max(0, maxFiles));
+  const accum = new Map();
+
+  filesToUse.forEach(entry => {
+    const rows = Array.isArray(entry?.rows) ? entry.rows : [];
+    rows.forEach(row => {
+      const dgId = String(row?.dg_id || row?.dgId || '').trim();
+      if (!dgId) return;
+      if (fieldIdSet && !fieldIdSet.has(dgId)) return;
+      let target = accum.get(dgId);
+      if (!target) {
+        target = {
+          dg_id: dgId,
+          player_name: row?.player_name || row?.playerName || null,
+          sums: {},
+          counts: {}
+        };
+        accum.set(dgId, target);
+      }
+      if (!target.player_name && (row?.player_name || row?.playerName)) {
+        target.player_name = row?.player_name || row?.playerName;
+      }
+
+      metricSpecs.forEach(spec => {
+        const value = row?.[spec.key];
+        if (typeof value !== 'number' || Number.isNaN(value)) return;
+        target.sums[spec.key] = (target.sums[spec.key] || 0) + value;
+        target.counts[spec.key] = (target.counts[spec.key] || 0) + 1;
+      });
+    });
+  });
+
+  const rows = [];
+  accum.forEach(entry => {
+    const outputRow = {
+      dg_id: entry.dg_id,
+      player_name: entry.player_name,
+      tournament_field: fieldIdSet ? true : null
+    };
+    metricSpecs.forEach(spec => {
+      const count = entry.counts[spec.key] || 0;
+      outputRow[spec.key] = count > 0 ? entry.sums[spec.key] / count : null;
+    });
+    rows.push(outputRow);
+  });
+
+  return {
+    rows,
+    meta: {
+      method: 'rolling_average',
+      filesUsed: filesToUse.map(entry => entry.path),
+      fileCount: filesToUse.length,
+      maxFiles
+    }
+  };
+}
+
+function buildApproachDeltaAlignmentFromRollingRows(metricSpecs, rows) {
+  const aggregates = new Map();
+  (rows || []).forEach(row => {
+    metricSpecs.forEach(spec => {
+      if (!spec.alignmentLabel) return;
+      const rawValue = row?.[spec.key];
+      if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return;
+      const adjustedValue = spec.lowerBetter ? -rawValue : rawValue;
+      const label = normalizeGeneratedMetricLabel(spec.alignmentLabel);
+      const entry = aggregates.get(label) || { sum: 0, count: 0 };
+      entry.sum += adjustedValue;
+      entry.count += 1;
+      aggregates.set(label, entry);
+    });
+  });
+
+  let maxAbs = 0;
+  const map = new Map();
+  aggregates.forEach((entry, label) => {
+    const mean = entry.count > 0 ? entry.sum / entry.count : 0;
+    map.set(label, mean);
+    maxAbs = Math.max(maxAbs, Math.abs(mean));
+  });
+
+  if (maxAbs > 0) {
+    map.forEach((value, label) => {
+      map.set(label, value / maxAbs);
+    });
+  }
+
+  return map;
+}
+
+function buildApproachAlignmentMapFromMetricWeights(metricConfig, metricWeights, metricSpecs) {
+  if (!metricConfig || !Array.isArray(metricConfig.groups)) return new Map();
+  if (!metricWeights) return new Map();
+  const targetLabels = new Set(
+    (metricSpecs || [])
+      .filter(spec => spec?.alignmentLabel)
+      .map(spec => normalizeGeneratedMetricLabel(spec.alignmentLabel))
+      .filter(Boolean)
+  );
+  if (targetLabels.size === 0) return new Map();
+
+  const map = new Map();
+  metricConfig.groups.forEach(group => {
+    (group.metrics || []).forEach(metric => {
+      const label = normalizeGeneratedMetricLabel(metric.name);
+      if (!targetLabels.has(label)) return;
+      const key = `${group.name}::${metric.name}`;
+      const weight = metricWeights[key];
+      if (typeof weight !== 'number' || Number.isNaN(weight)) return;
+      map.set(label, Math.abs(weight));
+    });
+  });
+
+  return map;
+}
+
+function buildApproachDeltaPlayerScores(metricSpecs, deltaRows, alignmentMap) {
+  if (!alignmentMap || alignmentMap.size === 0) return [];
+  const weightByLabel = new Map();
+  alignmentMap.forEach((value, label) => {
+    const weight = Math.abs(value || 0);
+    if (weight > 0) weightByLabel.set(label, weight);
+  });
+  if (weightByLabel.size === 0) return [];
+
+  const specs = (metricSpecs || []).filter(spec => spec.alignmentLabel);
+  if (specs.length === 0) return [];
+
+  const results = [];
+  (deltaRows || []).forEach(row => {
+    const dgId = String(row?.dg_id || row?.dgId || '').trim();
+    if (!dgId) return;
+    let weightedSum = 0;
+    let totalWeight = 0;
+    let usedMetrics = 0;
+
+    specs.forEach(spec => {
+      const label = normalizeGeneratedMetricLabel(spec.alignmentLabel);
+      const weight = weightByLabel.get(label) || 0;
+      if (!weight) return;
+      const rawValue = row?.[spec.key];
+      if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return;
+      const adjustedValue = spec.lowerBetter ? -rawValue : rawValue;
+      weightedSum += adjustedValue * weight;
+      totalWeight += weight;
+      usedMetrics += 1;
+    });
+
+    if (totalWeight === 0) return;
+    results.push({
+      dgId,
+      playerName: row?.player_name || row?.playerName || null,
+      score: weightedSum / totalWeight,
+      usedMetrics
+    });
+  });
+
+  return results.sort((a, b) => (b.score || 0) - (a.score || 0));
+}
+
+function getApproachDeltaFileEntries(dirs, excludePath = null) {
+  const normalizedExclude = excludePath ? path.resolve(excludePath) : null;
+  const entries = listApproachDeltaFiles(dirs)
+    .filter(file => !normalizedExclude || path.resolve(file) !== normalizedExclude)
+    .map(file => {
+      const data = loadApproachDeltaRows(file);
+      return {
+        path: file,
+        meta: data.meta || null,
+        rows: Array.isArray(data.rows) ? data.rows : [],
+        time: resolveApproachDeltaTimestamp(file, data.meta)
+      };
+    })
+    .filter(entry => entry.rows.length > 0);
+
+  entries.sort((a, b) => (b.time || 0) - (a.time || 0));
+  return entries;
+}
+
+function buildApproachDeltaMetricSpecs() {
+  const bucketDefs = [
+    { bucket: '50_100_fw', labelBase: 'Approach <100' },
+    { bucket: '100_150_fw', labelBase: 'Approach <150 FW' },
+    { bucket: '150_200_fw', labelBase: 'Approach <200 FW' },
+    { bucket: 'under_150_rgh', labelBase: 'Approach <150 Rough' },
+    { bucket: 'over_150_rgh', labelBase: 'Approach >150 Rough' },
+    { bucket: 'over_200_fw', labelBase: 'Approach >200 FW' }
+  ];
+
+  const specs = [];
+  const addSpec = (key, label, lowerBetter, alignmentLabel = null) => {
+    specs.push({ key, label, lowerBetter, alignmentLabel });
+  };
+
+  bucketDefs.forEach(({ bucket, labelBase }) => {
+    addSpec(`delta_${bucket}_gir_rate`, `${labelBase} GIR`, false, `${labelBase} GIR`);
+    addSpec(`delta_${bucket}_sg_per_shot`, `${labelBase} SG`, false, `${labelBase} SG`);
+    addSpec(`delta_${bucket}_proximity_per_shot`, `${labelBase} Prox`, true, `${labelBase} Prox`);
+    addSpec(`delta_${bucket}_good_shot_rate`, `${labelBase} Good Shot Rate`, false, null);
+    addSpec(`delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Poor Shot Avoid Rate`, false, null);
+    addSpec(`delta_${bucket}_good_shot_count`, `${labelBase} Good Shot Count`, false, null);
+    addSpec(`delta_${bucket}_poor_shot_count`, `${labelBase} Poor Shot Count`, true, null);
+    addSpec(`weighted_delta_${bucket}_good_shot_rate`, `${labelBase} Weighted Δ Good Shot Rate`, false, null);
+    addSpec(`weighted_delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Weighted Δ Poor Shot Avoid Rate`, false, null);
+  });
+
+  return specs;
+}
+
+function computeApproachDeltaCorrelations(deltaRows, results, metricSpecs) {
+  const resultsById = new Map();
+  results.forEach(result => {
+    const dgId = String(result.dgId || '').trim();
+    if (!dgId) return;
+    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
+      resultsById.set(dgId, result.finishPosition);
+    }
+  });
+
+  return metricSpecs.map(spec => {
+    const xValues = [];
+    const yValues = [];
+    (deltaRows || []).forEach(row => {
+      const dgId = String(row.dg_id || row.dgId || '').trim();
+      if (!dgId) return;
+      const finishPosition = resultsById.get(dgId);
+      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      const rawValue = row[spec.key];
+      if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return;
+      const adjustedValue = spec.lowerBetter ? -rawValue : rawValue;
+      xValues.push(adjustedValue);
+      yValues.push(-finishPosition);
+    });
+
+    if (xValues.length < 5) {
+      return { label: spec.label, key: spec.key, correlation: 0, samples: xValues.length, alignmentLabel: spec.alignmentLabel, lowerBetter: spec.lowerBetter };
+    }
+
+    return {
+      label: spec.label,
+      key: spec.key,
+      correlation: calculatePearsonCorrelation(xValues, yValues),
+      samples: xValues.length,
+      alignmentLabel: spec.alignmentLabel,
+      lowerBetter: spec.lowerBetter
+    };
+  });
+}
+
+function buildApproachDeltaAlignmentMap(metricConfig, deltaCorrelations = []) {
+  const map = new Map();
+  (deltaCorrelations || []).forEach(entry => {
+    if (!entry?.alignmentLabel) return;
+    if (typeof entry.correlation !== 'number' || Number.isNaN(entry.correlation)) return;
+    map.set(normalizeGeneratedMetricLabel(entry.alignmentLabel), entry.correlation);
+  });
+  return map;
 }
 
 function normalizeTemplateKey(value) {
@@ -2919,6 +3306,107 @@ function upsertTemplateInFile(filePath, template, options = {}) {
   }
 }
 
+function buildDeltaPlayerScoresEntry(eventId, season, playerSummary) {
+  if (!playerSummary) return null;
+  const trendScores = Array.isArray(playerSummary.trendWeightedAll) ? playerSummary.trendWeightedAll : [];
+  const predictiveScores = Array.isArray(playerSummary.predictiveWeightedAll) ? playerSummary.predictiveWeightedAll : [];
+  if (!trendScores.length && !predictiveScores.length) return null;
+
+  const players = new Map();
+  const upsert = (entry, scoreKey) => {
+    const dgId = String(entry?.dgId || entry?.dg_id || '').trim();
+    if (!dgId) return;
+    const name = entry?.playerName || entry?.player_name || null;
+    const score = typeof entry?.score === 'number' && !Number.isNaN(entry.score) ? entry.score : null;
+    if (score === null) return;
+    const current = players.get(dgId) || {};
+    if (name && !current.name) current.name = name;
+    current[scoreKey] = score;
+    players.set(dgId, current);
+  };
+
+  trendScores.forEach(entry => upsert(entry, 'deltaTrendScore'));
+  predictiveScores.forEach(entry => upsert(entry, 'deltaPredictiveScore'));
+
+  if (players.size === 0) return null;
+
+  const seasonValue = typeof season === 'number' && !Number.isNaN(season)
+    ? season
+    : parseInt(String(season || '').trim(), 10);
+
+  const sortedIds = Array.from(players.keys()).sort((a, b) => Number(a) - Number(b));
+  const playersObject = {};
+  sortedIds.forEach(id => {
+    const entry = players.get(id);
+    playersObject[id] = {
+      name: entry?.name || null,
+      deltaTrendScore: typeof entry?.deltaTrendScore === 'number' ? entry.deltaTrendScore : null,
+      deltaPredictiveScore: typeof entry?.deltaPredictiveScore === 'number' ? entry.deltaPredictiveScore : null
+    };
+  });
+
+  return {
+    [String(eventId)]: {
+      season: Number.isNaN(seasonValue) ? null : seasonValue,
+      players: playersObject
+    }
+  };
+}
+
+function buildDeltaPlayerScoresFileContent(deltaScoresByEvent, options = {}) {
+  const { includeModuleExports = false } = options;
+  const content = `const DELTA_PLAYER_SCORES = ${JSON.stringify(deltaScoresByEvent, null, 2)};\n\n`;
+  let output = `${content}` +
+    `function getDeltaPlayerScoresForEvent(eventId, season) {\n` +
+    `  const key = eventId !== null && eventId !== undefined ? String(eventId).trim() : '';\n` +
+    `  const entry = DELTA_PLAYER_SCORES[key];\n` +
+    `  if (!entry) return {};\n` +
+    `  if (season !== null && season !== undefined) {\n` +
+    `    const seasonValue = parseInt(String(season).trim(), 10);\n` +
+    `    if (!Number.isNaN(seasonValue) && entry.season && entry.season !== seasonValue) {\n` +
+    `      return {};\n` +
+    `    }\n` +
+    `  }\n` +
+    `  return entry.players || {};\n` +
+    `}\n\n` +
+    `function getDeltaPlayerScores() {\n` +
+    `  return DELTA_PLAYER_SCORES;\n` +
+    `}\n`;
+
+  if (includeModuleExports) {
+    output += `\nmodule.exports = { DELTA_PLAYER_SCORES, getDeltaPlayerScoresForEvent, getDeltaPlayerScores };\n`;
+  }
+  return output;
+}
+
+function writeDeltaPlayerScoresFiles(targets, deltaScoresByEvent, options = {}) {
+  const { dryRun = false, outputDir = null } = options;
+  if (!deltaScoresByEvent || Object.keys(deltaScoresByEvent).length === 0) return [];
+  const outputs = [];
+  const nodeTarget = path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js');
+
+  (targets || []).forEach(filePath => {
+    if (!filePath) return;
+    const includeModuleExports = path.resolve(filePath) === nodeTarget;
+    const content = buildDeltaPlayerScoresFileContent(deltaScoresByEvent, { includeModuleExports });
+    if (dryRun) {
+      const suffix = includeModuleExports ? 'node' : 'gas';
+      const baseName = path.basename(filePath, path.extname(filePath));
+      const dryRunName = `dryrun_${baseName}.${suffix}${path.extname(filePath) || '.js'}`;
+      const dryRunPath = outputDir
+        ? path.resolve(outputDir, dryRunName)
+        : `${filePath}.dryrun`;
+      fs.writeFileSync(dryRunPath, content, 'utf8');
+      outputs.push({ action: 'dryRun', target: dryRunPath });
+    } else {
+      fs.writeFileSync(filePath, content, 'utf8');
+      outputs.push({ action: 'write', target: filePath });
+    }
+  });
+
+  return outputs;
+}
+
 function runAdaptiveOptimizer() {
   const requiredFiles = [
     { name: 'Configuration Sheet', path: null },
@@ -2930,6 +3418,7 @@ function runAdaptiveOptimizer() {
   const CURRENT_EVENT_ID = OVERRIDE_EVENT_ID;
   const CURRENT_SEASON = OVERRIDE_SEASON ?? 2026;
   const tournamentNameFallback = TOURNAMENT_NAME || 'Sony Open';
+  const APPROACH_DELTA_PATH = findApproachDeltaFile([OUTPUT_DIR, DATA_DIR, DEFAULT_DATA_DIR], TOURNAMENT_NAME, tournamentNameFallback);
   const CONFIG_PATH = resolveTournamentFile('Configuration Sheet', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const FIELD_PATH = resolveTournamentFile('Tournament Field', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const HISTORY_PATH = resolveTournamentFile('Historical Data', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
@@ -3073,6 +3562,7 @@ function runAdaptiveOptimizer() {
       { label: 'historicalData', path: HISTORY_PATH },
       { label: 'approachSkill', path: APPROACH_PATH },
       { label: 'tournamentResults', path: RESULTS_PATH },
+      { label: APPROACH_DELTA_PRIOR_LABEL, path: APPROACH_DELTA_PATH },
       { label: 'weightTemplatesJs', path: path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js') }
     ],
     validationPaths: [
@@ -3084,9 +3574,25 @@ function runAdaptiveOptimizer() {
   console.log('\n🔄 Loading data...');
   const fieldData = loadCsv(FIELD_PATH, { skipFirstColumn: true });
   console.log(`✓ Loaded field: ${fieldData.length} players`);
+  const fieldIdSetForDelta = new Set(
+    fieldData
+      .map(row => String(row?.['dg_id'] || '').trim())
+      .filter(Boolean)
+  );
   
   const historyData = loadCsv(HISTORY_PATH, { skipFirstColumn: true });
   console.log(`✓ Loaded history: ${historyData.length} rounds`);
+
+  const eventIdStr = String(CURRENT_EVENT_ID);
+  const seasonStr = String(effectiveSeason);
+  const historyEventCount = historyData.filter(row => String(row['event_id'] || '').trim() === eventIdStr).length;
+  const historyEventSeasonCount = historyData.filter(row => {
+    const eventMatch = String(row['event_id'] || '').trim() === eventIdStr;
+    if (!eventMatch) return false;
+    const seasonValue = String(row['season'] || row['year'] || '').trim();
+    return seasonValue === seasonStr;
+  }).length;
+  console.log(`ℹ️  History rows for event ${eventIdStr}: ${historyEventCount} (season ${seasonStr}: ${historyEventSeasonCount})`);
   
   const approachData = loadCsv(APPROACH_PATH, { skipFirstColumn: true });
   console.log(`✓ Loaded approach: ${approachData.length} rows`);
@@ -3148,13 +3654,81 @@ function runAdaptiveOptimizer() {
     console.warn('   Falling back to historical + similar-course outcomes for supervised metric training.');
   }
 
-  const field2026DgIds = new Set(fieldData.map(p => String(p['dg_id'] || '').trim()));
+  const approachDeltaData = loadApproachDeltaRows(APPROACH_DELTA_PATH);
+  let approachDeltaRowsAll = Array.isArray(approachDeltaData.rows) ? approachDeltaData.rows : [];
+  let approachDeltaRows = approachDeltaRowsAll.filter(row => {
+    if (!row) return false;
+    if (row.tournament_field === false) return false;
+    return true;
+  });
+  const approachDeltaMetricSpecs = buildApproachDeltaMetricSpecs();
+  let approachDeltaCorrelations = [];
+  let approachDeltaAlignmentMap = new Map();
+  let approachDeltaPriorMode = null;
+  let approachDeltaPriorMeta = approachDeltaData.meta || null;
+  let approachDeltaPriorFiles = APPROACH_DELTA_PATH ? [APPROACH_DELTA_PATH] : [];
+  let approachDeltaPlayerSummary = null;
+
+  if (HAS_CURRENT_RESULTS && approachDeltaRows.length > 0) {
+    approachDeltaCorrelations = computeApproachDeltaCorrelations(approachDeltaRows, resultsCurrent, approachDeltaMetricSpecs);
+    approachDeltaAlignmentMap = buildApproachDeltaAlignmentMap(metricConfig, approachDeltaCorrelations);
+    approachDeltaPriorMode = 'current_event';
+    console.log(`✓ Computed approach delta correlations (${approachDeltaCorrelations.length})`);
+  } else if (!HAS_CURRENT_RESULTS) {
+    const rollingEntries = getApproachDeltaFileEntries(
+      [OUTPUT_DIR, DATA_DIR, DEFAULT_DATA_DIR],
+      APPROACH_DELTA_PATH
+    );
+    const rollingResult = buildRollingApproachDeltaRows(
+      rollingEntries,
+      approachDeltaMetricSpecs,
+      fieldIdSetForDelta,
+      APPROACH_DELTA_ROLLING_EVENTS
+    );
+
+    if (rollingResult.rows.length > 0) {
+      approachDeltaRowsAll = rollingResult.rows;
+      approachDeltaRows = rollingResult.rows;
+      approachDeltaAlignmentMap = buildApproachDeltaAlignmentFromRollingRows(
+        approachDeltaMetricSpecs,
+        approachDeltaRows
+      );
+      approachDeltaPriorMode = 'rolling_average';
+      approachDeltaPriorMeta = rollingResult.meta || null;
+      approachDeltaPriorFiles = rollingResult.meta?.filesUsed || [];
+      console.log(`✓ Built rolling approach delta baseline (${rollingResult.meta?.fileCount || 0} files).`);
+    } else if (!APPROACH_DELTA_PATH) {
+      approachDeltaPriorFiles = [];
+      console.log('ℹ️  Approach delta prior unavailable (no delta JSON found).');
+    } else {
+      approachDeltaPriorFiles = [];
+      console.log('ℹ️  Approach delta prior skipped (missing current results and no rolling baseline).');
+    }
+  } else if (!APPROACH_DELTA_PATH) {
+    approachDeltaPriorFiles = [];
+    console.log('ℹ️  Approach delta prior unavailable (no delta JSON found).');
+  } else {
+    approachDeltaPriorFiles = [];
+    console.log('ℹ️  Approach delta prior skipped (no usable rows after filtering).');
+  }
+
+  if (approachDeltaPriorMode === 'rolling_average' && approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
+    approachDeltaPlayerSummary = { totalPlayers: approachDeltaRows.length };
+  }
+
+  const field2026DgIds = fieldIdSetForDelta;
   console.log(`✓ Loaded 2026 field: ${field2026DgIds.size} players\n`);
+
+  const deltaScoresById = typeof getDeltaPlayerScoresForEvent === 'function'
+    ? getDeltaPlayerScoresForEvent(CURRENT_EVENT_ID, CURRENT_SEASON)
+    : {};
 
   const runtimeConfig = {
     similarCoursesWeight: sharedConfig.similarCoursesWeight,
     puttingCoursesWeight: sharedConfig.puttingCoursesWeight,
-    courseSetupWeights: sharedConfig.courseSetupWeights
+    courseSetupWeights: sharedConfig.courseSetupWeights,
+    currentSeason: CURRENT_SEASON,
+    deltaScoresById
   };
 
   const runRanking = ({ roundsRawData, approachRawData, groupWeights, metricWeights, includeCurrentEventRounds = false, fieldDataOverride = null }) => {
@@ -3663,6 +4237,7 @@ function runAdaptiveOptimizer() {
           HISTORICAL_CORE_TOP20_BLEND
         );
       }
+
       suggestedTop20MetricWeights = buildSuggestedMetricWeights(
         metricLabelsForTraining,
         currentGeneratedTop20Correlations,
@@ -3899,10 +4474,43 @@ function runAdaptiveOptimizer() {
       sharedConfig.courseSetupWeights
     );
 
+    if (approachDeltaPriorMode === 'rolling_average' && approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
+      const trendScores = buildApproachDeltaPlayerScores(
+        approachDeltaMetricSpecs,
+        approachDeltaRows,
+        approachDeltaAlignmentMap
+      );
+      const predictiveAlignmentMap = buildApproachAlignmentMapFromMetricWeights(
+        metricConfig,
+        adjustedMetricWeights,
+        approachDeltaMetricSpecs
+      );
+      const predictiveScores = buildApproachDeltaPlayerScores(
+        approachDeltaMetricSpecs,
+        approachDeltaRows,
+        predictiveAlignmentMap
+      );
+
+      approachDeltaPlayerSummary = {
+        totalPlayers: approachDeltaRows.length,
+        trendWeightedAll: trendScores,
+        trendWeighted: {
+          topMovers: trendScores.slice(0, 10),
+          bottomMovers: trendScores.slice(-10).reverse()
+        },
+        predictiveWeightedAll: predictiveScores,
+        predictiveWeighted: {
+          topMovers: predictiveScores.slice(0, 10),
+          bottomMovers: predictiveScores.slice(-10).reverse()
+        }
+      };
+    }
+
     const output = {
       timestamp: new Date().toISOString(),
       mode: 'pre_event_training',
       eventId: CURRENT_EVENT_ID,
+      season: CURRENT_SEASON,
       tournament: TOURNAMENT_NAME || 'Event',
       dryRun: DRY_RUN,
       trainingSource: 'historical+similar-course',
@@ -3913,6 +4521,19 @@ function runAdaptiveOptimizer() {
       currentGeneratedTop20Logistic,
       currentGeneratedTop20CvSummary,
       cvReliability,
+      approachDeltaPrior: {
+        label: APPROACH_DELTA_PRIOR_LABEL,
+        weight: APPROACH_DELTA_PRIOR_WEIGHT,
+        mode: approachDeltaPriorMode || 'unavailable',
+        sourcePath: approachDeltaPriorMode === 'current_event' ? (APPROACH_DELTA_PATH || null) : null,
+        filesUsed: approachDeltaPriorFiles,
+        meta: approachDeltaPriorMeta || null,
+        rowsTotal: approachDeltaRowsAll.length,
+        rowsUsed: approachDeltaRows.length,
+        correlations: approachDeltaCorrelations,
+        alignmentMap: Array.from(approachDeltaAlignmentMap.entries()).map(([label, correlation]) => ({ label, correlation })),
+        playerSummary: approachDeltaPlayerSummary
+      },
       blendSettings: {
         similarCourseIds: normalizeIdList(sharedConfig.similarCourseIds),
         puttingCourseIds: normalizeIdList(sharedConfig.puttingCourseIds),
@@ -3971,6 +4592,55 @@ function runAdaptiveOptimizer() {
     textLines.push(`  Included: ${trainingMetricNotes.included.join(', ')}`);
     textLines.push(`  Excluded: ${trainingMetricNotes.excluded.join(', ')}`);
     textLines.push(`  Derived: ${trainingMetricNotes.derived.join('; ')}`);
+    textLines.push('');
+    textLines.push(`APPROACH DELTA PRIOR (${APPROACH_DELTA_PRIOR_LABEL}):`);
+    if (approachDeltaPriorMode === 'rolling_average') {
+      textLines.push(`  Mode: rolling_average (files=${approachDeltaPriorFiles.length}, max=${APPROACH_DELTA_ROLLING_EVENTS})`);
+      textLines.push(`  Rows used: ${approachDeltaRows.length}/${approachDeltaRowsAll.length}`);
+      const rollingEntries = Array.from(approachDeltaAlignmentMap.entries())
+        .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+        .slice(0, 10);
+      if (rollingEntries.length === 0) {
+        textLines.push('  No rolling alignment map computed.');
+      } else {
+        rollingEntries.forEach(([label, value]) => {
+          textLines.push(`  ${label}: Score=${value.toFixed(4)}`);
+        });
+      }
+      if (approachDeltaPlayerSummary?.trendWeighted?.topMovers?.length) {
+        textLines.push('  Player delta movers (trend-weighted, top 10):');
+        approachDeltaPlayerSummary.trendWeighted.topMovers.forEach((entry, idx) => {
+          const name = entry.playerName || entry.dgId || 'Unknown';
+          textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+        });
+        textLines.push('  Player delta movers (trend-weighted, bottom 10):');
+        approachDeltaPlayerSummary.trendWeighted.bottomMovers.forEach((entry, idx) => {
+          const name = entry.playerName || entry.dgId || 'Unknown';
+          textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+        });
+      }
+      if (approachDeltaPlayerSummary?.predictiveWeighted?.topMovers?.length) {
+        textLines.push('  Player delta movers (predictive-weighted, top 10):');
+        approachDeltaPlayerSummary.predictiveWeighted.topMovers.forEach((entry, idx) => {
+          const name = entry.playerName || entry.dgId || 'Unknown';
+          textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+        });
+        textLines.push('  Player delta movers (predictive-weighted, bottom 10):');
+        approachDeltaPlayerSummary.predictiveWeighted.bottomMovers.forEach((entry, idx) => {
+          const name = entry.playerName || entry.dgId || 'Unknown';
+          textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+        });
+      }
+    } else if (!approachDeltaCorrelations.length) {
+      textLines.push('  No approach delta correlations computed (missing results or delta file).');
+    } else {
+      textLines.push(`  Weight: ${APPROACH_DELTA_PRIOR_WEIGHT.toFixed(2)}`);
+      textLines.push(`  Source: ${APPROACH_DELTA_PATH || 'n/a'}`);
+      textLines.push(`  Rows used: ${approachDeltaRows.length}/${approachDeltaRowsAll.length}`);
+      approachDeltaCorrelations.slice(0, 10).forEach(entry => {
+        textLines.push(`  ${entry.label}: Corr=${entry.correlation.toFixed(4)}, Samples=${entry.samples}`);
+      });
+    }
     textLines.push('');
     textLines.push('TRAINING TOP-20 SIGNAL (historical outcomes):');
     if (!currentGeneratedTop20Correlations.length) {
@@ -4047,6 +4717,60 @@ function runAdaptiveOptimizer() {
     console.log('✅ Pre-event training output saved (no rankings).');
     console.log(`✅ JSON results saved to: output/adaptive_optimizer_v2_results.json`);
     console.log(`✅ Text results saved to: output/adaptive_optimizer_v2_results.txt\n`);
+
+    if (WRITE_TEMPLATES) {
+      const preEventTemplateName = courseTemplateKey || String(CURRENT_EVENT_ID);
+      const preEventTemplate = {
+        name: preEventTemplateName,
+        eventId: String(CURRENT_EVENT_ID),
+        description: `${TOURNAMENT_NAME || 'Event'} ${CURRENT_SEASON || ''} Pre-Event Blended`,
+        groupWeights: blendedGroupWeights,
+        metricWeights: nestMetricWeights(adjustedMetricWeights)
+      };
+
+      const preEventTemplateTargets = [
+        path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js'),
+        path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
+      ];
+
+      preEventTemplateTargets.forEach(filePath => {
+        const result = upsertTemplateInFile(filePath, preEventTemplate, { replaceByEventId: true, dryRun: DRY_RUN });
+        if (result.updated) {
+          if (DRY_RUN && result.content) {
+            const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
+            fs.writeFileSync(dryRunPath, result.content, 'utf8');
+            console.log(`🧪 Dry-run template output saved to: ${dryRunPath}`);
+          } else {
+            console.log(`✅ Pre-event template written to: ${filePath}`);
+          }
+        } else {
+          console.warn(`⚠️  Pre-event template not written (unable to update): ${filePath}`);
+        }
+      });
+
+      const deltaScoresByEvent = buildDeltaPlayerScoresEntry(
+        CURRENT_EVENT_ID,
+        CURRENT_SEASON,
+        approachDeltaPlayerSummary
+      );
+
+      if (deltaScoresByEvent) {
+        const deltaScoreTargets = [
+          path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js'),
+          path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'deltaPlayerScores.js')
+        ];
+        const outputs = writeDeltaPlayerScoresFiles(deltaScoreTargets, deltaScoresByEvent, {
+          dryRun: DRY_RUN,
+          outputDir: OUTPUT_DIR
+        });
+        outputs.forEach(entry => {
+          const label = entry.action === 'dryRun' ? '🧪 Dry-run delta scores saved to' : '✅ Delta scores written to';
+          console.log(`${label}: ${entry.target}`);
+        });
+      } else {
+        console.warn('⚠️  Delta player scores not written (missing player summary data).');
+      }
+    }
     return;
   }
 
@@ -4056,7 +4780,6 @@ function runAdaptiveOptimizer() {
 
   if (currentGeneratedTop20AlignmentMap.size > 0) {
     alignmentMaps.push(currentGeneratedTop20AlignmentMap);
-    alignmentWeights.push(1 - VALIDATION_PRIOR_WEIGHT - DELTA_TREND_PRIOR_WEIGHT);
   }
 
   if (validationAlignmentMap.size > 0) {
@@ -4068,6 +4791,17 @@ function runAdaptiveOptimizer() {
     alignmentMaps.push(deltaTrendAlignmentMap);
     alignmentWeights.push(DELTA_TREND_PRIOR_WEIGHT);
     console.log(`ℹ️  Blended delta trend prior (${Math.round(DELTA_TREND_PRIOR_WEIGHT * 100)}%) into alignment map.`);
+  }
+
+  if (approachDeltaAlignmentMap.size > 0) {
+    alignmentMaps.push(approachDeltaAlignmentMap);
+    alignmentWeights.push(APPROACH_DELTA_PRIOR_WEIGHT);
+    console.log(`ℹ️  Blended ${APPROACH_DELTA_PRIOR_LABEL} (${Math.round(APPROACH_DELTA_PRIOR_WEIGHT * 100)}%) into alignment map.`);
+  }
+
+  if (currentGeneratedTop20AlignmentMap.size > 0) {
+    const totalPriors = alignmentWeights.reduce((sum, value) => sum + value, 0);
+    alignmentWeights.unshift(Math.max(0, 1 - totalPriors));
   }
 
   if (alignmentMaps.length > 0) {
@@ -4590,8 +5324,22 @@ function runAdaptiveOptimizer() {
       validationTemplateName,
       validationPriorWeight: VALIDATION_PRIOR_WEIGHT,
       deltaTrendPriorWeight: DELTA_TREND_PRIOR_WEIGHT,
+      approachDeltaPriorWeight: APPROACH_DELTA_PRIOR_WEIGHT,
       deltaTrendsPath: validationData.deltaTrendsPath || null,
       deltaTrendSummary
+    },
+    approachDeltaPrior: {
+      label: APPROACH_DELTA_PRIOR_LABEL,
+      weight: APPROACH_DELTA_PRIOR_WEIGHT,
+      mode: approachDeltaPriorMode || 'unavailable',
+      sourcePath: approachDeltaPriorMode === 'current_event' ? (APPROACH_DELTA_PATH || null) : null,
+      filesUsed: approachDeltaPriorFiles,
+      meta: approachDeltaPriorMeta || null,
+      rowsTotal: approachDeltaRowsAll.length,
+      rowsUsed: approachDeltaRows.length,
+      correlations: approachDeltaCorrelations,
+      alignmentMap: Array.from(approachDeltaAlignmentMap.entries()).map(([label, correlation]) => ({ label, correlation })),
+      playerSummary: approachDeltaPlayerSummary
     },
     multiYearTemplateComparison: templateResults.map(result => ({
       name: result.name,
@@ -4703,6 +5451,55 @@ function runAdaptiveOptimizer() {
   textLines.push(`STEP 1b: CURRENT-SEASON GENERATED METRICS (${CURRENT_SEASON}, event + similar + putting)`);
   textLines.push('Functions: runRanking (adaptiveOptimizer_v2.js) -> buildPlayerData (utilities/dataPrep.js) -> generatePlayerRankings (modelCore.js)');
   textLines.push('Additional: computeGeneratedMetricCorrelations, computeGeneratedMetricTopNCorrelations, trainTopNLogisticModel, crossValidateTopNLogisticByEvent, buildSuggestedMetricWeights, buildSuggestedGroupWeights (adaptiveOptimizer_v2.js)');
+  textLines.push(`APPROACH DELTA PRIOR (${APPROACH_DELTA_PRIOR_LABEL}):`);
+  if (approachDeltaPriorMode === 'rolling_average') {
+    textLines.push(`  Mode: rolling_average (files=${approachDeltaPriorFiles.length}, max=${APPROACH_DELTA_ROLLING_EVENTS})`);
+    textLines.push(`  Rows used: ${approachDeltaRows.length}/${approachDeltaRowsAll.length}`);
+    const rollingEntries = Array.from(approachDeltaAlignmentMap.entries())
+      .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))
+      .slice(0, 10);
+    if (rollingEntries.length === 0) {
+      textLines.push('  No rolling alignment map computed.');
+    } else {
+      rollingEntries.forEach(([label, value]) => {
+        textLines.push(`  ${label}: Score=${value.toFixed(4)}`);
+      });
+    }
+    if (approachDeltaPlayerSummary?.trendWeighted?.topMovers?.length) {
+      textLines.push('  Player delta movers (trend-weighted, top 10):');
+      approachDeltaPlayerSummary.trendWeighted.topMovers.forEach((entry, idx) => {
+        const name = entry.playerName || entry.dgId || 'Unknown';
+        textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+      });
+      textLines.push('  Player delta movers (trend-weighted, bottom 10):');
+      approachDeltaPlayerSummary.trendWeighted.bottomMovers.forEach((entry, idx) => {
+        const name = entry.playerName || entry.dgId || 'Unknown';
+        textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+      });
+    }
+    if (approachDeltaPlayerSummary?.predictiveWeighted?.topMovers?.length) {
+      textLines.push('  Player delta movers (predictive-weighted, top 10):');
+      approachDeltaPlayerSummary.predictiveWeighted.topMovers.forEach((entry, idx) => {
+        const name = entry.playerName || entry.dgId || 'Unknown';
+        textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+      });
+      textLines.push('  Player delta movers (predictive-weighted, bottom 10):');
+      approachDeltaPlayerSummary.predictiveWeighted.bottomMovers.forEach((entry, idx) => {
+        const name = entry.playerName || entry.dgId || 'Unknown';
+        textLines.push(`    ${idx + 1}. ${name}: Score=${entry.score.toFixed(4)}`);
+      });
+    }
+  } else if (!approachDeltaCorrelations.length) {
+    textLines.push('  No approach delta correlations computed (missing results or delta file).');
+  } else {
+    textLines.push(`  Weight: ${APPROACH_DELTA_PRIOR_WEIGHT.toFixed(2)}`);
+    textLines.push(`  Source: ${APPROACH_DELTA_PATH || 'n/a'}`);
+    textLines.push(`  Rows used: ${approachDeltaRows.length}/${approachDeltaRowsAll.length}`);
+    approachDeltaCorrelations.slice(0, 10).forEach(entry => {
+      textLines.push(`  ${entry.label}: Corr=${entry.correlation.toFixed(4)}, Samples=${entry.samples}`);
+    });
+  }
+  textLines.push('');
   textLines.push(`CURRENT-SEASON means season ${CURRENT_SEASON} only (event + similar + putting events).`);
   const reportSimilarCourseIds = normalizeIdList(sharedConfig.similarCourseIds);
   const reportPuttingCourseIds = normalizeIdList(sharedConfig.puttingCourseIds);

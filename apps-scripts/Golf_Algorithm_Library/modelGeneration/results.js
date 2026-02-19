@@ -40,6 +40,9 @@ function generatePlayerRankings() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   const configSheet = ss.getSheetByName("Configuration Sheet");
   const outputSheet = ss.getSheetByName("Player Ranking Model") || ss.insertSheet("Player Ranking Model");
+  const DELTA_PREDICTIVE_WAR_WEIGHT = 0.05;
+  const DELTA_PERCENTILE = 0.1;
+  const CURRENT_SEASON = new Date().getFullYear();
 
   // ===== DEBUG LOG CAPTURE =====
   const { logs, flushLogs, restore } = initDebugLogCapture({ enabled: LOGGING_ENABLED });
@@ -95,6 +98,79 @@ function generatePlayerRankings() {
 
   const processedData = rankedPlayers.players;
   const groupStats = rankedPlayers.groupStats || {};
+  const deltaScoresById = (typeof getDeltaPlayerScoresForEvent === 'function' && metricConfig?.pastPerformance?.currentEventId)
+    ? getDeltaPlayerScoresForEvent(metricConfig.pastPerformance.currentEventId, CURRENT_SEASON)
+    : {};
+
+  const deltaTrendScores = Object.values(deltaScoresById)
+    .map(entry => entry?.deltaTrendScore)
+    .filter(value => typeof value === 'number' && !isNaN(value))
+    .sort((a, b) => a - b);
+  const deltaPredictiveScores = Object.values(deltaScoresById)
+    .map(entry => entry?.deltaPredictiveScore)
+    .filter(value => typeof value === 'number' && !isNaN(value))
+    .sort((a, b) => a - b);
+
+  const getPercentileThreshold = (values, percentile) => {
+    if (!values.length) return null;
+    const idx = Math.min(values.length - 1, Math.max(0, Math.floor(values.length * percentile)));
+    return values[idx];
+  };
+
+  const deltaTrendLow = getPercentileThreshold(deltaTrendScores, DELTA_PERCENTILE);
+  const deltaTrendHigh = getPercentileThreshold(deltaTrendScores, 1 - DELTA_PERCENTILE);
+  const deltaPredLow = getPercentileThreshold(deltaPredictiveScores, DELTA_PERCENTILE);
+  const deltaPredHigh = getPercentileThreshold(deltaPredictiveScores, 1 - DELTA_PERCENTILE);
+
+  const buildDeltaNote = (trendScore, predScore) => {
+    const parts = [];
+    const hasPred = typeof predScore === 'number';
+    if (hasPred) {
+      if (deltaPredHigh !== null && predScore >= deltaPredHigh) {
+        parts.push('ΔPred↑');
+      } else if (deltaPredLow !== null && predScore <= deltaPredLow) {
+        parts.push('ΔPred↓');
+      } else {
+        parts.push('ΔPred→');
+      }
+    } else {
+      parts.push('ΔPred∅');
+    }
+
+    const hasTrend = typeof trendScore === 'number';
+    if (hasTrend) {
+      if (deltaTrendHigh !== null && trendScore >= deltaTrendHigh) {
+        parts.push('ΔTrend↑');
+      } else if (deltaTrendLow !== null && trendScore <= deltaTrendLow) {
+        parts.push('ΔTrend↓');
+      } else {
+        parts.push('ΔTrend→');
+      }
+    } else {
+      parts.push('ΔTrend∅');
+    }
+
+    return parts.join(' ');
+  };
+
+  processedData.forEach(player => {
+    if (!player || !player.dgId) return;
+    const entry = deltaScoresById[String(player.dgId)] || null;
+    const trendScore = entry?.deltaTrendScore;
+    const predScore = entry?.deltaPredictiveScore;
+    player.deltaTrendScore = typeof trendScore === 'number' ? trendScore : null;
+    player.deltaPredictiveScore = typeof predScore === 'number' ? predScore : null;
+    player.deltaNote = buildDeltaNote(player.deltaTrendScore, player.deltaPredictiveScore);
+
+    if (typeof player.deltaPredictiveScore === 'number') {
+      const cappedDelta = Math.max(-1, Math.min(1, player.deltaPredictiveScore));
+      const deltaWarImpact = cappedDelta * DELTA_PREDICTIVE_WAR_WEIGHT;
+      player.deltaWarImpact = deltaWarImpact;
+      player.war = (typeof player.war === 'number' ? player.war : 0) + deltaWarImpact;
+    } else {
+      player.deltaWarImpact = 0;
+    }
+  });
 
   // ===== DEBUG SNAPSHOT (EXPLICIT, NOT VIA console.log) =====
   const snapshotTime = () => new Date().toLocaleTimeString();
@@ -3239,7 +3315,9 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
     ...metricLabels.slice(0, HISTORICAL_METRICS).flatMap(m => [m, `${m} Trend`]),
     ...metricLabels.slice(HISTORICAL_METRICS),
     'Refined Weighted Score',
-    'WAR' // ADDED: Header for Birdie Chances Created & Wins Above Replacement (WAR)
+    'WAR',
+    'Delta Trend Score',
+    'Delta Predictive Score'
   ];
 
   // Write headers
@@ -3333,8 +3411,14 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
       ? player.refinedWeightedScore.toFixed(2)
       : "0.00";
 
-    // Return Refined Weighted Score + WAR
-    const trailingValues = [refinedWeightedScoreValue, player.war.toFixed(2)];
+    // Return Refined Weighted Score + WAR + delta scores
+    const deltaTrendValue = typeof player.deltaTrendScore === 'number' && !isNaN(player.deltaTrendScore)
+      ? player.deltaTrendScore.toFixed(3)
+      : '';
+    const deltaPredValue = typeof player.deltaPredictiveScore === 'number' && !isNaN(player.deltaPredictiveScore)
+      ? player.deltaPredictiveScore.toFixed(3)
+      : '';
+    const trailingValues = [refinedWeightedScoreValue, player.war.toFixed(2), deltaTrendValue, deltaPredValue];
 
     rowData.push([...base, ...historical, ...approach, ...trailingValues]);
   });
@@ -3370,10 +3454,17 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
   const numColumns = dataRange.getNumColumns();
 
   // Calculate the WAR Column Number
-  const warColumn = numColumns - 1;
-  const refinedScoreColumn = numColumns - 2;
+  const warColumn = numColumns - 2;
+  const refinedScoreColumn = numColumns - 3;
+  const deltaTrendColumn = numColumns - 1;
+  const deltaPredictiveColumn = numColumns;
   outputSheet.setColumnWidth(refinedScoreColumn, 90);
   outputSheet.setColumnWidth(warColumn, 75);
+  outputSheet.setColumnWidth(deltaTrendColumn, 110);
+  outputSheet.setColumnWidth(deltaPredictiveColumn, 130);
+  outputSheet.getRange(START_ROW + 1, deltaTrendColumn, outputSheet.getLastRow() - START_ROW, 2)
+    .setNumberFormat('0.000')
+    .setHorizontalAlignment('center');
 
   // 1. Percentage columns (number formatting only)
   const percentageColumns = [
@@ -3550,6 +3641,40 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
   range.setBackgrounds(backgrounds)
        .setFontColors(textColors)
        .setNumberFormat('0.000');
+  });
+
+  // 5. Delta score columns (z-score background coloring)
+  const deltaColumns = [deltaTrendColumn, deltaPredictiveColumn];
+  deltaColumns.forEach(col => {
+    const range = outputSheet.getRange(START_ROW + 1, col, outputSheet.getLastRow() - START_ROW, 1);
+    const rawValues = range.getValues();
+    const values = rawValues.map(row => parseFloat(row[0])).filter(v => !isNaN(v));
+
+    if (values.length >= 5) {
+      const mean = values.reduce((a, b) => a + b, 0) / values.length;
+      const stdDev = Math.sqrt(values.reduce((sum, x) => sum + Math.pow(x - mean, 2), 0) / values.length);
+
+      if (stdDev > 0) {
+        const backgrounds = rawValues.map(row => {
+          const value = parseFloat(row[0]);
+          if (isNaN(value)) return ['#FFFFFF'];
+
+          const z = (value - mean) / stdDev;
+
+          if (z > 2) return ['#006837'];
+          if (z > 1) return ['#31a354'];
+          if (z > 0.5) return ['#a1d99b'];
+          if (z < -2) return ['#a50f15'];
+          if (z < -1) return ['#de2d26'];
+          if (z < -0.5) return ['#fb6a4a'];
+          return ['#FFFFFF'];
+        });
+
+        range.setBackgrounds(backgrounds);
+      }
+    }
+
+    range.setNumberFormat('0.000');
   });
   removeProtections();
 }
@@ -3765,6 +3890,10 @@ function generatePlayerNotes(player, groups, groupStats) {
   }
   
   // Return formatted notes
+  if (player.deltaNote) {
+    notes.push(player.deltaNote);
+  }
+
   return notes.join(" | ");
 }
 

@@ -193,6 +193,9 @@ Optional (standard templates):
 - `--template <NAME>`: Restrict to a specific template (e.g., `POWER`, `BALANCED`, `TECHNICAL`, or event‑id template).
 - `--tests <N>`: Override number of optimization tests (same effect as `OPT_TESTS`).
 - `--log` / `--verbose`: Enable console logging (default is quiet).
+- `--dir <name>`: Use `data/<name>` and `output/<name>` (folders are created if missing). Preferred for subfolder runs (e.g., `--dir pebble_beach`).
+- `--dataDir <path>`: Override input data directory (advanced usage).
+- `--outputDir <path>`: Override output directory (advanced usage).
 - `--writeTemplates`: Writes optimized template back to loaders (see “Paths” below). Default is **dry‑run**.
 - `--writeValidationTemplates`: Also write POWER/BALANCED/TECHNICAL templates using the validation CSV outputs (Weight Templates + 03_*_Summary). Honors `--dryRun`.
 - `--dryRun` / `--dry-run`: Forces dry‑run (templates not written). Default = `true` unless `--writeTemplates` is supplied.
@@ -256,6 +259,73 @@ All outputs are written to:
 - `output/dryrun_POWER_templateLoader.js`
 - `output/dryrun_BALANCED_templateLoader.js`
 - `output/dryrun_TECHNICAL_templateLoader.js`
+
+## Weekly approach delta pipeline
+
+Use this to compute week‑over‑week deltas from consecutive **Approach Skill** CSVs (e.g., Pebble → Genesis). The output can be fed into validation/optimization experiments as additional features or stability checks.
+
+**Inputs:**
+
+- Previous week: `* - Approach Skill.csv`
+- Current week: `* - Approach Skill.csv`
+
+**Output:**
+
+- `output/approach_deltas.csv` (default)
+- Optional JSON file for programmatic use
+
+**Run:**
+
+```bash
+node scripts/compute_approach_deltas.js --previous "data/AT&T - Pebble Beach (2026) - Approach Skill.csv" --current "data/Genesis Invitational (2026) - Approach Skill.csv" --out "output/approach_deltas_genesis_vs_pebble.csv" --outJson "output/approach_deltas_genesis_vs_pebble.json"
+```
+
+**Field filtering (optional):**
+
+- If a single `* - Tournament Field.csv` exists in `data/`, it is auto‑detected.
+- You can override with `--field "data/<Tournament> - Tournament Field.csv"`.
+- Each output row includes `tournament_field: true|false|null`.
+
+**Delta output details:**
+
+- **Raw deltas are emitted.** Lower‑is‑better metrics (e.g., `*_proximity_per_shot`, `*_poor_shot_count`) should be inverted downstream using the same normalization logic as other metrics.
+- **Low‑data filtering (Option C):** if `low_data_indicator = 1` for a bucket, deltas are only kept when `shot_count >= 20` for either week; otherwise delta values are set to `null` for that bucket.
+- **Volume‑weighted deltas:** for good/poor shot rates, weighted deltas are written using $\sqrt{n_{prev}+n_{curr}}$ as the volume weight.
+- **Good/Poor shot counts:** derived counts are computed as `shot_count × rate`, with deltas emitted (subject to low‑data filtering).
+- **JSON meta:** JSON output includes a `meta` block with generation details and guidance.
+- **Snapshot naming convention:** Approach Skill files are named for the *next* event because they reflect data available after the prior week completes. For post‑tournament analysis, use **before = prior snapshot (e.g., Pebble)** and **after = next snapshot (e.g., Genesis)** to reflect changes leading into the next event.
+
+### Pre‑tournament approach delta baseline (rolling)
+
+When no current results exist, the optimizer now builds a **rolling average** approach‑delta prior from the most recent `approach_deltas*.json` files found in `output/` or `data/`.
+
+- Default window: **last 4 files** (newest by `meta.generatedAt`, falling back to file mtime).
+- Filtered to the current tournament field.
+- Emits a normalized alignment map in the output under `approachDeltaPrior.mode = "rolling_average"`.
+
+Control the window size with:
+
+```bash
+APPROACH_DELTA_ROLLING_EVENTS=6
+```
+
+Set to 0 to disable the rolling approach‑delta prior:
+
+```bash
+APPROACH_DELTA_ROLLING_EVENTS=0
+```
+
+Or via CLI:
+
+```bash
+node core/adaptiveOptimizer_v2.js --event [event id] --season [season] --tournament "[tournament name]" --rollingDeltas 6
+```
+
+Disable via CLI:
+
+```bash
+node core/adaptiveOptimizer_v2.js --event [event id] --season [season] --tournament "[tournament name]" --rollingDeltas 0
+```
 
 ### Template write‑back paths (only when `--writeTemplates` is used)
 

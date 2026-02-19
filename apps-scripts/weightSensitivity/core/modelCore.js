@@ -2690,6 +2690,12 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
   console.log(`Starting generatePlayerRankings with ${Object.keys(players).length} players`);
   
   try {
+    const DELTA_PREDICTIVE_WAR_WEIGHT = 0.05;
+    const DELTA_PERCENTILE = 0.1;
+    const CURRENT_SEASON = typeof config.currentSeason === 'number'
+      ? config.currentSeason
+      : new Date().getFullYear();
+
     // 1. Aggregate Player Data
     const aggregatedPlayers = aggregatePlayerData(
       players, 
@@ -2708,6 +2714,91 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
 
     const processedData = rankedPlayers.players;
     const groupStats = rankedPlayers.groupStats || {};
+
+    const resolveDeltaScoresById = () => {
+      if (config && typeof config.getDeltaPlayerScoresForEvent === 'function' && metricGroups?.pastPerformance?.currentEventId) {
+        return config.getDeltaPlayerScoresForEvent(metricGroups.pastPerformance.currentEventId, CURRENT_SEASON) || {};
+      }
+      if (config && config.deltaScoresById) return config.deltaScoresById;
+      if (config && config.deltaScoresByEvent && metricGroups?.pastPerformance?.currentEventId) {
+        const entry = config.deltaScoresByEvent[String(metricGroups.pastPerformance.currentEventId)];
+        if (!entry) return {};
+        if (CURRENT_SEASON && entry.season && Number(entry.season) !== Number(CURRENT_SEASON)) return {};
+        return entry.players || {};
+      }
+      return {};
+    };
+
+    const deltaScoresById = resolveDeltaScoresById();
+    const deltaTrendScores = Object.values(deltaScoresById)
+      .map(entry => entry?.deltaTrendScore)
+      .filter(value => typeof value === 'number' && !isNaN(value))
+      .sort((a, b) => a - b);
+    const deltaPredictiveScores = Object.values(deltaScoresById)
+      .map(entry => entry?.deltaPredictiveScore)
+      .filter(value => typeof value === 'number' && !isNaN(value))
+      .sort((a, b) => a - b);
+
+    const getPercentileThreshold = (values, percentile) => {
+      if (!values.length) return null;
+      const idx = Math.min(values.length - 1, Math.max(0, Math.floor(values.length * percentile)));
+      return values[idx];
+    };
+
+    const deltaTrendLow = getPercentileThreshold(deltaTrendScores, DELTA_PERCENTILE);
+    const deltaTrendHigh = getPercentileThreshold(deltaTrendScores, 1 - DELTA_PERCENTILE);
+    const deltaPredLow = getPercentileThreshold(deltaPredictiveScores, DELTA_PERCENTILE);
+    const deltaPredHigh = getPercentileThreshold(deltaPredictiveScores, 1 - DELTA_PERCENTILE);
+
+    const buildDeltaNote = (trendScore, predScore) => {
+      const parts = [];
+      const hasPred = typeof predScore === 'number';
+      if (hasPred) {
+        if (deltaPredHigh !== null && predScore >= deltaPredHigh) {
+          parts.push('ΔPred↑');
+        } else if (deltaPredLow !== null && predScore <= deltaPredLow) {
+          parts.push('ΔPred↓');
+        } else {
+          parts.push('ΔPred→');
+        }
+      } else {
+        parts.push('ΔPred∅');
+      }
+
+      const hasTrend = typeof trendScore === 'number';
+      if (hasTrend) {
+        if (deltaTrendHigh !== null && trendScore >= deltaTrendHigh) {
+          parts.push('ΔTrend↑');
+        } else if (deltaTrendLow !== null && trendScore <= deltaTrendLow) {
+          parts.push('ΔTrend↓');
+        } else {
+          parts.push('ΔTrend→');
+        }
+      } else {
+        parts.push('ΔTrend∅');
+      }
+
+      return parts.join(' ');
+    };
+
+    processedData.forEach(player => {
+      if (!player || !player.dgId) return;
+      const entry = deltaScoresById[String(player.dgId)] || null;
+      const trendScore = entry?.deltaTrendScore;
+      const predScore = entry?.deltaPredictiveScore;
+      player.deltaTrendScore = typeof trendScore === 'number' ? trendScore : null;
+      player.deltaPredictiveScore = typeof predScore === 'number' ? predScore : null;
+      player.deltaNote = buildDeltaNote(player.deltaTrendScore, player.deltaPredictiveScore);
+
+      if (typeof player.deltaPredictiveScore === 'number') {
+        const cappedDelta = Math.max(-1, Math.min(1, player.deltaPredictiveScore));
+        const deltaWarImpact = cappedDelta * DELTA_PREDICTIVE_WAR_WEIGHT;
+        player.deltaWarImpact = deltaWarImpact;
+        player.war = (typeof player.war === 'number' ? player.war : 0) + deltaWarImpact;
+      } else {
+        player.deltaWarImpact = 0;
+      }
+    });
 
     console.log(`Processed ${processedData.length} players with rankings`);
 
