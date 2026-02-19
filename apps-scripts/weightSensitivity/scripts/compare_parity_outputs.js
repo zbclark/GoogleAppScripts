@@ -9,6 +9,7 @@ const args = process.argv.slice(2);
 let NODE_PATH = DEFAULT_NODE_PATH;
 let GAS_PATH = DEFAULT_GAS_PATH;
 let OUT_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'parity_compare.txt');
+const SCORE_TOLERANCE = 0.01;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--node' && args[i + 1]) NODE_PATH = args[i + 1];
@@ -86,6 +87,7 @@ records.forEach(row => {
 });
 
 const diffs = [];
+const rankSwaps = [];
 const onlyInNode = [];
 const onlyInGas = [];
 
@@ -104,7 +106,11 @@ const compareFields = (nodePlayer, gasPlayer) => {
     const g = gasPlayer[field];
     if (typeof n === 'number' && typeof g === 'number') {
       const diff = n - g;
-      if (Math.abs(diff) > 1e-6) {
+      if (field === 'rank') {
+        if (Math.abs(diff) > 1e-6) {
+          deltas[field] = diff;
+        }
+      } else if (Math.abs(diff) >= SCORE_TOLERANCE) {
         deltas[field] = diff;
       }
     } else if (n !== g) {
@@ -128,6 +134,16 @@ nodePlayers.forEach((nodePlayer, dgId) => {
       deltas
     });
   }
+
+  if (typeof nodePlayer.rank === 'number' && typeof gasPlayer.rank === 'number' && nodePlayer.rank !== gasPlayer.rank) {
+    rankSwaps.push({
+      dgId,
+      name: nodePlayer.name || gasPlayer.name || '',
+      nodeRank: nodePlayer.rank,
+      gasRank: gasPlayer.rank,
+      diff: nodePlayer.rank - gasPlayer.rank
+    });
+  }
 });
 
  gasPlayers.forEach((gasPlayer, dgId) => {
@@ -147,7 +163,8 @@ lines.push(`Node players: ${nodePlayers.size}`);
 lines.push(`GAS players: ${gasPlayers.size}`);
 lines.push(`Only in Node: ${onlyInNode.length}`);
 lines.push(`Only in GAS: ${onlyInGas.length}`);
-lines.push(`Differences: ${diffs.length}`);
+lines.push(`Differences (>= ${SCORE_TOLERANCE} for scores): ${diffs.length}`);
+lines.push(`Rank swaps: ${rankSwaps.length}`);
 lines.push('');
 
 if (onlyInNode.length) {
@@ -166,14 +183,25 @@ if (onlyInGas.length) {
   lines.push('');
 }
 
-lines.push('--- Differences (first 50) ---');
+lines.push(`--- Rank swaps (first 50) ---`);
+rankSwaps.slice(0, 50).forEach(entry => {
+  const diffSign = entry.diff > 0 ? '+' : '';
+  lines.push(`${entry.dgId} | ${entry.name} | node=${entry.nodeRank} gas=${entry.gasRank} rank_diff_from_gas=${diffSign}${entry.diff}`);
+});
+lines.push('');
+
+lines.push('--- Differences (first 50, tolerance applied) ---');
 diffs.slice(0, 50).forEach(entry => {
   lines.push(`${entry.dgId} | ${entry.name}`);
   Object.entries(entry.deltas).forEach(([field, delta]) => {
     if (typeof delta === 'number') {
-      lines.push(`  ${field}: ${delta > 0 ? '+' : ''}${delta.toFixed(6)}`);
+      if (field === 'rank') {
+        lines.push(`  rank_diff_from_gas=${delta > 0 ? '+' : ''}${delta.toFixed(6)}`);
+      } else {
+        lines.push(`  diff_${field}_from_gas=${delta > 0 ? '+' : ''}${delta.toFixed(6)}`);
+      }
     } else {
-      lines.push(`  ${field}: node=${delta.node} gas=${delta.gas}`);
+      lines.push(`  diff_${field}_from_gas=node=${delta.node} gas=${delta.gas}`);
     }
   });
 });

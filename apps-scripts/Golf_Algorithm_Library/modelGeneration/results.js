@@ -33,8 +33,11 @@ const METRIC_TYPES = {
 };
 
 function generatePlayerRankings() {
-  ensureTraceConfigViaUi();
-  ensureTraceGroupStatsViaUi();
+  const debugLoggingEnabled = isDebugLoggingEnabled();
+  if (debugLoggingEnabled) {
+    ensureTraceConfigViaUi();
+    ensureTraceGroupStatsViaUi();
+  }
   ensureDebugCalculationSheetViaUi();
   refreshTraceConfig();
   const ss = SpreadsheetApp.getActiveSpreadsheet();
@@ -45,8 +48,8 @@ function generatePlayerRankings() {
   const CURRENT_SEASON = new Date().getFullYear();
 
   // ===== DEBUG LOG CAPTURE =====
-  const { logs, flushLogs, restore } = initDebugLogCapture({ enabled: LOGGING_ENABLED });
-  if (LOGGING_ENABLED) {
+  const { logs, flushLogs, restore } = initDebugLogCapture({ enabled: debugLoggingEnabled });
+  if (debugLoggingEnabled) {
     // Ensure at least one entry so the sheet is never blank
     logs.push([new Date().toLocaleTimeString(), '[LOG] Debug log capture initialized']);
     logs.push([new Date().toLocaleTimeString(), `[LOG] TRACE_PLAYER property: "${TRACE_PLAYER_NAME}"`]);
@@ -90,17 +93,35 @@ function generatePlayerRankings() {
   // 2. Aggregate Player Data - FIXED INITIALIZATION
   const players = aggregatePlayerData(metricGroups); // Properly declared with const
   
+  const deltaScoresById = (typeof getDeltaPlayerScoresForEvent === 'function' && metricConfig?.pastPerformance?.currentEventId)
+    ? getDeltaPlayerScoresForEvent(metricConfig.pastPerformance.currentEventId, CURRENT_SEASON)
+    : {};
+
   // 3. Calculate Metrics and Apply Weights
   const rankedPlayers = calculatePlayerMetrics(players, {
     groups: metricGroups,
-    pastPerformance: pastPerformance
+    pastPerformance: pastPerformance,
+    deltaScoresById: deltaScoresById
   });
 
   const processedData = rankedPlayers.players;
   const groupStats = rankedPlayers.groupStats || {};
-  const deltaScoresById = (typeof getDeltaPlayerScoresForEvent === 'function' && metricConfig?.pastPerformance?.currentEventId)
-    ? getDeltaPlayerScoresForEvent(metricConfig.pastPerformance.currentEventId, CURRENT_SEASON)
-    : {};
+  // Read course setup weights for bucket signal notes
+  const courseSetupWeights = {
+    under100: configSheet.getRange("P17").getValue(),
+    from100to150: configSheet.getRange("P18").getValue(),
+    from150to200: configSheet.getRange("P19").getValue(),
+    over200: configSheet.getRange("P20").getValue()
+  };
+  const courseTotalWeight = Object.values(courseSetupWeights).reduce((sum, w) => sum + w, 0);
+  if (courseTotalWeight && Math.abs(courseTotalWeight - 1.0) > 0.01) {
+    Object.keys(courseSetupWeights).forEach(key => {
+      courseSetupWeights[key] = courseSetupWeights[key] / courseTotalWeight;
+    });
+  }
+
+  const DELTA_BLEND_PRED = 0.7;
+  const DELTA_BLEND_TREND = 0.3;
 
   const deltaTrendScores = Object.values(deltaScoresById)
     .map(entry => entry?.deltaTrendScore)
@@ -122,7 +143,91 @@ function generatePlayerRankings() {
   const deltaPredLow = getPercentileThreshold(deltaPredictiveScores, DELTA_PERCENTILE);
   const deltaPredHigh = getPercentileThreshold(deltaPredictiveScores, 1 - DELTA_PERCENTILE);
 
-  const buildDeltaNote = (trendScore, predScore) => {
+  const computeBucketSignalMap = (scoresById, courseSetup) => {
+    const bucketWeights = {
+      short: courseSetup?.under100,
+      mid: courseSetup?.from100to150,
+      long: courseSetup?.from150to200,
+      veryLong: courseSetup?.over200
+    };
+    const bucketKeys = ['short', 'mid', 'long', 'veryLong'];
+    const totalWeight = bucketKeys.reduce((sum, key) => {
+      const value = bucketWeights[key];
+      return sum + (typeof value === 'number' && !isNaN(value) ? value : 0);
+    }, 0);
+    if (!totalWeight) return new Map();
+
+    const entries = [];
+    Object.entries(scoresById || {}).forEach(([dgId, entry]) => {
+      if (!entry || (!entry.deltaTrendBuckets && !entry.deltaPredictiveBuckets)) return;
+      let weightedSignal = 0;
+      bucketKeys.forEach(key => {
+        const weight = bucketWeights[key];
+        if (typeof weight !== 'number' || isNaN(weight) || weight === 0) return;
+        const trendVal = typeof entry.deltaTrendBuckets?.[key] === 'number' ? entry.deltaTrendBuckets[key] : 0;
+        const predVal = typeof entry.deltaPredictiveBuckets?.[key] === 'number' ? entry.deltaPredictiveBuckets[key] : 0;
+        const blended = (DELTA_BLEND_PRED * predVal) + (DELTA_BLEND_TREND * trendVal);
+        weightedSignal += blended * (weight / totalWeight);
+      });
+      entries.push({ dgId, signal: weightedSignal });
+    });
+
+    if (!entries.length) return new Map();
+    const mean = entries.reduce((sum, entry) => sum + entry.signal, 0) / entries.length;
+    const variance = entries.reduce((sum, entry) => sum + Math.pow(entry.signal - mean, 2), 0) / entries.length;
+    const stdDev = Math.sqrt(variance) || 0;
+    const map = new Map();
+    entries.forEach(entry => {
+      const zScore = stdDev > 0 ? (entry.signal - mean) / stdDev : 0;
+      map.set(entry.dgId, { signal: entry.signal, zScore });
+    });
+    return map;
+  };
+
+  const buildBucketSignalNote = (entry, courseSetup, signalEntry) => {
+    if (!entry || (!entry.deltaTrendBuckets && !entry.deltaPredictiveBuckets)) return null;
+    const bucketWeights = {
+      short: courseSetup?.under100,
+      mid: courseSetup?.from100to150,
+      long: courseSetup?.from150to200,
+      veryLong: courseSetup?.over200
+    };
+    const bucketMeta = [
+      { key: 'short', label: 'S' },
+      { key: 'mid', label: 'M' },
+      { key: 'long', label: 'L' },
+      { key: 'veryLong', label: 'VL' }
+    ];
+    const totalWeight = bucketMeta.reduce((sum, { key }) => {
+      const value = bucketWeights[key];
+      return sum + (typeof value === 'number' && !isNaN(value) ? value : 0);
+    }, 0);
+    if (!totalWeight) return null;
+
+    const bucketThreshold = 0.005;
+    let weightedSignal = 0;
+    const bucketFlags = bucketMeta.map(({ key, label }) => {
+      const weight = bucketWeights[key];
+      if (typeof weight !== 'number' || isNaN(weight) || weight === 0) {
+        return `${label}∅`;
+      }
+      const trendVal = typeof entry.deltaTrendBuckets?.[key] === 'number' ? entry.deltaTrendBuckets[key] : 0;
+      const predVal = typeof entry.deltaPredictiveBuckets?.[key] === 'number' ? entry.deltaPredictiveBuckets[key] : 0;
+      const blended = (DELTA_BLEND_PRED * predVal) + (DELTA_BLEND_TREND * trendVal);
+      weightedSignal += blended * (weight / totalWeight);
+      const arrow = blended >= bucketThreshold ? '↑' : (blended <= -bucketThreshold ? '↓' : '→');
+      return `${label}${arrow}`;
+    });
+
+    const signalValue = signalEntry?.signal ?? weightedSignal;
+    const zScore = signalEntry?.zScore ?? 0;
+    const weightedArrow = zScore >= 0 ? '↑' : '↓';
+    return `BucketSig ${weightedArrow} z=${zScore.toFixed(2)} (${signalValue.toFixed(3)}) [${bucketFlags.join(' ')}]`;
+  };
+
+  const bucketSignalById = computeBucketSignalMap(deltaScoresById, courseSetupWeights);
+
+  const buildDeltaNote = (trendScore, predScore, entry, courseSetup, signalEntry) => {
     const parts = [];
     const hasPred = typeof predScore === 'number';
     if (hasPred) {
@@ -150,7 +255,8 @@ function generatePlayerRankings() {
       parts.push('ΔTrend∅');
     }
 
-    return parts.join(' ');
+    const bucketNote = buildBucketSignalNote(entry, courseSetup, signalEntry);
+    return `For Course Setup - ${parts.join(' ')}${bucketNote ? ` | ${bucketNote}` : ''}`;
   };
 
   processedData.forEach(player => {
@@ -160,7 +266,8 @@ function generatePlayerRankings() {
     const predScore = entry?.deltaPredictiveScore;
     player.deltaTrendScore = typeof trendScore === 'number' ? trendScore : null;
     player.deltaPredictiveScore = typeof predScore === 'number' ? predScore : null;
-    player.deltaNote = buildDeltaNote(player.deltaTrendScore, player.deltaPredictiveScore);
+    const bucketSignalEntry = bucketSignalById.get(String(player.dgId)) || null;
+    player.deltaNote = buildDeltaNote(player.deltaTrendScore, player.deltaPredictiveScore, entry, courseSetupWeights, bucketSignalEntry);
 
     if (typeof player.deltaPredictiveScore === 'number') {
       const cappedDelta = Math.max(-1, Math.min(1, player.deltaPredictiveScore));
@@ -1268,7 +1375,11 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
 }
 
 // Ported to test
-function calculatePlayerMetrics(players, { groups, pastPerformance }) {
+function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresById = {} }) {
+  const DELTA_BLEND_PRED = 0.7;
+  const DELTA_BLEND_TREND = 0.3;
+  const DELTA_BUCKET_CAP = 0.10;
+  const DELTA_BOTH_UP_BOOST = 0.05;
   // Define constants
   const TREND_THRESHOLD = 0.005; // Minimum trend value to consider significant
   const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
@@ -1938,6 +2049,45 @@ function calculatePlayerMetrics(players, { groups, pastPerformance }) {
       console.log(`${data.name}: Recalculated weighted score with dampening: ${weightedScore.toFixed(3)}`);
     }
     
+    // Apply bucket delta bonus to weighted score (pre-refinement)
+    const deltaEntry = deltaScoresById[String(dgId)] || null;
+    if (deltaEntry?.deltaTrendBuckets || deltaEntry?.deltaPredictiveBuckets) {
+      const bucketWeights = {
+        short: courseSetupWeights.under100,
+        mid: courseSetupWeights.from100to150,
+        long: courseSetupWeights.from150to200,
+        veryLong: courseSetupWeights.over200
+      };
+      const bucketKeys = ['short', 'mid', 'long', 'veryLong'];
+      const normalizedWeightSum = bucketKeys.reduce((sum, key) => {
+        const value = bucketWeights[key];
+        return sum + (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
+      }, 0);
+
+      if (normalizedWeightSum > 0) {
+        let bucketBonus = 0;
+        bucketKeys.forEach(key => {
+          const weight = bucketWeights[key];
+          if (typeof weight !== 'number' || Number.isNaN(weight) || weight === 0) return;
+          const trendBucket = deltaEntry?.deltaTrendBuckets?.[key];
+          const predBucket = deltaEntry?.deltaPredictiveBuckets?.[key];
+          if (typeof trendBucket !== 'number' && typeof predBucket !== 'number') return;
+          const trendValue = typeof trendBucket === 'number' ? trendBucket : 0;
+          const predValue = typeof predBucket === 'number' ? predBucket : 0;
+          const blended = (DELTA_BLEND_PRED * predValue) + (DELTA_BLEND_TREND * trendValue);
+          bucketBonus += blended * (weight / normalizedWeightSum);
+        });
+
+        const cappedBonus = Math.max(-DELTA_BUCKET_CAP, Math.min(DELTA_BUCKET_CAP, bucketBonus));
+        const hasBothUp = typeof deltaEntry?.deltaPredictiveScore === 'number'
+          && typeof deltaEntry?.deltaTrendScore === 'number'
+          && deltaEntry.deltaPredictiveScore > 0
+          && deltaEntry.deltaTrendScore > 0;
+        const gatedBoost = hasBothUp ? DELTA_BOTH_UP_BOOST : 0;
+        weightedScore += (cappedBonus + gatedBoost);
+      }
+    }
+
     // Refined score: apply confidence and coverage multipliers
     // Use smoother degradation curve for low-coverage players
     const dataCoverageMultiplier = dataCoverage < 0.70
@@ -3437,6 +3587,10 @@ function writeRankingOutput(outputSheet, sortedData, metricLabels, groups, group
       .setHorizontalAlignment("center");
   }
 
+  // Auto-resize columns after data is written
+  outputSheet.autoResizeColumns(NOTES_COL, 1);
+  outputSheet.autoResizeColumns(START_COL, headers.length);
+
   // ===== FORMATTING =====
 
   // Set column A width
@@ -3842,12 +3996,27 @@ function generatePlayerNotes(player, groups, groupStats) {
   
   const fitPercentage = totalKeyWeight > 0 ? (playerStrengthWeight / totalKeyWeight) * 100 : 0;
   
+  let hasStrongFitNote = false;
+  let hasPoorFitNote = false;
   if (fitPercentage >= 50) {
     notes.push("✅ Strong course fit");
+    hasStrongFitNote = true;
   } else if (fitPercentage >= 25) {
     notes.push("👍 Good course fit");
   } else if (weaknesses.length > 0 && weaknesses.some(w => w.weight > 0.1)) {
     notes.push("⚠️ Poor course fit");
+    hasPoorFitNote = true;
+  }
+
+  const bucketSigMatch = player.deltaNote ? player.deltaNote.match(/BucketSig\s+([↑↓])\s+z=([\-\d.]+)/) : null;
+  if (bucketSigMatch) {
+    const bucketArrow = bucketSigMatch[1];
+    const bucketZ = parseFloat(bucketSigMatch[2]);
+    if (hasPoorFitNote && (bucketArrow === '↑' || bucketZ >= 0.75)) {
+      notes.push("ℹ️ Recent bucket trend strong (short-term) despite baseline fit");
+    } else if (hasStrongFitNote && (bucketArrow === '↓' || bucketZ <= -0.75)) {
+      notes.push("ℹ️ Recent bucket trend weak (short-term) despite baseline fit");
+    }
   }
   
   // 5. Significant trends

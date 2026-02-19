@@ -147,7 +147,6 @@ function clearConfig() {
   const resultsSheet = ss.getSheetByName("Tournament Results");
   const historicalDataSheet = ss.getSheetByName("Historical Data");
   const debugSheet = ss.getSheetByName("🔧 Debug - Calculations")
-  const debugExecutionLogSheet = ss.getSheetByName("Debug Execution Log");
   
   // Confirm action with user
   const ui = SpreadsheetApp.getUi();
@@ -310,18 +309,7 @@ function clearConfig() {
     console.error("Error deleting Debug sheet:", e);
   }
 
-  // 6b. Delete Debug Execution Log sheet
-  try {
-    if (debugExecutionLogSheet) {
-      deleteSheet(debugExecutionLogSheet);
-    } else {
-      console.log("Debug Execution Log sheet not found");
-    }
-  } catch (e) {
-    console.error("Error deleting Debug Execution Log sheet:", e);
-  }
-
-  // 6c. Delete *_Metric Validation* sheets (singular/plural)
+  // 6b. Delete *_Metric Validation* sheets (singular/plural)
   try {
     const sheets = ss.getSheets();
     const metricValidationSheets = sheets.filter(sheet =>

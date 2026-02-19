@@ -5,9 +5,11 @@
  */
 
 // Toggle verbose logging for model calculations
+const fs = require('fs');
 const DEBUG_LOGGING = false;
 const DEBUG_SNAPSHOT = String(process.env.DEBUG_SNAPSHOT || '').toLowerCase() === 'true';
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim().toLowerCase();
+let traceLogInitialized = false;
 const snapshotLog = (...args) => {
   if (!DEBUG_SNAPSHOT) return;
   globalThis.console.log(...args);
@@ -15,6 +17,34 @@ const snapshotLog = (...args) => {
 const traceLog = (...args) => {
   if (!TRACE_PLAYER) return;
   globalThis.console.log(...args);
+
+  const tracePath = String(process.env.TRACE_LOG_PATH || '').trim();
+  if (!tracePath) return;
+
+  if (!traceLogInitialized) {
+    try {
+      fs.writeFileSync(tracePath, '');
+    } catch (err) {
+      return;
+    }
+    traceLogInitialized = true;
+  }
+
+  const message = args.map(arg => {
+    if (typeof arg === 'string') return arg;
+    if (typeof arg === 'number' || typeof arg === 'boolean') return String(arg);
+    try {
+      return JSON.stringify(arg);
+    } catch (err) {
+      return String(arg);
+    }
+  }).join(' ');
+
+  try {
+    fs.appendFileSync(tracePath, `${message}\n`);
+  } catch (err) {
+    // ignore file write errors to avoid affecting scoring
+  }
 };
 const shouldTracePlayer = (name) => TRACE_PLAYER && String(name || '').toLowerCase().includes(TRACE_PLAYER);
 const console = DEBUG_LOGGING
@@ -325,11 +355,13 @@ function calculateDynamicWeight(baseWeight, dataPoints, minPoints, maxPoints = 2
 function calculateHistoricalAverages(historicalRounds, similarRounds = [], puttingRounds = [], options = {}) {
   // Default options
   const {
-    lambda = 0.2, // Exponential decay factor for recency
+    lambda = 0.25, // Exponential decay factor for recency
     lambdaPutting = 0.3, // Faster decay for putting-specific data
     minHistoricalPoints = 2, // Min points needed for historical data (lowered from 10)
     minSimilarPoints = 2, // Min points needed for similar course data (lowered from 5)
     minPuttingPoints = 2, // Min points needed for putting-specific data (lowered from 5)
+    minSimilarRoundsForFullWeight = 12, // Min similar rounds before full weight applies
+    similarHalfLifeYears = 2, // Recency half-life for similar-course rounds
     similarWeight = 0.6, // Weight for similar course data (0.0-1.0)
     puttingWeight = 0.7 // Weight for putting-specific data (0.0-1.0)
   } = options;
@@ -380,27 +412,16 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
  
   // Create standardized date strings for consistent sorting
   const prepareRounds = (rounds) => {
-    const isValidDate = (value) => {
-      const date = new Date(value);
-      return !isNaN(date.getTime());
-    };
-
-    const validRounds = rounds
-      .filter(round => round && round.metrics && isValidDate(round.date));
-
-    const invalidCount = (rounds?.length || 0) - validRounds.length;
-    if (invalidCount > 0) {
-      console.warn(`Filtered ${invalidCount} rounds with invalid dates`);
-    }
-
-    return validRounds
+    return rounds
+      .filter(round => round && round.metrics)
       .sort((a, b) => {
-        const dateA = new Date(a.date).getTime();
-        const dateB = new Date(b.date).getTime();
+        // First convert dates to ISO string format for consistent comparison
+        const dateA = new Date(a.date).toISOString();
+        const dateB = new Date(b.date).toISOString();
         
         // Primary sort by date (newest first)
         if (dateA !== dateB) {
-          return dateB - dateA;
+          return dateB.localeCompare(dateA);
         }
         // Secondary sort by round number (if dates are identical)
         return b.roundNum - a.roundNum;
@@ -408,7 +429,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   }
  
   // Calculate weighted average for a set of values
-  const calculateWeightedAverage = (values, decayFactor = lambda) => {
+  const calculateWeightedAverage = (values, decayFactor = lambda, dates = null, halfLifeYears = null) => {
     if (!values || values.length === 0) return null;
     
     let sumWeighted = 0;
@@ -425,7 +446,15 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
     }
     
     values.forEach((value, i) => {
-      const weight = Math.exp(-decayFactor * i); // Newest first
+      let weight = Math.exp(-decayFactor * i); // Newest first
+
+      // Apply time-based decay (for similar-course rounds)
+      if (dates && halfLifeYears && dates[i] instanceof Date && !isNaN(dates[i])) {
+        const ageMs = Date.now() - dates[i].getTime();
+        const ageYears = ageMs / (1000 * 60 * 60 * 24 * 365.25);
+        const timeWeight = Math.pow(2, -ageYears / halfLifeYears);
+        weight *= timeWeight;
+      }
       sumWeighted += weight * value;
       sumWeights += weight;
       
@@ -448,22 +477,34 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
   };
  
     // Helper function to calculate average for a specific metric
-  const calculateMetricAverage = (rounds, metricKey, isVirtualMetric = false, minPoints = 0, decayFactor = lambda) => {
+  const calculateMetricAverage = (rounds, metricKey, isVirtualMetric = false, minPoints = 0, decayFactor = lambda, useTimeDecay = false, halfLifeYears = null) => {
     if (!rounds || rounds.length < minPoints) return null;
     
     // Extract values based on metric type
     let values = [];
+    let dates = [];
     
     if (isVirtualMetric) {
       // Special case for birdies or better
       values = rounds
         .map(round => (round.metrics.eagles || 0) + (round.metrics.birdies || 0))
         .filter(v => typeof v === 'number' && !isNaN(v));
+      if (useTimeDecay) {
+        dates = rounds.map(round => round.date).filter(d => d instanceof Date && !isNaN(d));
+      }
     } else {
       // Normal metrics
-      values = rounds
-        .map(round => round.metrics?.[metricKey])
-        .filter(v => typeof v === 'number' && !isNaN(v));
+      values = [];
+      dates = [];
+      rounds.forEach(round => {
+        const value = round.metrics?.[metricKey];
+        if (typeof value === 'number' && !isNaN(value)) {
+          values.push(value);
+          if (useTimeDecay) {
+            dates.push(round.date);
+          }
+        }
+      });
     }
     
     if (values.length < minPoints) return null;
@@ -475,7 +516,7 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       return v > 1 ? v/100 : v; // Convert 0-100% to 0-1 decimal
     });
     
-    return calculateWeightedAverage(adjustedValues, decayFactor);
+    return calculateWeightedAverage(adjustedValues, decayFactor, useTimeDecay ? dates : null, useTimeDecay ? halfLifeYears : null);
   };
  
   // Prepare all rounds datasets
@@ -525,7 +566,10 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
       sortedSimilar, 
       metricKey, 
       isVirtualMetric, 
-      minSimilarPoints
+      minSimilarPoints,
+      lambda,
+      true,
+      similarHalfLifeYears
     );
     
     const puttingAvg = isPuttingMetric ? calculateMetricAverage(
@@ -607,8 +651,12 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
           minSimilarPoints
         );
         
+        // Additional scaling for limited similar-course samples
+        const similarSampleScale = Math.min(1, sortedSimilar.length / minSimilarRoundsForFullWeight);
+        const effectiveSimilarWeight = dynamicSimilarWeight * similarSampleScale;
+
         // Blend similar with historical data
-        finalValue = (similarAvg * dynamicSimilarWeight) + (historicalAvg * (1 - dynamicSimilarWeight));
+        finalValue = (similarAvg * effectiveSimilarWeight) + (historicalAvg * (1 - effectiveSimilarWeight));
         
         if (playerName === 'Scheffler, Scottie' && metricKey === 'drivingDistance') {
           console.log(`\n📊 DETAILED BLENDING FOR ${playerName} - ${metricKey}:`);
@@ -627,8 +675,8 @@ function calculateHistoricalAverages(historicalRounds, similarRounds = [], putti
           console.log(`    BLENDED RESULT: ${finalValue.toFixed(4)} yards\n`);
         }
         
-        console.log(`${playerName} - ${metricKey}: BLENDED: ${similarAvg.toFixed(3)} × weight ${dynamicSimilarWeight.toFixed(2)} = ${(similarAvg * dynamicSimilarWeight).toFixed(3)}
-          Historical: ${historicalAvg.toFixed(3)} × weight ${(1-dynamicSimilarWeight).toFixed(2)} = ${(historicalAvg * (1-dynamicSimilarWeight)).toFixed(3)}
+        console.log(`${playerName} - ${metricKey}: BLENDED: ${similarAvg.toFixed(3)} × weight ${effectiveSimilarWeight.toFixed(2)} = ${(similarAvg * effectiveSimilarWeight).toFixed(3)}
+          Historical: ${historicalAvg.toFixed(3)} × weight ${(1-effectiveSimilarWeight).toFixed(2)} = ${(historicalAvg * (1-effectiveSimilarWeight)).toFixed(3)}
           Final value: ${finalValue.toFixed(3)}`);
         
         metricSources.blended++;
@@ -760,6 +808,10 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
+  const DELTA_BLEND_PRED = 0.7;
+  const DELTA_BLEND_TREND = 0.3;
+  const DELTA_BUCKET_CAP = 0.10;
+  const DELTA_BOTH_UP_BOOST = 0.05;
   const traceMetricNames = [
     'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
     'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
@@ -783,6 +835,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   // Read the weights from configuration or use defaults
   const similarCoursesWeight = typeof config.similarCoursesWeight === 'number' ? config.similarCoursesWeight : 0.7;
   const puttingCoursesWeight = typeof config.puttingCoursesWeight === 'number' ? config.puttingCoursesWeight : 0.8;
+  const deltaScoresById = config.deltaScoresById || {};
 
   // Fix group weights before using them
   groups = groups.map(group => {
@@ -1430,6 +1483,45 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
       console.log(`${data.name}: Recalculated weighted score with dampening: ${weightedScore.toFixed(3)}`);
     }
     
+    // Apply bucket delta bonus to weighted score (pre-refinement)
+    const deltaEntry = deltaScoresById[String(dgId)] || null;
+    if (deltaEntry?.deltaTrendBuckets || deltaEntry?.deltaPredictiveBuckets) {
+      const bucketWeights = {
+        short: courseSetupWeights.under100,
+        mid: courseSetupWeights.from100to150,
+        long: courseSetupWeights.from150to200,
+        veryLong: courseSetupWeights.over200
+      };
+      const bucketKeys = ['short', 'mid', 'long', 'veryLong'];
+      const normalizedWeightSum = bucketKeys.reduce((sum, key) => {
+        const value = bucketWeights[key];
+        return sum + (typeof value === 'number' && !Number.isNaN(value) ? value : 0);
+      }, 0);
+
+      if (normalizedWeightSum > 0) {
+        let bucketBonus = 0;
+        bucketKeys.forEach(key => {
+          const weight = bucketWeights[key];
+          if (typeof weight !== 'number' || Number.isNaN(weight) || weight === 0) return;
+          const trendBucket = deltaEntry?.deltaTrendBuckets?.[key];
+          const predBucket = deltaEntry?.deltaPredictiveBuckets?.[key];
+          if (typeof trendBucket !== 'number' && typeof predBucket !== 'number') return;
+          const trendValue = typeof trendBucket === 'number' ? trendBucket : 0;
+          const predValue = typeof predBucket === 'number' ? predBucket : 0;
+          const blended = (DELTA_BLEND_PRED * predValue) + (DELTA_BLEND_TREND * trendValue);
+          bucketBonus += blended * (weight / normalizedWeightSum);
+        });
+
+        const cappedBonus = Math.max(-DELTA_BUCKET_CAP, Math.min(DELTA_BUCKET_CAP, bucketBonus));
+        const hasBothUp = typeof deltaEntry?.deltaPredictiveScore === 'number'
+          && typeof deltaEntry?.deltaTrendScore === 'number'
+          && deltaEntry.deltaPredictiveScore > 0
+          && deltaEntry.deltaTrendScore > 0;
+        const gatedBoost = hasBothUp ? DELTA_BOTH_UP_BOOST : 0;
+        weightedScore += (cappedBonus + gatedBoost);
+      }
+    }
+
     // Refined score: apply confidence and coverage multipliers
     // Use smoother degradation curve for low-coverage players
     const dataCoverageMultiplier = dataCoverage < 0.70
@@ -2650,10 +2742,8 @@ function aggregatePlayerData(players = {}, historicalData = [], approachData = {
       aggregatedPlayers[dgId].similarRounds.push(roundData);
     }
     
-    // Add to historicalRounds if NOT similar AND NOT putting-specific
-    if (!eventType.isSimilar && !eventType.isPuttingSpecific) {
-      aggregatedPlayers[dgId].historicalRounds.push(roundData);
-    }
+    // Always add to historicalRounds so the most recent rounds are included
+    aggregatedPlayers[dgId].historicalRounds.push(roundData);
   });
 
   console.log(`COMPLETED: Processed ${roundsProcessed} total rounds from Historical Data`);

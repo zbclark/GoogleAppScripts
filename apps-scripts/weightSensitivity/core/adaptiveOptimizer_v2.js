@@ -969,6 +969,9 @@ function buildApproachDeltaPlayerScores(metricSpecs, deltaRows, alignmentMap) {
     let weightedSum = 0;
     let totalWeight = 0;
     let usedMetrics = 0;
+    const bucketTotals = {};
+    const bucketWeights = {};
+    const bucketUsed = {};
 
     specs.forEach(spec => {
       const label = normalizeGeneratedMetricLabel(spec.alignmentLabel);
@@ -980,14 +983,30 @@ function buildApproachDeltaPlayerScores(metricSpecs, deltaRows, alignmentMap) {
       weightedSum += adjustedValue * weight;
       totalWeight += weight;
       usedMetrics += 1;
+
+      if (spec.bucketKey) {
+        const key = spec.bucketKey;
+        bucketTotals[key] = (bucketTotals[key] || 0) + (adjustedValue * weight);
+        bucketWeights[key] = (bucketWeights[key] || 0) + weight;
+        bucketUsed[key] = (bucketUsed[key] || 0) + 1;
+      }
     });
 
     if (totalWeight === 0) return;
+    const bucketScores = {};
+    Object.keys(bucketTotals).forEach(key => {
+      const bucketWeight = bucketWeights[key] || 0;
+      if (bucketWeight > 0) {
+        bucketScores[key] = bucketTotals[key] / bucketWeight;
+      }
+    });
     results.push({
       dgId,
       playerName: row?.player_name || row?.playerName || null,
       score: weightedSum / totalWeight,
-      usedMetrics
+      usedMetrics,
+      bucketScores,
+      bucketUsedMetrics: bucketUsed
     });
   });
 
@@ -1015,29 +1034,29 @@ function getApproachDeltaFileEntries(dirs, excludePath = null) {
 
 function buildApproachDeltaMetricSpecs() {
   const bucketDefs = [
-    { bucket: '50_100_fw', labelBase: 'Approach <100' },
-    { bucket: '100_150_fw', labelBase: 'Approach <150 FW' },
-    { bucket: '150_200_fw', labelBase: 'Approach <200 FW' },
-    { bucket: 'under_150_rgh', labelBase: 'Approach <150 Rough' },
-    { bucket: 'over_150_rgh', labelBase: 'Approach >150 Rough' },
-    { bucket: 'over_200_fw', labelBase: 'Approach >200 FW' }
+    { bucket: '50_100_fw', labelBase: 'Approach <100', bucketKey: 'short' },
+    { bucket: '100_150_fw', labelBase: 'Approach <150 FW', bucketKey: 'mid' },
+    { bucket: '150_200_fw', labelBase: 'Approach <200 FW', bucketKey: 'long' },
+    { bucket: 'under_150_rgh', labelBase: 'Approach <150 Rough', bucketKey: 'mid' },
+    { bucket: 'over_150_rgh', labelBase: 'Approach >150 Rough', bucketKey: 'long' },
+    { bucket: 'over_200_fw', labelBase: 'Approach >200 FW', bucketKey: 'veryLong' }
   ];
 
   const specs = [];
-  const addSpec = (key, label, lowerBetter, alignmentLabel = null) => {
-    specs.push({ key, label, lowerBetter, alignmentLabel });
+  const addSpec = (key, label, lowerBetter, alignmentLabel = null, bucketKey = null) => {
+    specs.push({ key, label, lowerBetter, alignmentLabel, bucketKey });
   };
 
-  bucketDefs.forEach(({ bucket, labelBase }) => {
-    addSpec(`delta_${bucket}_gir_rate`, `${labelBase} GIR`, false, `${labelBase} GIR`);
-    addSpec(`delta_${bucket}_sg_per_shot`, `${labelBase} SG`, false, `${labelBase} SG`);
-    addSpec(`delta_${bucket}_proximity_per_shot`, `${labelBase} Prox`, true, `${labelBase} Prox`);
-    addSpec(`delta_${bucket}_good_shot_rate`, `${labelBase} Good Shot Rate`, false, null);
-    addSpec(`delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Poor Shot Avoid Rate`, false, null);
-    addSpec(`delta_${bucket}_good_shot_count`, `${labelBase} Good Shot Count`, false, null);
-    addSpec(`delta_${bucket}_poor_shot_count`, `${labelBase} Poor Shot Count`, true, null);
-    addSpec(`weighted_delta_${bucket}_good_shot_rate`, `${labelBase} Weighted Δ Good Shot Rate`, false, null);
-    addSpec(`weighted_delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Weighted Δ Poor Shot Avoid Rate`, false, null);
+  bucketDefs.forEach(({ bucket, labelBase, bucketKey }) => {
+    addSpec(`delta_${bucket}_gir_rate`, `${labelBase} GIR`, false, `${labelBase} GIR`, bucketKey);
+    addSpec(`delta_${bucket}_sg_per_shot`, `${labelBase} SG`, false, `${labelBase} SG`, bucketKey);
+    addSpec(`delta_${bucket}_proximity_per_shot`, `${labelBase} Prox`, true, `${labelBase} Prox`, bucketKey);
+    addSpec(`delta_${bucket}_good_shot_rate`, `${labelBase} Good Shot Rate`, false, null, bucketKey);
+    addSpec(`delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Poor Shot Avoid Rate`, false, null, bucketKey);
+    addSpec(`delta_${bucket}_good_shot_count`, `${labelBase} Good Shot Count`, false, null, bucketKey);
+    addSpec(`delta_${bucket}_poor_shot_count`, `${labelBase} Poor Shot Count`, true, null, bucketKey);
+    addSpec(`weighted_delta_${bucket}_good_shot_rate`, `${labelBase} Weighted Δ Good Shot Rate`, false, null, bucketKey);
+    addSpec(`weighted_delta_${bucket}_poor_shot_avoid_rate`, `${labelBase} Weighted Δ Poor Shot Avoid Rate`, false, null, bucketKey);
   });
 
   return specs;
@@ -3313,7 +3332,7 @@ function buildDeltaPlayerScoresEntry(eventId, season, playerSummary) {
   if (!trendScores.length && !predictiveScores.length) return null;
 
   const players = new Map();
-  const upsert = (entry, scoreKey) => {
+  const upsert = (entry, scoreKey, bucketKey) => {
     const dgId = String(entry?.dgId || entry?.dg_id || '').trim();
     if (!dgId) return;
     const name = entry?.playerName || entry?.player_name || null;
@@ -3322,11 +3341,14 @@ function buildDeltaPlayerScoresEntry(eventId, season, playerSummary) {
     const current = players.get(dgId) || {};
     if (name && !current.name) current.name = name;
     current[scoreKey] = score;
+    if (entry?.bucketScores && typeof entry.bucketScores === 'object') {
+      current[bucketKey] = entry.bucketScores;
+    }
     players.set(dgId, current);
   };
 
-  trendScores.forEach(entry => upsert(entry, 'deltaTrendScore'));
-  predictiveScores.forEach(entry => upsert(entry, 'deltaPredictiveScore'));
+  trendScores.forEach(entry => upsert(entry, 'deltaTrendScore', 'deltaTrendBuckets'));
+  predictiveScores.forEach(entry => upsert(entry, 'deltaPredictiveScore', 'deltaPredictiveBuckets'));
 
   if (players.size === 0) return null;
 
@@ -3341,7 +3363,9 @@ function buildDeltaPlayerScoresEntry(eventId, season, playerSummary) {
     playersObject[id] = {
       name: entry?.name || null,
       deltaTrendScore: typeof entry?.deltaTrendScore === 'number' ? entry.deltaTrendScore : null,
-      deltaPredictiveScore: typeof entry?.deltaPredictiveScore === 'number' ? entry.deltaPredictiveScore : null
+      deltaPredictiveScore: typeof entry?.deltaPredictiveScore === 'number' ? entry.deltaPredictiveScore : null,
+      deltaTrendBuckets: entry?.deltaTrendBuckets || null,
+      deltaPredictiveBuckets: entry?.deltaPredictiveBuckets || null
     };
   });
 
@@ -3712,7 +3736,18 @@ function runAdaptiveOptimizer() {
     console.log('ℹ️  Approach delta prior skipped (no usable rows after filtering).');
   }
 
-  if (approachDeltaPriorMode === 'rolling_average' && approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
+  if (!approachDeltaPriorMode && approachDeltaRows.length > 0) {
+    const fallbackAlignmentMap = buildApproachDeltaAlignmentFromRollingRows(
+      approachDeltaMetricSpecs,
+      approachDeltaRows
+    );
+    if (fallbackAlignmentMap.size > 0) {
+      approachDeltaAlignmentMap = fallbackAlignmentMap;
+      approachDeltaPriorMode = 'fallback_average';
+    }
+  }
+
+  if (approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
     approachDeltaPlayerSummary = { totalPlayers: approachDeltaRows.length };
   }
 
@@ -4474,7 +4509,7 @@ function runAdaptiveOptimizer() {
       sharedConfig.courseSetupWeights
     );
 
-    if (approachDeltaPriorMode === 'rolling_average' && approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
+    if (approachDeltaAlignmentMap.size > 0 && approachDeltaRows.length > 0) {
       const trendScores = buildApproachDeltaPlayerScores(
         approachDeltaMetricSpecs,
         approachDeltaRows,
@@ -4594,8 +4629,10 @@ function runAdaptiveOptimizer() {
     textLines.push(`  Derived: ${trainingMetricNotes.derived.join('; ')}`);
     textLines.push('');
     textLines.push(`APPROACH DELTA PRIOR (${APPROACH_DELTA_PRIOR_LABEL}):`);
-    if (approachDeltaPriorMode === 'rolling_average') {
-      textLines.push(`  Mode: rolling_average (files=${approachDeltaPriorFiles.length}, max=${APPROACH_DELTA_ROLLING_EVENTS})`);
+    if (approachDeltaPriorMode === 'rolling_average' || approachDeltaPriorMode === 'fallback_average') {
+      const modeLabel = approachDeltaPriorMode === 'rolling_average' ? 'rolling_average' : 'fallback_average';
+      const maxLabel = approachDeltaPriorMode === 'rolling_average' ? `, max=${APPROACH_DELTA_ROLLING_EVENTS}` : '';
+      textLines.push(`  Mode: ${modeLabel} (files=${approachDeltaPriorFiles.length}${maxLabel})`);
       textLines.push(`  Rows used: ${approachDeltaRows.length}/${approachDeltaRowsAll.length}`);
       const rollingEntries = Array.from(approachDeltaAlignmentMap.entries())
         .sort((a, b) => Math.abs(b[1]) - Math.abs(a[1]))

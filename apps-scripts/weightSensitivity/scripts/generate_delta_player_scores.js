@@ -49,7 +49,7 @@ function buildDeltaPlayerScoresEntry(eventIdValue, seasonValue, summary) {
   if (!trendScores.length && !predictiveScores.length) return null;
 
   const players = new Map();
-  const upsert = (entry, scoreKey) => {
+  const upsert = (entry, scoreKey, bucketKey) => {
     const dgId = String(entry?.dgId || entry?.dg_id || '').trim();
     if (!dgId) return;
     const name = entry?.playerName || entry?.player_name || null;
@@ -58,11 +58,14 @@ function buildDeltaPlayerScoresEntry(eventIdValue, seasonValue, summary) {
     const current = players.get(dgId) || {};
     if (name && !current.name) current.name = name;
     current[scoreKey] = score;
+    if (entry?.bucketScores && typeof entry.bucketScores === 'object') {
+      current[bucketKey] = entry.bucketScores;
+    }
     players.set(dgId, current);
   };
 
-  trendScores.forEach(entry => upsert(entry, 'deltaTrendScore'));
-  predictiveScores.forEach(entry => upsert(entry, 'deltaPredictiveScore'));
+  trendScores.forEach(entry => upsert(entry, 'deltaTrendScore', 'deltaTrendBuckets'));
+  predictiveScores.forEach(entry => upsert(entry, 'deltaPredictiveScore', 'deltaPredictiveBuckets'));
 
   if (players.size === 0) return null;
 
@@ -77,7 +80,9 @@ function buildDeltaPlayerScoresEntry(eventIdValue, seasonValue, summary) {
     playersObject[id] = {
       name: entry?.name || null,
       deltaTrendScore: typeof entry?.deltaTrendScore === 'number' ? entry.deltaTrendScore : null,
-      deltaPredictiveScore: typeof entry?.deltaPredictiveScore === 'number' ? entry.deltaPredictiveScore : null
+      deltaPredictiveScore: typeof entry?.deltaPredictiveScore === 'number' ? entry.deltaPredictiveScore : null,
+      deltaTrendBuckets: entry?.deltaTrendBuckets || null,
+      deltaPredictiveBuckets: entry?.deltaPredictiveBuckets || null
     };
   });
 

@@ -111,14 +111,7 @@ function createDebugCalculationSheet(ss, processedData, metricGroups, groupStats
       ];
       
       debugSheet.getRange(row, 1, 1, headers.length).setValues([rowData]);
-      
-      // Color code based on performance
-      if (player.refinedWeightedScore > 2) {
-        debugSheet.getRange(row, 1, 1, headers.length).setBackground("#C6EFCE");
-      } else if (player.refinedWeightedScore < 0.5) {
-        debugSheet.getRange(row, 1, 1, headers.length).setBackground("#FFC7CE");
-      }
-      
+
       row++;
     }
     

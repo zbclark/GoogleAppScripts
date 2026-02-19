@@ -1,6 +1,10 @@
 const DEBUG_LOG_SHEET_NAME = "🔧 Debug - Calculations";
-const DEBUG_EXECUTION_LOG_SHEET_NAME = "Debug Execution Log";
 const DEBUG_LOG_RESET_PENDING_KEY = 'DOC_DEBUG_LOG_RESET_PENDING';
+const DEBUG_LOG_TITLE = "— Debug Log —";
+const DEBUG_LOG_HEADERS = ["Time", "Message"];
+const DEBUG_LOG_TITLE_BG = "#E8EAED";
+const DEBUG_LOG_HEADER_BG = "#F1F3F4";
+const DEBUG_LOG_HEADER_TEXT = "#202124";
 const LOGGING_ENABLED = false;
 const DEFAULT_DEBUG_LOGGING = 'false';
 const DEFAULT_TRACE_PLAYER = '';
@@ -113,8 +117,7 @@ function resetDebugLogsIfPending() {
   const calcSheet = ensureDebugLogSheet(ss, DEBUG_LOG_SHEET_NAME);
 
   if (calcSheet) {
-    calcSheet.clearContents();
-    calcSheet.setFrozenRows(1);
+    resetDebugLogSheet(calcSheet);
   }
 
   docProps.deleteProperty(DEBUG_LOG_RESET_PENDING_KEY);
@@ -128,18 +131,45 @@ const ensureDebugLogSheet = (ss, sheetName) => {
   }
   const lastRow = sheet.getLastRow();
   if (lastRow === 0) {
-    sheet.appendRow(["— Debug Log —", ""]);
-    sheet.appendRow(["Time", "Message"]);
-  } else {
-    const lastValues = sheet.getRange(lastRow, 1, 1, 2).getValues()[0];
-    const hasHeader = String(lastValues[0]) === 'Time' && String(lastValues[1]) === 'Message';
-    if (!hasHeader) {
-      sheet.appendRow(['', '']);
-      sheet.appendRow(["— Debug Log —", ""]);
-      sheet.appendRow(["Time", "Message"]);
-    }
+    resetDebugLogSheet(sheet);
+    return sheet;
   }
+
+  const titleValues = sheet.getRange(1, 1, 1, 2).getValues()[0];
+  const headerValues = sheet.getRange(2, 1, 1, 2).getValues()[0];
+  const hasTitle = String(titleValues[0]) === DEBUG_LOG_TITLE;
+  const hasHeader = String(headerValues[0]) === DEBUG_LOG_HEADERS[0]
+    && String(headerValues[1]) === DEBUG_LOG_HEADERS[1];
+  if (!hasTitle || !hasHeader) {
+    sheet.insertRowsBefore(1, 2);
+    sheet.getRange(1, 1, 1, 2).setValues([[DEBUG_LOG_TITLE, ""]]);
+    sheet.getRange(2, 1, 1, 2).setValues([DEBUG_LOG_HEADERS]);
+  }
+  formatDebugLogSheet(sheet);
   return sheet;
+};
+
+const resetDebugLogSheet = (sheet) => {
+  if (!sheet) return;
+  sheet.clear();
+  sheet.getRange(1, 1, 1, 2).setValues([[DEBUG_LOG_TITLE, ""]]);
+  sheet.getRange(2, 1, 1, 2).setValues([DEBUG_LOG_HEADERS]);
+  formatDebugLogSheet(sheet);
+};
+
+const formatDebugLogSheet = (sheet) => {
+  if (!sheet) return;
+  sheet.getRange(1, 1, 1, 2)
+    .setFontWeight('bold')
+    .setBackground(DEBUG_LOG_TITLE_BG)
+    .setFontColor(DEBUG_LOG_HEADER_TEXT);
+  sheet.getRange(2, 1, 1, 2)
+    .setFontWeight('bold')
+    .setBackground(DEBUG_LOG_HEADER_BG)
+    .setFontColor(DEBUG_LOG_HEADER_TEXT);
+  sheet.setFrozenRows(1);
+  sheet.setColumnWidth(1, 120);
+  sheet.setColumnWidth(2, 900);
 };
 
 function appendDebugExecutionLog(message, context = {}) {
@@ -152,12 +182,7 @@ function appendDebugExecutionLog(message, context = {}) {
 
     if (context.reset) {
       if (calcSheet) {
-        calcSheet.clearContents();
-        calcSheet.setFrozenRows(1);
-      }
-      if (execSheet) {
-        execSheet.clearContents();
-        execSheet.setFrozenRows(1);
+        resetDebugLogSheet(calcSheet);
       }
       if (!message) return;
     }
@@ -190,7 +215,7 @@ function ensureTraceConfigViaUi() {
 
     const response = ui.prompt(
       'Trace Player (Optional)',
-      'Enter a player name to trace in the Debug Execution Log (leave blank to disable).',
+      'Enter a player name to trace in the Debug - Calculations log (leave blank to disable).',
       ui.ButtonSet.OK_CANCEL
     );
     if (response.getSelectedButton() !== ui.Button.OK) return;
@@ -217,7 +242,7 @@ function ensureTraceGroupStatsViaUi() {
 
     const response = ui.alert(
       'Log Group Stats?',
-      'Enable verbose group stats logging in the Debug Execution Log?',
+      'Enable verbose group stats logging in the Debug - Calculations log?',
       ui.ButtonSet.YES_NO
     );
 
@@ -251,7 +276,7 @@ function ensureDebugCalculationSheetViaUi() {
 }
 
 function initDebugLogCapture(options = {}) {
-  const enabled = options.enabled ?? LOGGING_ENABLED;
+  const enabled = options.enabled ?? isDebugLoggingEnabled();
   const logs = [];
   const originalConsole = {
     log: console.log,
