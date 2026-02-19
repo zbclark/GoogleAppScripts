@@ -1386,6 +1386,35 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
+  const GLOBAL_PAST_WEIGHT_FALLBACK = 0.30;
+  const COURSE_TYPE_PAST_WEIGHT_DEFAULTS = {
+    POWER: 0.30,
+    TECHNICAL: 0.30,
+    BALANCED: 0.30
+  };
+  const LOW_SAMPLE_PAST_WEIGHTS = {
+    1: 0.15,
+    2: 0.20,
+    3: 0.25
+  };
+  const toBoolean = value => {
+    if (value === true) return true;
+    if (value === false) return false;
+    const normalized = String(value || '').trim().toLowerCase();
+    return normalized === 'true' || normalized === 'yes' || normalized === 'y';
+  };
+  const detectCourseType = () => {
+    const powerChecked = configSheet.getRange("B33").getValue();
+    const technicalChecked = configSheet.getRange("B34").getValue();
+    const balancedChecked = configSheet.getRange("B35").getValue();
+
+    if (toBoolean(powerChecked)) return 'POWER';
+    if (toBoolean(technicalChecked)) return 'TECHNICAL';
+    if (toBoolean(balancedChecked)) return 'BALANCED';
+    return null;
+  };
+  const courseType = detectCourseType();
+  const courseNum = String(configSheet.getRange("G10").getValue() || '').trim() || null;
   const traceMetricNames = [
     'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
     'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
@@ -1405,6 +1434,31 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
   ];
  
   console.log(`** CURRENT_EVENT_ID = "${CURRENT_EVENT_ID}" **`);
+
+  const getCourseHistoryWeight = (courseNumValue) => {
+    if (!courseNumValue || typeof getCourseHistoryRegression !== 'function') return null;
+    const entry = getCourseHistoryRegression(courseNumValue);
+    if (!entry) return null;
+    const slope = Number(entry.slope);
+    const pValue = Number(entry.pValue);
+    if (!isFinite(slope) || !isFinite(pValue)) return null;
+    if (slope >= 0 || pValue >= 0.2) return 0.10;
+    if (pValue <= 0.01) {
+      if (slope <= -3.0) return 0.40;
+      if (slope <= -1.5) return 0.30;
+      return 0.25;
+    }
+    if (pValue <= 0.05) {
+      if (slope <= -2.0) return 0.30;
+      if (slope <= -1.0) return 0.25;
+      return 0.20;
+    }
+    if (pValue <= 0.10) {
+      if (slope <= -1.0) return 0.20;
+      return 0.15;
+    }
+    return 0.10;
+  };
  
   // Read the weights from configuration or use defaults
   const similarCoursesWeight = configSheet.getRange("H33").getValue() || 0.7;
@@ -2113,8 +2167,43 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
       console.error(`Got NaN for refinedWeightedScore for ${data.name}, setting to 0`);
     }
     
+    const getEventYear = (eventKey, event) => {
+      if (typeof event?.year === 'number' && !isNaN(event.year)) return event.year;
+      const keyYear = parseInt(String(eventKey || '').split('-').pop(), 10);
+      return Number.isFinite(keyYear) ? keyYear : null;
+    };
+
+    const currentYear = new Date().getFullYear();
+    const courseHistoryCount = CURRENT_EVENT_ID
+      ? Object.entries(pastPerformances).filter(([eventKey, event]) => {
+          const eventId = event?.eventId ? String(event.eventId) : null;
+          if (!eventId || eventId !== CURRENT_EVENT_ID) return false;
+          const eventYear = getEventYear(eventKey, event);
+          return eventYear !== null ? eventYear < currentYear : true;
+        }).length
+      : 0;
+
+    const courseHistoryWeight = getCourseHistoryWeight(courseNum);
+    const baseFallbackWeight = courseHistoryWeight ?? COURSE_TYPE_PAST_WEIGHT_DEFAULTS[courseType] ?? GLOBAL_PAST_WEIGHT_FALLBACK;
+    const cappedFallbackWeight = Math.min(PAST_PERF_WEIGHT, baseFallbackWeight);
+    let effectivePastPerfWeight = PAST_PERF_WEIGHT;
+
+    if (!PAST_PERF_ENABLED || PAST_PERF_WEIGHT <= 0) {
+      effectivePastPerfWeight = 0;
+    } else if (courseHistoryCount === 0) {
+      effectivePastPerfWeight = cappedFallbackWeight;
+    } else if (courseHistoryCount <= 3) {
+      const lowSampleWeight = LOW_SAMPLE_PAST_WEIGHTS[courseHistoryCount] ?? PAST_PERF_WEIGHT;
+      effectivePastPerfWeight = Math.min(PAST_PERF_WEIGHT, lowSampleWeight);
+    }
+
+    if (PAST_PERF_ENABLED && courseHistoryWeight !== null) {
+      effectivePastPerfWeight = Math.min(effectivePastPerfWeight, courseHistoryWeight);
+    }
+
     let pastPerformanceMultiplier = 1.0;
-    if (PAST_PERF_ENABLED && PAST_PERF_WEIGHT > 0) {
+    if (PAST_PERF_ENABLED && effectivePastPerfWeight > 0) {
+      console.log(`${data.name}: PastPerf sample=${courseHistoryCount}, courseNum=${courseNum || 'n/a'}, courseType=${courseType || 'GLOBAL'}, effectiveWeight=${effectivePastPerfWeight.toFixed(2)}`);
       if (sortedEvents.length > 0) {
         // Player has data - calculate full multiplier based on their performance
         // Calculate recency-weighted past performance score
@@ -2169,7 +2258,7 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
           const cappedMultiplier = Math.max(0.5, Math.min(1.8, rawMultiplier));
           
           // Apply weight to scale the boost/penalty magnitude
-          pastPerformanceMultiplier = 1.0 + ((cappedMultiplier - 1.0) * PAST_PERF_WEIGHT);
+          pastPerformanceMultiplier = 1.0 + ((cappedMultiplier - 1.0) * effectivePastPerfWeight);
           
           const capIndicator = rawMultiplier !== cappedMultiplier ? " [CAP APPLIED]" : "";
           console.log(`${data.name}: Avg perf score=${avgPerformanceScore.toFixed(2)}, raw=${rawMultiplier.toFixed(3)}, capped=${cappedMultiplier.toFixed(3)}, final=${pastPerformanceMultiplier.toFixed(3)}${capIndicator}`);

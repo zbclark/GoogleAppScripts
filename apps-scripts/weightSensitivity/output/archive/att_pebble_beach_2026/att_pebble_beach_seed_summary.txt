@@ -1,0 +1,16 @@
+====================================================================================================
+ADAPTIVE OPTIMIZER SEED SUMMARY
+====================================================================================================
+Base: att_pebble_beach
+Seeds analyzed: 5
+
+Top seed ranking (sorted by correlation, then Top-20, then Top-20 Weighted):
+
+1. seed=b | corr=0.2966 | top20=50.0% | top20W=51.1% | rmse=27.58 | mae=22.24 | players=80 | file=att_pebble_beach_seed-b_results.json
+2. seed=a | corr=0.2867 | top20=50.0% | top20W=51.5% | rmse=27.77 | mae=22.46 | players=80 | file=att_pebble_beach_seed-a_results.json
+3. seed=d | corr=0.2855 | top20=50.0% | top20W=51.6% | rmse=27.80 | mae=22.39 | players=80 | file=att_pebble_beach_seed-d_results.json
+4. seed=e | corr=0.2854 | top20=50.0% | top20W=51.7% | rmse=27.80 | mae=22.64 | players=80 | file=att_pebble_beach_seed-e_results.json
+5. seed=c | corr=0.2844 | top20=50.0% | top20W=51.7% | rmse=27.82 | mae=22.59 | players=80 | file=att_pebble_beach_seed-c_results.json
+
+Best seed:
+seed=b | file=att_pebble_beach_seed-b_results.json

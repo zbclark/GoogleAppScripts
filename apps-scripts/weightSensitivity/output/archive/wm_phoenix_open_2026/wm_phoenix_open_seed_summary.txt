@@ -1,0 +1,16 @@
+====================================================================================================
+ADAPTIVE OPTIMIZER SEED SUMMARY
+====================================================================================================
+Base: wm_phoenix_open
+Seeds analyzed: 5
+
+Top seed ranking (sorted by correlation, then Top-20, then Top-20 Weighted):
+
+1. seed=phoenix2026_c | corr=0.1645 | top20=35.0% | top20W=49.8% | rmse=41.17 | mae=33.68 | players=123 | file=wm_phoenix_open_seed-phoenix2026_c_results.json
+2. seed=phoenix2026_e | corr=0.1627 | top20=35.0% | top20W=49.5% | rmse=41.28 | mae=33.79 | players=123 | file=wm_phoenix_open_seed-phoenix2026_e_results.json
+3. seed=phoenix2026_a | corr=0.1577 | top20=35.0% | top20W=49.5% | rmse=41.36 | mae=33.89 | players=123 | file=wm_phoenix_open_seed-phoenix2026_a_results.json
+4. seed=phoenix2026_d | corr=0.1567 | top20=35.0% | top20W=49.7% | rmse=41.31 | mae=33.85 | players=123 | file=wm_phoenix_open_seed-phoenix2026_d_results.json
+5. seed=phoenix2026_b | corr=0.1564 | top20=35.0% | top20W=49.7% | rmse=41.35 | mae=33.92 | players=123 | file=wm_phoenix_open_seed-phoenix2026_b_results.json
+
+Best seed:
+seed=phoenix2026_c | file=wm_phoenix_open_seed-phoenix2026_c_results.json

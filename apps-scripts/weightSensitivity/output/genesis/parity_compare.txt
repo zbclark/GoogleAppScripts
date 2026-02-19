@@ -1,0 +1,16 @@
+====================================================================================================
+PARITY COMPARISON: NODE vs GAS
+====================================================================================================
+Node file: /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/output/genesis/parity_modelcore.json
+GAS file:  /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/output/genesis/Genesis Invitational (2026) - Player Ranking Model.csv
+
+Node players: 72
+GAS players: 72
+Only in Node: 0
+Only in GAS: 0
+Differences (>= 0.01 for scores): 0
+Rank swaps: 0
+
+--- Rank swaps (first 50) ---
+
+--- Differences (first 50, tolerance applied) ---

@@ -1,0 +1,4 @@
+Raw deltas are emitted. Lower-is-better metrics (e.g., proximity_per_shot, poor_shot_count) should be inverted downstream using the same normalization logic as other metrics.
+Generated: 2026-02-18T20:00:02.678Z
+Previous: /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/data/AT&T - Pebble Beach (2026) - Approach Skill.csv
+Current: /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/data/Genesis Invitational (2026) - Approach Skill.csv

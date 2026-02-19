@@ -1,0 +1,311 @@
+====================================================================================================
+ADAPTIVE WEIGHT OPTIMIZER - PRE-EVENT TRAINING
+====================================================================================================
+DRY RUN: OFF (templates written)
+
+MODE: Historical + Similar-Course Training (no current-year results)
+Event: 7 | Tournament: Genesis Invitational
+
+STEP 1: HISTORICAL METRIC CORRELATIONS
+  Scoring Average: Corr=0.4510, Samples=1260
+  Eagles or Better: Corr=0.0611, Samples=1260
+  Birdies: Corr=0.2737, Samples=1260
+  Birdies or Better: Corr=0.2895, Samples=1260
+  SG Total: Corr=0.4693, Samples=1260
+  Driving Distance: Corr=0.2251, Samples=1260
+  Driving Accuracy: Corr=0.0754, Samples=1260
+  SG T2G: Corr=0.3779, Samples=1260
+  SG Approach: Corr=0.2802, Samples=1260
+  SG Around Green: Corr=0.1448, Samples=1260
+  SG OTT: Corr=0.2108, Samples=1260
+  SG Putting: Corr=0.2446, Samples=1260
+  GIR: Corr=0.2612, Samples=1260
+  Scrambling: Corr=0.2301, Samples=1260
+  Great Shots: Corr=0.1790, Samples=1260
+  Poor Shots: Corr=0.2744, Samples=1260
+  Fairway Proximity: Corr=0.1645, Samples=1260
+  Rough Proximity: Corr=0.1288, Samples=1260
+
+TRAINING METRIC CORRELATIONS (historical outcomes):
+  1. Driving Distance: Corr=0.1134, Samples=279
+  2. Driving Accuracy: Corr=0.2526, Samples=279
+  3. SG T2G: Corr=0.4187, Samples=279
+  4. SG Approach: Corr=0.2530, Samples=279
+  5. SG Around Green: Corr=0.2145, Samples=279
+  6. SG OTT: Corr=0.2798, Samples=279
+  7. SG Putting: Corr=0.1132, Samples=279
+  8. Greens in Regulation: Corr=0.2682, Samples=279
+  9. Scrambling: Corr=0.1765, Samples=279
+  10. Great Shots: Corr=0.2053, Samples=279
+  11. Poor Shots: Corr=0.1680, Samples=279
+  12. Scoring Average: Corr=0.2851, Samples=279
+  13. Birdies or Better: Corr=0.2933, Samples=279
+  15. Fairway Proximity: Corr=0.2054, Samples=279
+  16. Rough Proximity: Corr=-0.0534, Samples=279
+
+TRAINING METRICS USED:
+  Included: Driving Distance, Driving Accuracy, SG T2G, SG Approach, SG Around Green, SG OTT, SG Putting, Greens in Regulation, Scrambling, Great Shots, Poor Shots, Scoring Average, Birdies or Better, Fairway Proximity, Rough Proximity
+  Excluded: Birdie Chances Created, SG Total
+  Derived: Birdies or Better = birdies + eagles (from historical rounds when available)
+
+APPROACH DELTA PRIOR (approachDeltaPrior):
+  Mode: rolling_average (files=3, max=4)
+  Rows used: 72/72
+  Approach >150 Rough Prox: Score=1.0000
+  Approach >200 FW Prox: Score=-0.5184
+  Approach <150 Rough Prox: Score=0.4170
+  Approach <200 FW Prox: Score=-0.1774
+  Approach <150 FW Prox: Score=-0.1227
+  Approach <100 Prox: Score=0.0723
+  Approach >150 Rough GIR: Score=0.0084
+  Approach <150 Rough GIR: Score=0.0083
+  Approach <100 SG: Score=0.0055
+  Approach >200 FW GIR: Score=-0.0035
+  Player delta movers (trend-weighted, top 10):
+    1. Penge, Marco: Score=2.1942
+    2. Burns, Sam: Score=1.2295
+    3. Knapp, Jake: Score=1.0571
+    4. Lee, Min Woo: Score=1.0322
+    5. Homa, Max: Score=1.0113
+    6. Straka, Sepp: Score=0.9843
+    7. Conners, Corey: Score=0.7774
+    8. Henley, Russell: Score=0.7718
+    9. McIlroy, Rory: Score=0.6974
+    10. Stevens, Sam: Score=0.6857
+  Player delta movers (trend-weighted, bottom 10):
+    1. Coody, Pierceson: Score=-0.6021
+    2. Kim, Si Woo: Score=-0.5620
+    3. Theegala, Sahith: Score=-0.4660
+    4. Hovland, Viktor: Score=-0.3410
+    5. Gotterup, Chris: Score=-0.2125
+    6. Scheffler, Scottie: Score=-0.1441
+    7. Kitayama, Kurt: Score=-0.1127
+    8. McGreevy, Max: Score=-0.0807
+    9. Cauley, Bud: Score=-0.0632
+    10. Berger, Daniel: Score=-0.0523
+  Player delta movers (predictive-weighted, top 10):
+    1. Penge, Marco: Score=0.6962
+    2. Lee, Min Woo: Score=0.1783
+    3. Burns, Sam: Score=0.1658
+    4. Homa, Max: Score=0.1392
+    5. Hoge, Tom: Score=0.1325
+    6. Knapp, Jake: Score=0.1311
+    7. Straka, Sepp: Score=0.1252
+    8. Higgo, Garrick: Score=0.1205
+    9. Henley, Russell: Score=0.1135
+    10. Fitzpatrick, Matt: Score=0.0860
+  Player delta movers (predictive-weighted, bottom 10):
+    1. Kim, Si Woo: Score=-0.1654
+    2. Theegala, Sahith: Score=-0.1471
+    3. Hovland, Viktor: Score=-0.1226
+    4. Gotterup, Chris: Score=-0.0848
+    5. Berger, Daniel: Score=-0.0821
+    6. McGreevy, Max: Score=-0.0742
+    7. Poston, J.T.: Score=-0.0737
+    8. Scheffler, Scottie: Score=-0.0716
+    9. Coody, Pierceson: Score=-0.0694
+    10. Matsuyama, Hideki: Score=-0.0664
+
+TRAINING TOP-20 SIGNAL (historical outcomes):
+  1. Driving Distance: Corr=0.1140, Samples=279
+  2. Driving Accuracy: Corr=0.0959, Samples=279
+  3. SG T2G: Corr=0.4017, Samples=279
+  4. SG Approach: Corr=0.3011, Samples=279
+  5. SG Around Green: Corr=0.2028, Samples=279
+  6. SG OTT: Corr=0.1972, Samples=279
+  7. SG Putting: Corr=0.1234, Samples=279
+  8. Greens in Regulation: Corr=0.2136, Samples=279
+  9. Scrambling: Corr=0.1369, Samples=279
+  10. Great Shots: Corr=0.1812, Samples=279
+  11. Poor Shots: Corr=0.2204, Samples=279
+  12. Scoring Average: Corr=0.3133, Samples=279
+  13. Birdies or Better: Corr=0.3050, Samples=279
+  15. Fairway Proximity: Corr=0.1655, Samples=279
+  16. Rough Proximity: Corr=-0.0697, Samples=279
+
+SUGGESTED METRIC WEIGHTS (TOP-20) - SOURCE: top20-logistic
+  1. SG Putting: weight=0.1369, top20Corr=0.1234, logisticWeight=0.3184
+  2. SG T2G: weight=0.1177, top20Corr=0.4017, logisticWeight=0.2737
+  3. Birdies or Better: weight=0.0914, top20Corr=0.3050, logisticWeight=0.2126
+  4. SG Around Green: weight=0.0872, top20Corr=0.2028, logisticWeight=0.2027
+  5. Scrambling: weight=0.0800, top20Corr=0.1369, logisticWeight=0.1861
+  6. Great Shots: weight=0.0793, top20Corr=0.1812, logisticWeight=0.1843
+  7. Fairway Proximity: weight=0.0684, top20Corr=0.1655, logisticWeight=0.1591
+  8. Greens in Regulation: weight=0.0668, top20Corr=0.2136, logisticWeight=0.1553
+  9. SG Approach: weight=0.0665, top20Corr=0.3011, logisticWeight=0.1547
+  10. SG OTT: weight=0.0606, top20Corr=0.1972, logisticWeight=0.1408
+  11. Scoring Average: weight=0.0550, top20Corr=0.3133, logisticWeight=0.1279
+  12. Driving Accuracy: weight=0.0390, top20Corr=0.0959, logisticWeight=0.0908
+  13. Rough Proximity: weight=0.0262, top20Corr=-0.0697, logisticWeight=0.0609
+  14. Poor Shots: weight=0.0167, top20Corr=0.2204, logisticWeight=0.0389
+  15. Driving Distance: weight=-0.0083, top20Corr=0.1140, logisticWeight=-0.0193
+
+SUGGESTED GROUP WEIGHTS (TOP-20) - SOURCE: top20-logistic
+  1. Course Management: weight=0.2586
+  2. Scoring: weight=0.2537
+  3. Putting: weight=0.2011
+  4. Driving Performance: weight=0.1585
+  5. Around the Green: weight=0.1280
+
+CV RELIABILITY (event-based): 41.7%
+CONSERVATIVE GROUP WEIGHTS (CV-adjusted, model share 14.6%):
+  1. Course Management: weight=0.2122
+  2. Scoring: weight=0.1717
+  3. Approach - Long (150-200): weight=0.1524
+  4. Approach - Mid (100-150): weight=0.1331
+  5. Driving Performance: weight=0.0849
+  6. Approach - Very Long (>200): weight=0.0812
+  7. Putting: weight=0.0735
+  8. Approach - Short (<100): weight=0.0500
+  9. Around the Green: weight=0.0409
+
+FILLED GROUP WEIGHTS (normalized with fallback template):
+  Driving Performance: 0.1104
+  Approach - Short (<100): 0.0364
+  Approach - Mid (100-150): 0.0970
+  Approach - Long (150-200): 0.1111
+  Approach - Very Long (>200): 0.0592
+  Putting: 0.1401
+  Around the Green: 0.0892
+  Scoring: 0.1767
+  Course Management: 0.1801
+
+FILLED METRIC WEIGHTS (group-level normalization applied):
+  Driving Performance::Driving Distance: -0.0907
+  Driving Performance::Driving Accuracy: 0.4276
+  Driving Performance::SG OTT: 0.6631
+  Approach - Short (<100)::Approach <100 GIR: 0.1173
+  Approach - Short (<100)::Approach <100 SG: 0.2761
+  Approach - Short (<100)::Approach <100 Prox: 0.6066
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.0915
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.2054
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.4938
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0915
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.2054
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.4938
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.0774
+  Approach - Long (150-200)::Approach <200 FW SG: 0.2644
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.4535
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0774
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.2644
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.4535
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0764
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.2305
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.6931
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 0.6815
+  Scoring::Scoring Average: 0.3185
+  Scoring::Birdie Chances Created: 0.0000
+  Scoring::Scoring: Approach <100 SG: 0.0000
+  Scoring::Scoring: Approach <150 FW SG: 0.0000
+  Scoring::Scoring: Approach <150 Rough SG: 0.0000
+  Scoring::Scoring: Approach <200 FW SG: 0.0000
+  Scoring::Scoring: Approach >200 FW SG: 0.0000
+  Scoring::Scoring: Approach >150 Rough SG: 0.0000
+  Course Management::Scrambling: 0.4546
+  Course Management::Great Shots: 0.4503
+  Course Management::Poor Shots: 0.0951
+  Course Management::Course Management: Approach <100 Prox: 0.0000
+  Course Management::Course Management: Approach <150 FW Prox: 0.0000
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0000
+  Course Management::Course Management: Approach >150 Rough Prox: 0.0000
+  Course Management::Course Management: Approach <200 FW Prox: 0.0000
+  Course Management::Course Management: Approach >200 FW Prox: 0.0000
+
+BLENDED GROUP WEIGHTS (prior 60% / model 40%):
+  Driving Performance: 0.0810
+  Approach - Short (<100): 0.0542
+  Approach - Mid (100-150): 0.1350
+  Approach - Long (150-200): 0.1457
+  Approach - Very Long (>200): 0.0757
+  Putting: 0.0713
+  Around the Green: 0.0383
+  Scoring: 0.1762
+  Course Management: 0.2225
+
+BLENDED METRIC WEIGHTS (prior/model blend, normalized per group):
+  Driving Performance::Driving Distance: 0.0326
+  Driving Performance::Driving Accuracy: 0.3435
+  Driving Performance::SG OTT: 0.6240
+  Approach - Short (<100)::Approach <100 GIR: 0.1243
+  Approach - Short (<100)::Approach <100 SG: 0.1666
+  Approach - Short (<100)::Approach <100 Prox: 0.7092
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.0868
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.1608
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.4958
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0297
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.0667
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.1602
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.0757
+  Approach - Long (150-200)::Approach <200 FW SG: 0.2446
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.4224
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0250
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.0856
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.1467
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0869
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.1827
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.7303
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 0.5143
+  Scoring::Scoring Average: 0.2387
+  Scoring::Birdie Chances Created: 0.1102
+  Scoring::Scoring: Approach <100 SG: 0.0399
+  Scoring::Scoring: Approach <150 FW SG: 0.0870
+  Scoring::Scoring: Approach <150 Rough SG: 0.0099
+  Scoring::Scoring: Approach <200 FW SG: 0.0000
+  Scoring::Scoring: Approach >200 FW SG: 0.0000
+  Scoring::Scoring: Approach >150 Rough SG: 0.0000
+  Course Management::Scrambling: 0.2426
+  Course Management::Great Shots: 0.2283
+  Course Management::Poor Shots: 0.0943
+  Course Management::Course Management: Approach <100 Prox: 0.0576
+  Course Management::Course Management: Approach <150 FW Prox: 0.0697
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0835
+  Course Management::Course Management: Approach >150 Rough Prox: 0.1421
+  Course Management::Course Management: Approach <200 FW Prox: 0.0500
+  Course Management::Course Management: Approach >200 FW Prox: 0.0320
+
+ADJUSTED METRIC WEIGHTS (course setup applied):
+  Driving Performance::Driving Distance: 0.0326
+  Driving Performance::Driving Accuracy: 0.3435
+  Driving Performance::SG OTT: 0.6240
+  Approach - Short (<100)::Approach <100 GIR: 0.1243
+  Approach - Short (<100)::Approach <100 SG: 0.1666
+  Approach - Short (<100)::Approach <100 Prox: 0.7092
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.0868
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.1608
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.4958
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0297
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.0667
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.1602
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.0757
+  Approach - Long (150-200)::Approach <200 FW SG: 0.2446
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.4224
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0250
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.0856
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.1467
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0869
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.1827
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.7303
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 0.5143
+  Scoring::Scoring Average: 0.2387
+  Scoring::Birdie Chances Created: 0.1102
+  Scoring::Scoring: Approach <100 SG: 0.0113
+  Scoring::Scoring: Approach <150 FW SG: 0.0133
+  Scoring::Scoring: Approach <150 Rough SG: 0.0133
+  Scoring::Scoring: Approach <200 FW SG: 0.0533
+  Scoring::Scoring: Approach >200 FW SG: 0.0228
+  Scoring::Scoring: Approach >150 Rough SG: 0.0228
+  Course Management::Scrambling: 0.2426
+  Course Management::Great Shots: 0.2283
+  Course Management::Poor Shots: 0.0943
+  Course Management::Course Management: Approach <100 Prox: 0.0358
+  Course Management::Course Management: Approach <150 FW Prox: 0.0424
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0424
+  Course Management::Course Management: Approach >150 Rough Prox: 0.0723
+  Course Management::Course Management: Approach <200 FW Prox: 0.1696
+  Course Management::Course Management: Approach >200 FW Prox: 0.0723

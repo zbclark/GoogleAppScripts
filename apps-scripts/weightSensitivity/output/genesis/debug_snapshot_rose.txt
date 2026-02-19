@@ -1,0 +1,271 @@
+TRACE_PLAYER: Rose
+Players processed: 72
+Target player found: YES
+Rose, Justin DG ID: 6093
+Round Categorization:
+  Putting rounds: 36
+  Historical rounds: 83
+  Similar rounds: 44
+  Putting Round 0: event=5, sg_putt=-1.074, roundNum=4
+  Putting Round 1: event=5, sg_putt=1.182, roundNum=3
+  Putting Round 2: event=5, sg_putt=2.75, roundNum=2
+  Putting Round 3: event=4, sg_putt=1.003, roundNum=4
+  Putting Round 4: event=4, sg_putt=-1.026, roundNum=3
+  Putting Round 5: event=4, sg_putt=3.587, roundNum=2
+  Putting Round 6: event=4, sg_putt=0, roundNum=1
+  Putting Round 7: event=7, sg_putt=1.215, roundNum=2
+  Putting Round 8: event=7, sg_putt=0.173, roundNum=1
+  Putting Round 9: event=5, sg_putt=-0.364, roundNum=4
+  Putting Round 10: event=5, sg_putt=1.255, roundNum=3
+  Putting Round 11: event=5, sg_putt=1.133, roundNum=1
+  Putting Round 12: event=4, sg_putt=-1.808, roundNum=2
+  Putting Round 13: event=4, sg_putt=0, roundNum=1
+  Putting Round 14: event=5, sg_putt=1.625, roundNum=3
+  Putting Round 15: event=5, sg_putt=0.412, roundNum=2
+  Putting Round 16: event=4, sg_putt=-0.828, roundNum=4
+  Putting Round 17: event=4, sg_putt=1.771, roundNum=3
+  Putting Round 18: event=4, sg_putt=0.926, roundNum=2
+  Putting Round 19: event=4, sg_putt=0, roundNum=1
+  Putting Round 20: event=26, sg_putt=2.56, roundNum=2
+  Putting Round 21: event=26, sg_putt=-3.428, roundNum=1
+  Putting Round 22: event=7, sg_putt=0.127, roundNum=2
+  Putting Round 23: event=7, sg_putt=0.536, roundNum=1
+  Putting Round 24: event=5, sg_putt=2.517, roundNum=4
+  Putting Round 25: event=5, sg_putt=-0.526, roundNum=1
+  Putting Round 26: event=4, sg_putt=1.064, roundNum=4
+  Putting Round 27: event=4, sg_putt=2.625, roundNum=3
+  Putting Round 28: event=4, sg_putt=0, roundNum=2
+  Putting Round 29: event=4, sg_putt=-2.271, roundNum=1
+  Putting Round 30: event=5, sg_putt=-0.653, roundNum=4
+  Putting Round 31: event=5, sg_putt=0.39, roundNum=3
+  Putting Round 32: event=4, sg_putt=2.677, roundNum=4
+  Putting Round 33: event=4, sg_putt=-1.223, roundNum=3
+  Putting Round 34: event=4, sg_putt=0.467, roundNum=2
+  Putting Round 35: event=4, sg_putt=0, roundNum=1
+  Historical sg_putt values:
+    Historical Round 0: event=5, sg_putt=-1.074, roundNum=4
+    Historical Round 1: event=5, sg_putt=1.182, roundNum=3
+    Historical Round 2: event=5, sg_putt=2.75, roundNum=2
+    Historical Round 3: event=4, sg_putt=1.003, roundNum=4
+    Historical Round 4: event=4, sg_putt=-1.026, roundNum=3
+    Historical Round 5: event=4, sg_putt=3.587, roundNum=2
+    Historical Round 6: event=4, sg_putt=0, roundNum=1
+    Historical Round 7: event=2, sg_putt=-0.685, roundNum=3
+    Historical Round 8: event=2, sg_putt=0, roundNum=2
+    Historical Round 9: event=2, sg_putt=0, roundNum=1
+    Historical Round 10: event=478, sg_putt=1.195, roundNum=4
+    Historical Round 11: event=478, sg_putt=-0.058, roundNum=3
+    Historical Round 12: event=478, sg_putt=-1.385, roundNum=2
+    Historical Round 13: event=478, sg_putt=0.881, roundNum=1
+    Historical Round 14: event=23, sg_putt=1.842, roundNum=4
+    Historical Round 15: event=23, sg_putt=-2.697, roundNum=3
+    Historical Round 16: event=23, sg_putt=3.733, roundNum=2
+    Historical Round 17: event=23, sg_putt=0.616, roundNum=1
+    Historical Round 18: event=33, sg_putt=-1.83, roundNum=2
+    Historical Round 19: event=33, sg_putt=-3.74, roundNum=1
+    Historical Round 20: event=14, sg_putt=1.487, roundNum=4
+    Historical Round 21: event=14, sg_putt=-4.538, roundNum=3
+    Historical Round 22: event=14, sg_putt=2.082, roundNum=2
+    Historical Round 23: event=14, sg_putt=5.27, roundNum=1
+    Historical Round 24: event=9, sg_putt=2.047, roundNum=4
+    Historical Round 25: event=9, sg_putt=-0.953, roundNum=3
+    Historical Round 26: event=9, sg_putt=-0.867, roundNum=2
+    Historical Round 27: event=9, sg_putt=4.934, roundNum=1
+    Historical Round 28: event=7, sg_putt=1.215, roundNum=2
+    Historical Round 29: event=7, sg_putt=0.173, roundNum=1
+    Historical Round 30: event=5, sg_putt=-0.364, roundNum=4
+    Historical Round 31: event=5, sg_putt=1.255, roundNum=3
+    Historical Round 32: event=5, sg_putt=1.133, roundNum=1
+    Historical Round 33: event=4, sg_putt=-1.808, roundNum=2
+    Historical Round 34: event=4, sg_putt=0, roundNum=1
+    Historical Round 35: event=23, sg_putt=0.833, roundNum=2
+    Historical Round 36: event=23, sg_putt=0.041, roundNum=1
+    Historical Round 37: event=480, sg_putt=-1.574, roundNum=4
+    Historical Round 38: event=480, sg_putt=-2.061, roundNum=3
+    Historical Round 39: event=480, sg_putt=-0.241, roundNum=2
+    Historical Round 40: event=480, sg_putt=-0.752, roundNum=1
+    Historical Round 41: event=14, sg_putt=1.772, roundNum=2
+    Historical Round 42: event=14, sg_putt=0.625, roundNum=1
+    Historical Round 43: event=9, sg_putt=-3.437, roundNum=2
+    Historical Round 44: event=9, sg_putt=-1.322, roundNum=1
+    Historical Round 45: event=5, sg_putt=1.625, roundNum=3
+    Historical Round 46: event=5, sg_putt=0.412, roundNum=2
+    Historical Round 47: event=4, sg_putt=-0.828, roundNum=4
+    Historical Round 48: event=4, sg_putt=1.771, roundNum=3
+    Historical Round 49: event=4, sg_putt=0.926, roundNum=2
+    Historical Round 50: event=4, sg_putt=0, roundNum=1
+    Historical Round 51: event=26, sg_putt=2.56, roundNum=2
+    Historical Round 52: event=26, sg_putt=-3.428, roundNum=1
+    Historical Round 53: event=14, sg_putt=0.393, roundNum=4
+    Historical Round 54: event=14, sg_putt=1.931, roundNum=3
+    Historical Round 55: event=14, sg_putt=1.428, roundNum=2
+    Historical Round 56: event=14, sg_putt=2.312, roundNum=1
+    Historical Round 57: event=9, sg_putt=0.587, roundNum=2
+    Historical Round 58: event=9, sg_putt=-0.662, roundNum=1
+    Historical Round 59: event=7, sg_putt=0.127, roundNum=2
+    Historical Round 60: event=7, sg_putt=0.536, roundNum=1
+    Historical Round 61: event=5, sg_putt=2.517, roundNum=4
+    Historical Round 62: event=5, sg_putt=-0.526, roundNum=1
+    Historical Round 63: event=4, sg_putt=1.064, roundNum=4
+    Historical Round 64: event=4, sg_putt=2.625, roundNum=3
+    Historical Round 65: event=4, sg_putt=0, roundNum=2
+    Historical Round 66: event=4, sg_putt=-2.271, roundNum=1
+    Historical Round 67: event=14, sg_putt=2.446, roundNum=2
+    Historical Round 68: event=14, sg_putt=-0.432, roundNum=1
+    Historical Round 69: event=9, sg_putt=-0.224, roundNum=2
+    Historical Round 70: event=9, sg_putt=-0.109, roundNum=1
+    Historical Round 71: event=5, sg_putt=-0.653, roundNum=4
+    Historical Round 72: event=5, sg_putt=0.39, roundNum=3
+    Historical Round 73: event=4, sg_putt=2.677, roundNum=4
+    Historical Round 74: event=4, sg_putt=-1.223, roundNum=3
+    Historical Round 75: event=4, sg_putt=0.467, roundNum=2
+    Historical Round 76: event=4, sg_putt=0, roundNum=1
+    Historical Round 77: event=536, sg_putt=-2.481, roundNum=4
+    Historical Round 78: event=536, sg_putt=2.593, roundNum=3
+    Historical Round 79: event=536, sg_putt=1.05, roundNum=2
+    Historical Round 80: event=536, sg_putt=4.885, roundNum=1
+    Historical Round 81: event=9, sg_putt=2.333, roundNum=2
+    Historical Round 82: event=9, sg_putt=1.712, roundNum=1
+  Weighted Average SG Putt (lambda=0.2): 0.572729350454123
+  Calculation: -1.074*exp(-0.2*0) + 1.182*exp(-0.2*1) + 2.75*exp(-0.2*2) + 1.003*exp(-0.2*3) + -1.026*exp(-0.2*4) + 3.587*exp(-0.2*5) + 0*exp(-0.2*6) + -0.685*exp(-0.2*7) + 0*exp(-0.2*8) + 0*exp(-0.2*9) + 1.195*exp(-0.2*10) + -0.058*exp(-0.2*11) + -1.385*exp(-0.2*12) + 0.881*exp(-0.2*13) + 1.842*exp(-0.2*14) + -2.697*exp(-0.2*15) + 3.733*exp(-0.2*16) + 0.616*exp(-0.2*17) + -1.83*exp(-0.2*18) + -3.74*exp(-0.2*19) + 1.487*exp(-0.2*20) + -4.538*exp(-0.2*21) + 2.082*exp(-0.2*22) + 5.27*exp(-0.2*23) + 2.047*exp(-0.2*24) + -0.953*exp(-0.2*25) + -0.867*exp(-0.2*26) + 4.934*exp(-0.2*27) + 1.215*exp(-0.2*28) + 0.173*exp(-0.2*29) + -0.364*exp(-0.2*30) + 1.255*exp(-0.2*31) + 1.133*exp(-0.2*32) + -1.808*exp(-0.2*33) + 0*exp(-0.2*34) + 0.833*exp(-0.2*35) + 0.041*exp(-0.2*36) + -1.574*exp(-0.2*37) + -2.061*exp(-0.2*38) + -0.241*exp(-0.2*39) + -0.752*exp(-0.2*40) + 1.772*exp(-0.2*41) + 0.625*exp(-0.2*42) + -3.437*exp(-0.2*43) + -1.322*exp(-0.2*44) + 1.625*exp(-0.2*45) + 0.412*exp(-0.2*46) + -0.828*exp(-0.2*47) + 1.771*exp(-0.2*48) + 0.926*exp(-0.2*49) + 0*exp(-0.2*50) + 2.56*exp(-0.2*51) + -3.428*exp(-0.2*52) + 0.393*exp(-0.2*53) + 1.931*exp(-0.2*54) + 1.428*exp(-0.2*55) + 2.312*exp(-0.2*56) + 0.587*exp(-0.2*57) + -0.662*exp(-0.2*58) + 0.127*exp(-0.2*59) + 0.536*exp(-0.2*60) + 2.517*exp(-0.2*61) + -0.526*exp(-0.2*62) + 1.064*exp(-0.2*63) + 2.625*exp(-0.2*64) + 0*exp(-0.2*65) + -2.271*exp(-0.2*66) + 2.446*exp(-0.2*67) + -0.432*exp(-0.2*68) + -0.224*exp(-0.2*69) + -0.109*exp(-0.2*70) + -0.653*exp(-0.2*71) + 0.39*exp(-0.2*72) + 2.677*exp(-0.2*73) + -1.223*exp(-0.2*74) + 0.467*exp(-0.2*75) + 0*exp(-0.2*76) + -2.481*exp(-0.2*77) + 2.593*exp(-0.2*78) + 1.05*exp(-0.2*79) + 4.885*exp(-0.2*80) + 2.333*exp(-0.2*81) + 1.712*exp(-0.2*82) / sum(weights)
+Approach Metrics Raw Data:
+  <100 FW GIR: 0.91
+  <100 SG (per-shot): 0.08
+  <100 Prox: 14.93
+  <150 FW GIR: 0.82
+  <150 FW SG (per-shot): 0.03
+  <150 FW Prox: 18.85
+BCC Calculation Components:
+  Driving Accuracy (metric 2): 0.6354075232804373
+  SG Putting (metric 7): 0.6090049328395903
+  Approach <100 GIR (metric 17): 0.91
+  Approach <150 FW GIR (metric 20): 0.82
+  Approach <150 Rough GIR (metric 23): 0.63
+  Approach >150 Rough GIR (metric 26): 0.45
+  Approach <200 FW GIR (metric 29): 0.72
+  Approach >200 FW GIR (metric 32): 0.46
+  Approach <100 SG (metric 18): 1.44
+  Approach <150 FW SG (metric 21): 0.54
+  Calculated BCC (metric 14): 4.237074222174355
+WeightedScore: 0.40959049480793386
+RefinedWeightedScore: 0.40195567160099144
+PastPerfMultiplier: 1.0635980808034395
+DataCoverage: 0.926829268292683 | Confidence: 0.981359862341233
+GroupScore Driving Performance: -0.20424123625637508
+GroupScore Approach - Short (<100): 1.3301065210225786
+GroupScore Approach - Mid (100-150): 0.7438904946741949
+GroupScore Approach - Long (150-200): 1.2360790410089244
+GroupScore Approach - Very Long (>200): -1.9920110143027707
+GroupScore Putting: 1.0224541335564579
+GroupScore Around the Green: 0.46061168445273
+GroupScore Scoring: 0.39100062233672356
+GroupScore Course Management: 0.3657726290122504
+Metric 0 SG Total: 0.43922945390228374
+Metric 1 Driving Distance: 273.7868981753188
+Metric 2 Driving Accuracy: 0.6354075232804373
+Metric 3 SG T2G: -0.13811903778412415
+Metric 4 SG Approach: -0.20087082746527327
+Metric 5 SG Around Green: 0.2071486784097072
+Metric 6 SG OTT: -0.14439073022019808
+Metric 7 SG Putting: 0.6090049328395903
+Metric 8 Greens in Regulation: 0.5726413727380479
+Metric 9 Scrambling: 0.6111075519743807
+Metric 10 Great Shots: 3.357180366690145
+Metric 11 Poor Shots: 3.6628588484886553
+Metric 12 Scoring Average: 71.25354859940425
+Metric 13 Birdies or Better: 4.29981101896513
+Metric 14 Birdie Chances Created: 4.237074222174355
+Metric 15 Fairway Proximity: 32.72961173579546
+Metric 16 Rough Proximity: 44.18081237742833
+Metric 17 Approach <100 GIR: 0.91
+Metric 18 Approach <100 SG: 1.44
+Metric 19 Approach <100 Prox: 14.93
+Metric 20 Approach <150 FW GIR: 0.82
+Metric 21 Approach <150 FW SG: 0.54
+Metric 22 Approach <150 FW Prox: 18.85
+Metric 23 Approach <150 Rough GIR: 0.63
+Metric 24 Approach <150 Rough SG: 0.9
+Metric 25 Approach <150 Rough Prox: 38.47
+Metric 26 Approach >150 Rough GIR: 0.45
+Metric 27 Approach >150 Rough SG: 1.2600000000000002
+Metric 28 Approach >150 Rough Prox: 53.62
+Metric 29 Approach <200 FW GIR: 0.72
+Metric 30 Approach <200 FW SG: 0.72
+Metric 31 Approach <200 FW Prox: 27.69
+Metric 32 Approach >200 FW GIR: 0.46
+Metric 33 Approach >200 FW SG: 0
+Metric 34 Approach >200 FW Prox: 51.81
+Putting Metric Value (index 7): 0.6090049328395903
+Putting Stats mean=0.04721397608712366, stdDev=0.5716109124828801
+Putting Z-Score: 0.9828205593770789
+Approach Metric 17 Approach <100 GIR: 0.91
+Approach Metric 18 Approach <100 SG: 1.44
+Approach Metric 19 Approach <100 Prox: 14.93
+Approach Metric 20 Approach <150 FW GIR: 0.82
+Approach Metric 21 Approach <150 FW SG: 0.54
+Approach Metric 22 Approach <150 FW Prox: 18.85
+Approach Metric 23 Approach <150 Rough GIR: 0.63
+Approach Metric 24 Approach <150 Rough SG: 0.9
+Approach Metric 25 Approach <150 Rough Prox: 38.47
+Approach Metric 26 Approach >150 Rough GIR: 0.45
+Approach Metric 27 Approach >150 Rough SG: 1.2600000000000002
+Approach Metric 28 Approach >150 Rough Prox: 53.62
+Approach Metric 29 Approach <200 FW GIR: 0.72
+Approach Metric 30 Approach <200 FW SG: 0.72
+Approach Metric 31 Approach <200 FW Prox: 27.69
+Approach Metric 32 Approach >200 FW GIR: 0.46
+Approach Metric 33 Approach >200 FW SG: 0
+Approach Metric 34 Approach >200 FW Prox: 51.81
+Derived Metric BCC (index 14): 4.237074222174355
+Trend 0 SG Total: -0.01
+Trend 1 Driving Distance: 0.016
+Trend 2 Driving Accuracy: 0.018
+Trend 3 SG T2G: -0.051
+Trend 4 SG Approach: -0.045
+Trend 5 SG Around Green: -0.329
+Trend 6 SG OTT: 0.093
+Trend 7 SG Putting: 0.124
+Trend 8 Greens in Regulation: 0.032
+Trend 9 Scrambling: 0.026
+Trend 10 Great Shots: -0.006
+Trend 11 Poor Shots: -0.029
+Trend 12 Scoring Average: 0
+Trend 13 Birdies or Better: -0.013
+Trend 14 Fairway Proximity: 0.014
+Trend 15 Rough Proximity: -0.018
+GroupScores Before Dampening: {"Driving Performance":-0.20424123625637508,"Approach - Short (<100)":1.3301065210225786,"Approach - Mid (100-150)":0.7438904946741949,"Approach - Long (150-200)":1.2360790410089244,"Approach - Very Long (>200)":-1.9920110143027707,"Putting":1.0224541335564579,"Around the Green":0.46061168445273,"Scoring":0.39100062233672356,"Course Management":0.3657726290122504}
+Stats Approach - Short (<100) -> Approach <100 GIR: mean=0.8506666666666667, stdDev=0.04068428772395596
+Stats Approach - Short (<100) -> Approach <100 SG: mean=0.07074999999999995, stdDev=0.8628389719694491
+Stats Approach - Short (<100) -> Approach <100 Prox: mean=23.02495833333334, stdDev=1.7208440562250467
+Stats Approach - Mid (100-150) -> Approach <150 FW GIR: mean=0.8091527777777776, stdDev=0.03259554092126592
+Stats Approach - Mid (100-150) -> Approach <150 FW SG: mean=0.16325, stdDev=0.4826818784402911
+Stats Approach - Mid (100-150) -> Approach <150 FW Prox: mean=29.04241666666666, stdDev=1.6596341337013039
+Stats Approach - Mid (100-150) -> Approach <150 Rough GIR: mean=0.5580416666666664, stdDev=0.0463931264639342
+Stats Approach - Mid (100-150) -> Approach <150 Rough SG: mean=0.145, stdDev=0.683251629147267
+Stats Approach - Mid (100-150) -> Approach <150 Rough Prox: mean=21.58544444444445, stdDev=2.641793132441787
+Stats Approach - Long (150-200) -> Approach <200 FW GIR: mean=0.6986250000000002, stdDev=0.037756610278444076
+Stats Approach - Long (150-200) -> Approach <200 FW SG: mean=0.3552499999999998, stdDev=0.5219955682181954
+Stats Approach - Long (150-200) -> Approach <200 FW Prox: mean=35.630861111111116, stdDev=1.7688895562268225
+Stats Approach - Long (150-200) -> Approach >150 Rough GIR: mean=0.34840277777777773, stdDev=0.04168617149107993
+Stats Approach - Long (150-200) -> Approach >150 Rough SG: mean=0.2832499999999999, stdDev=0.7084932186302634
+Stats Approach - Long (150-200) -> Approach >150 Rough Prox: mean=12.477777777777776, stdDev=5.354907103841001
+Stats Approach - Very Long (>200) -> Approach >200 FW GIR: mean=0.48597222222222214, stdDev=0.042322029099570016
+Stats Approach - Very Long (>200) -> Approach >200 FW SG: mean=0.347, stdDev=0.5749709116953435
+Stats Approach - Very Long (>200) -> Approach >200 FW Prox: mean=46.75109722222222, stdDev=3.285514786597364
+Stats Putting -> SG Putting: mean=0.04721397608712366, stdDev=0.5716109124828801
+Stats Around the Green -> SG Around Green: mean=0.03364310724084027, stdDev=0.33229725119041464
+Stats Scoring -> SG T2G: mean=0.20427024900010946, stdDev=0.8551886169066052
+Stats Scoring -> Scoring Average: mean=2.875371736684426, stdDev=1.0054848543040653
+Stats Scoring -> Birdie Chances Created: mean=1.4570215924719068, stdDev=2.1490809562081647
+Stats Scoring -> Scoring: Approach <100 SG: mean=0.07074999999999995, stdDev=0.8628389719694491
+Stats Scoring -> Scoring: Approach <150 FW SG: mean=0.16325, stdDev=0.4826818784402911
+Stats Scoring -> Scoring: Approach <150 Rough SG: mean=0.145, stdDev=0.683251629147267
+Stats Scoring -> Scoring: Approach <200 FW SG: mean=0.3552499999999998, stdDev=0.5219955682181954
+Stats Scoring -> Scoring: Approach >200 FW SG: mean=0.347, stdDev=0.5749709116953435
+Stats Scoring -> Scoring: Approach >150 Rough SG: mean=0.2832499999999999, stdDev=0.7084932186302634
+Stats Course Management -> Course Management: Approach <100 Prox: mean=23.02495833333334, stdDev=1.7208440562250467
+Stats Course Management -> Course Management: Approach <150 FW Prox: mean=29.04241666666666, stdDev=1.6596341337013039
+Stats Course Management -> Course Management: Approach <150 Rough Prox: mean=21.58544444444445, stdDev=2.641793132441787
+Stats Course Management -> Course Management: Approach >150 Rough Prox: mean=12.477777777777776, stdDev=5.354907103841001
+Stats Course Management -> Course Management: Approach <200 FW Prox: mean=35.630861111111116, stdDev=1.7688895562268225
+Stats Course Management -> Course Management: Approach >200 FW Prox: mean=46.75109722222222, stdDev=3.285514786597364

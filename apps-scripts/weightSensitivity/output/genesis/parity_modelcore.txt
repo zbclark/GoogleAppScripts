@@ -1,0 +1,62 @@
+====================================================================================================
+MODELCORE PARITY OUTPUT
+====================================================================================================
+Timestamp: 2026-02-19T22:15:02.101Z
+Event: 7 | Season: 2026 | Tournament: Genesis Invitational
+Data Dir: /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/data/genesis
+Include Current Event Rounds: false
+Players: 72
+
+Top 50 Rankings:
+Rank | DG ID | Name | Weighted | Refined | WAR | ΔTrend | ΔPred | ΔNote
+----------------------------------------------------------------------------------------------------
+1 | 18417 | Scheffler, Scottie | 1.431 | 1.414 | 0.884 | -0.144 | -0.072 | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-0.88 (-0.109) [S↑ M↑ L↓ VL↓]
+2 | 22085 | Morikawa, Collin | 0.976 | 0.958 | 0.552 | 0.623 | 0.074 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.74 (0.176) [S↓ M↑ L↑ VL↓]
+3 | 14578 | Henley, Russell | 0.969 | 0.957 | 0.533 | 0.772 | 0.114 | For Course Setup - ΔPred→ ΔTrend↑ | BucketSig ↑ z=0.97 (0.216) [S↑ M↑ L↑ VL↓]
+4 | 17511 | Straka, Sepp | 0.924 | 0.913 | 0.483 | 0.984 | 0.125 | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.33 (0.279) [S↓ M↑ L↑ VL↓]
+5 | 10091 | McIlroy, Rory | 0.835 | 0.819 | 0.430 | 0.697 | 0.076 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.66 (0.162) [S↑ M↓ L↑ VL↓]
+6 | 13562 | Matsuyama, Hideki | 0.745 | 0.736 | 0.444 | 0.242 | -0.066 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.50 (-0.042) [S↓ M↓ L↑ VL↓]
+7 | 18841 | Hovland, Viktor | 0.624 | 0.617 | 0.461 | -0.341 | -0.123 | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-1.52 (-0.221) [S↑ M↑ L↓ VL↓]
+8 | 11889 | Fox, Ryan | 0.590 | 0.583 | 0.316 | 0.360 | 0.039 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.34 (0.106) [S↓ M↓ L↑ VL↓]
+9 | 13900 | Lowry, Shane | 0.529 | 0.522 | 0.464 | 0.119 | -0.034 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.87 (-0.106) [S↑ M↑ L↑ VL↓]
+10 | 19895 | Schauffele, Xander | 0.572 | 0.565 | 0.306 | 0.362 | 0.013 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.07 (0.033) [S↓ M↑ L↑ VL↓]
+11 | 6093 | Rose, Justin | 0.529 | 0.522 | 0.308 | 0.676 | 0.066 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.85 (0.195) [S↑ M↑ L↑ VL↓]
+12 | 14609 | Kim, Si Woo | 0.459 | 0.454 | 0.344 | -0.562 | -0.165 | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-2.11 (-0.324) [S↑ M→ L↓ VL↓]
+13 | 12294 | Fleetwood, Tommy | 0.474 | 0.468 | 0.232 | 0.665 | 0.052 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.47 (0.128) [S↑ M↑ L↑ VL↓]
+14 | 17576 | Conners, Corey | 0.437 | 0.432 | 0.193 | 0.777 | 0.031 | For Course Setup - ΔPred→ ΔTrend↑ | BucketSig ↑ z=0.74 (0.176) [S↓ M↓ L↑ VL↓]
+15 | 17536 | Spaun, J.J. | 0.373 | 0.368 | 0.324 | 0.195 | -0.011 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.37 (-0.020) [S↑ M↑ L↑ VL↓]
+16 | 15575 | Hoge, Tom | 0.407 | 0.402 | 0.210 | 0.553 | 0.132 | For Course Setup - ΔPred↑ ΔTrend→ | BucketSig ↑ z=0.79 (0.184) [S↑ M↑ L↑ VL↓]
+17 | 18554 | Rai, Aaron | 0.311 | 0.307 | 0.203 | 0.250 | -0.044 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.14 (0.021) [S↓ M↓ L↑ VL↓]
+18 | 17646 | Fitzpatrick, Matt | 0.338 | 0.334 | 0.090 | 0.613 | 0.086 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.65 (0.160) [S↓ M↑ L↑ VL↓]
+19 | 15466 | Cantlay, Patrick | 0.265 | 0.262 | 0.301 | -0.021 | -0.025 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.55 (-0.050) [S↑ M↑ L↓ VL↓]
+20 | 23504 | Hoey, Rico | 0.250 | 0.247 | 0.288 | 0.026 | -0.055 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.80 (-0.095) [S↑ M↓ L↑ VL↓]
+21 | 24968 | Griffin, Ben | 0.282 | 0.278 | 0.147 | 0.282 | 0.019 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.25 (0.002) [S↑ M↑ L↑ VL↓]
+22 | 26096 | Bhatia, Akshay | 0.237 | 0.233 | 0.212 | 0.232 | -0.017 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.14 (0.021) [S↑ M↑ L↑ VL↓]
+23 | 22833 | Echavarria, Nico | 0.274 | 0.270 | 0.103 | 0.488 | 0.050 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.74 (0.175) [S↑ M→ L↑ VL↑]
+24 | 23950 | Aberg, Ludvig | 0.282 | 0.278 | 0.071 | 0.465 | 0.050 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.36 (0.110) [S↑ M↑ L↑ VL↓]
+25 | 18634 | McNealy, Maverick | 0.208 | 0.204 | 0.127 | 0.334 | 0.015 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.22 (0.007) [S↑ M↑ L↑ VL↓]
+26 | 22760 | Hisatsune, Ryo | 0.201 | 0.198 | 0.141 | 0.090 | -0.032 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.44 (-0.032) [S↑ M↑ L↑ VL↓]
+27 | 14577 | English, Harris | 0.163 | 0.161 | 0.129 | 0.261 | -0.045 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.56 (-0.052) [S↑ M↓ L↑ VL↓]
+28 | 29767 | Gerard, Ryan | 0.142 | 0.140 | 0.165 | 0.244 | 0.008 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.08 (0.032) [S→ M↑ L↑ VL↓]
+29 | 17606 | Berger, Daniel | 0.125 | 0.124 | 0.173 | -0.052 | -0.082 | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.86 (-0.105) [S↓ M↑ L↓ VL↓]
+30 | 12965 | Fowler, Rickie | 0.137 | 0.136 | 0.117 | 0.001 | -0.064 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-1.08 (-0.144) [S↓ M→ L↑ VL↓]
+31 | 23323 | MacIntyre, Robert | 0.150 | 0.148 | 0.085 | 0.150 | -0.013 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.46 (-0.035) [S↓ M↑ L↑ VL↓]
+32 | 23816 | Valimaki, Sami | 0.162 | 0.160 | 0.040 | 0.421 | 0.057 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.32 (0.101) [S↑ M↑ L↑ VL↓]
+33 | 29433 | Bridgeman, Jacob | 0.159 | 0.156 | 0.007 | 0.376 | 0.060 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.21 (0.083) [S↑ M↑ L↑ VL↓]
+34 | 21891 | Kitayama, Kurt | 0.065 | 0.064 | 0.135 | -0.113 | -0.017 | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-0.80 (-0.094) [S↑ M↑ L↓ VL↓]
+35 | 7399 | Glover, Lucas | 0.097 | 0.096 | 0.024 | 0.572 | 0.062 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.63 (0.157) [S↑ M↑ L↑ VL↓]
+36 | 19396 | Knapp, Jake | 0.111 | 0.109 | -0.067 | 1.057 | 0.131 | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.77 (0.356) [S↓ M↓ L↑ VL↑]
+37 | 11676 | Finau, Tony | 0.041 | 0.041 | -0.032 | 0.446 | 0.003 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.19 (0.013) [S↑ M↑ L↑ VL↓]
+38 | 14636 | Spieth, Jordan | 0.065 | 0.064 | -0.103 | 0.618 | 0.038 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.32 (0.102) [S↑ M↑ L↑ VL↓]
+39 | 10419 | Noren, Alex | -0.006 | -0.006 | -0.030 | 0.054 | 0.022 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.33 (-0.011) [S↑ M↑ L↑ VL↓]
+40 | 17543 | Kim, Michael | -0.005 | -0.005 | -0.077 | 0.467 | 0.050 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.34 (0.106) [S↑ M↑ L↑ VL↓]
+41 | 13872 | Bradley, Keegan | -0.033 | -0.032 | -0.029 | 0.398 | -0.019 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.22 (0.007) [S↑ M↑ L↑ VL↓]
+42 | 17780 | Pendrith, Taylor | -0.023 | -0.023 | -0.072 | 0.598 | 0.052 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.44 (0.123) [S↓ M↑ L↑ VL↓]
+43 | 19483 | Burns, Sam | -0.011 | -0.011 | -0.141 | 1.229 | 0.166 | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.76 (0.353) [S↓ M↑ L↑ VL↓]
+44 | 27774 | Gotterup, Chris | -0.074 | -0.074 | 0.002 | -0.213 | -0.085 | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-1.06 (-0.139) [S↑ M↓ L↓ VL↓]
+45 | 6430 | Scott, Adam | -0.079 | -0.078 | -0.027 | 0.116 | -0.054 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.74 (-0.084) [S↑ M↑ L↑ VL↓]
+46 | 13126 | Taylor, Nick | -0.083 | -0.082 | -0.050 | 0.299 | -0.016 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.26 (0.000) [S↑ M↑ L↑ VL↓]
+47 | 26651 | Young, Cameron | -0.121 | -0.119 | -0.053 | 0.090 | -0.037 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.40 (-0.025) [S↓ M↑ L↑ VL↓]
+48 | 28635 | McCarty, Matt | -0.184 | -0.182 | -0.141 | 0.061 | -0.040 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.65 (-0.067) [S↑ M↑ L↑ VL↓]
+49 | 23505 | McGreevy, Max | -0.214 | -0.211 | -0.073 | -0.081 | -0.074 | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-0.89 (-0.110) [S↑ M↑ L↓ VL↓]
+50 | 19870 | McCarthy, Denny | -0.186 | -0.184 | -0.208 | 0.540 | 0.037 | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.11 (0.065) [S↑ M↑ L↑ VL↓]

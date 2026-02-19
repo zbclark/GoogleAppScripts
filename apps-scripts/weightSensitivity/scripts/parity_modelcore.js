@@ -167,7 +167,9 @@ const runParity = () => {
     deltaScoresById,
     courseSetupWeights: sharedConfig.courseSetupWeights,
     similarCoursesWeight: sharedConfig.similarCoursesWeight,
-    puttingCoursesWeight: sharedConfig.puttingCoursesWeight
+    puttingCoursesWeight: sharedConfig.puttingCoursesWeight,
+    courseType: sharedConfig.courseType,
+    courseNum: sharedConfig.courseNum
   };
 
   const aggregatedPlayers = aggregatePlayerData(

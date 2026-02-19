@@ -1,0 +1,62 @@
+====================================================================================================
+MODELCORE PARITY OUTPUT
+====================================================================================================
+Timestamp: 2026-02-19T19:43:50.577Z
+Event: 7 | Season: 2026 | Tournament: Genesis Invitational
+Data Dir: /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity/data/genesis
+Include Current Event Rounds: false
+Players: 72
+
+Top 50 Rankings:
+Rank | DG ID | Name | Weighted | Refined | WAR | ΔTrend | ΔPred | ΔNote
+----------------------------------------------------------------------------------------------------
+1 | 18417 | Scheffler, Scottie | 1.431 | 1.414 | 0.884 | -0.144 | -0.072 | ΔPred↓ ΔTrend↓
+2 | 22085 | Morikawa, Collin | 0.926 | 0.908 | 0.552 | 0.623 | 0.074 | ΔPred→ ΔTrend→
+3 | 14578 | Henley, Russell | 0.919 | 0.908 | 0.533 | 0.772 | 0.114 | ΔPred→ ΔTrend↑
+4 | 17511 | Straka, Sepp | 0.874 | 0.864 | 0.483 | 0.984 | 0.125 | ΔPred↑ ΔTrend↑
+5 | 10091 | McIlroy, Rory | 0.785 | 0.770 | 0.430 | 0.697 | 0.076 | ΔPred→ ΔTrend→
+6 | 13562 | Matsuyama, Hideki | 0.745 | 0.736 | 0.444 | 0.242 | -0.066 | ΔPred→ ΔTrend→
+7 | 18841 | Hovland, Viktor | 0.624 | 0.617 | 0.461 | -0.341 | -0.123 | ΔPred↓ ΔTrend↓
+8 | 13900 | Lowry, Shane | 0.529 | 0.522 | 0.464 | 0.119 | -0.034 | ΔPred→ ΔTrend→
+9 | 11889 | Fox, Ryan | 0.540 | 0.533 | 0.316 | 0.360 | 0.039 | ΔPred→ ΔTrend→
+10 | 19895 | Schauffele, Xander | 0.522 | 0.515 | 0.306 | 0.362 | 0.013 | ΔPred→ ΔTrend→
+11 | 6093 | Rose, Justin | 0.479 | 0.473 | 0.308 | 0.676 | 0.066 | ΔPred→ ΔTrend→
+12 | 14609 | Kim, Si Woo | 0.459 | 0.454 | 0.344 | -0.562 | -0.165 | ΔPred↓ ΔTrend↓
+13 | 12294 | Fleetwood, Tommy | 0.424 | 0.419 | 0.232 | 0.665 | 0.052 | ΔPred→ ΔTrend→
+14 | 17536 | Spaun, J.J. | 0.373 | 0.368 | 0.324 | 0.195 | -0.011 | ΔPred→ ΔTrend→
+15 | 17576 | Conners, Corey | 0.387 | 0.383 | 0.193 | 0.777 | 0.031 | ΔPred→ ΔTrend↑
+16 | 15575 | Hoge, Tom | 0.357 | 0.353 | 0.210 | 0.553 | 0.132 | ΔPred↑ ΔTrend→
+17 | 18554 | Rai, Aaron | 0.311 | 0.307 | 0.203 | 0.250 | -0.044 | ΔPred→ ΔTrend→
+18 | 15466 | Cantlay, Patrick | 0.265 | 0.262 | 0.301 | -0.021 | -0.025 | ΔPred→ ΔTrend→
+19 | 23504 | Hoey, Rico | 0.250 | 0.247 | 0.288 | 0.026 | -0.055 | ΔPred→ ΔTrend→
+20 | 17646 | Fitzpatrick, Matt | 0.288 | 0.284 | 0.090 | 0.613 | 0.086 | ΔPred→ ΔTrend→
+21 | 26096 | Bhatia, Akshay | 0.237 | 0.233 | 0.212 | 0.232 | -0.017 | ΔPred→ ΔTrend→
+22 | 24968 | Griffin, Ben | 0.232 | 0.229 | 0.147 | 0.282 | 0.019 | ΔPred→ ΔTrend→
+23 | 22833 | Echavarria, Nico | 0.224 | 0.221 | 0.103 | 0.488 | 0.050 | ΔPred→ ΔTrend→
+24 | 23950 | Aberg, Ludvig | 0.232 | 0.229 | 0.071 | 0.465 | 0.050 | ΔPred→ ΔTrend→
+25 | 22760 | Hisatsune, Ryo | 0.201 | 0.198 | 0.141 | 0.090 | -0.032 | ΔPred→ ΔTrend→
+26 | 14577 | English, Harris | 0.163 | 0.161 | 0.129 | 0.261 | -0.045 | ΔPred→ ΔTrend→
+27 | 18634 | McNealy, Maverick | 0.158 | 0.155 | 0.127 | 0.334 | 0.015 | ΔPred→ ΔTrend→
+28 | 17606 | Berger, Daniel | 0.125 | 0.124 | 0.173 | -0.052 | -0.082 | ΔPred↓ ΔTrend→
+29 | 12965 | Fowler, Rickie | 0.137 | 0.136 | 0.117 | 0.001 | -0.064 | ΔPred→ ΔTrend→
+30 | 23323 | MacIntyre, Robert | 0.150 | 0.148 | 0.085 | 0.150 | -0.013 | ΔPred→ ΔTrend→
+31 | 29767 | Gerard, Ryan | 0.092 | 0.091 | 0.165 | 0.244 | 0.008 | ΔPred→ ΔTrend→
+32 | 23816 | Valimaki, Sami | 0.112 | 0.111 | 0.040 | 0.421 | 0.057 | ΔPred→ ΔTrend→
+33 | 21891 | Kitayama, Kurt | 0.065 | 0.064 | 0.135 | -0.113 | -0.017 | ΔPred→ ΔTrend↓
+34 | 29433 | Bridgeman, Jacob | 0.109 | 0.107 | 0.007 | 0.376 | 0.060 | ΔPred→ ΔTrend→
+35 | 7399 | Glover, Lucas | 0.047 | 0.047 | 0.024 | 0.572 | 0.062 | ΔPred→ ΔTrend→
+36 | 19396 | Knapp, Jake | 0.061 | 0.060 | -0.067 | 1.057 | 0.131 | ΔPred↑ ΔTrend↑
+37 | 11676 | Finau, Tony | -0.009 | -0.008 | -0.032 | 0.446 | 0.003 | ΔPred→ ΔTrend→
+38 | 14636 | Spieth, Jordan | 0.015 | 0.015 | -0.103 | 0.618 | 0.038 | ΔPred→ ΔTrend→
+39 | 13872 | Bradley, Keegan | -0.033 | -0.032 | -0.029 | 0.398 | -0.019 | ΔPred→ ΔTrend→
+40 | 10419 | Noren, Alex | -0.056 | -0.056 | -0.030 | 0.054 | 0.022 | ΔPred→ ΔTrend→
+41 | 27774 | Gotterup, Chris | -0.074 | -0.074 | 0.002 | -0.213 | -0.085 | ΔPred↓ ΔTrend↓
+42 | 17543 | Kim, Michael | -0.055 | -0.055 | -0.077 | 0.467 | 0.050 | ΔPred→ ΔTrend→
+43 | 6430 | Scott, Adam | -0.079 | -0.078 | -0.027 | 0.116 | -0.054 | ΔPred→ ΔTrend→
+44 | 17780 | Pendrith, Taylor | -0.073 | -0.072 | -0.072 | 0.598 | 0.052 | ΔPred→ ΔTrend→
+45 | 13126 | Taylor, Nick | -0.083 | -0.082 | -0.050 | 0.299 | -0.016 | ΔPred→ ΔTrend→
+46 | 19483 | Burns, Sam | -0.061 | -0.060 | -0.141 | 1.229 | 0.166 | ΔPred↑ ΔTrend↑
+47 | 26651 | Young, Cameron | -0.121 | -0.119 | -0.053 | 0.090 | -0.037 | ΔPred→ ΔTrend→
+48 | 28635 | McCarty, Matt | -0.184 | -0.182 | -0.141 | 0.061 | -0.040 | ΔPred→ ΔTrend→
+49 | 23505 | McGreevy, Max | -0.214 | -0.211 | -0.073 | -0.081 | -0.074 | ΔPred↓ ΔTrend↓
+50 | 21554 | Poston, J.T. | -0.257 | -0.254 | -0.108 | 0.004 | -0.074 | ΔPred↓ ΔTrend→

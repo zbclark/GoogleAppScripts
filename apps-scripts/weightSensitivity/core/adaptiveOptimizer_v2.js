@@ -181,6 +181,7 @@ if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesE
   DRY_RUN = false;
 }
 
+
 if (OVERRIDE_DIR) {
   const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
   const dataFolder = path.resolve(ROOT_DIR, 'data', normalizedDir);
@@ -3453,6 +3454,19 @@ function runAdaptiveOptimizer() {
   requiredFiles[1].path = FIELD_PATH;
   requiredFiles[2].path = HISTORY_PATH;
   requiredFiles[3].path = APPROACH_PATH;
+
+  if (WRITE_TEMPLATES) {
+    const fallbackDirName = CONFIG_PATH ? path.basename(path.dirname(CONFIG_PATH)) : null;
+    const outputDir = OUTPUT_DIR
+      || (fallbackDirName ? path.resolve(ROOT_DIR, 'output', fallbackDirName) : null);
+    if (outputDir) {
+      process.env.PRE_TOURNAMENT_OUTPUT_DIR = outputDir;
+    }
+    process.env.WRITE_TEMPLATES = 'true';
+    console.log('🔄 Generating course history regression utilities (writeTemplates enabled)...');
+    require('../scripts/analyze_course_history_impact');
+    console.log('✓ Course history regression utilities generated.');
+  }
 
   const missingFiles = requiredFiles.filter(file => !fs.existsSync(file.path));
   if (missingFiles.length > 0) {

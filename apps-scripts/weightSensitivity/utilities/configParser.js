@@ -59,6 +59,13 @@ const collectEventIds = (cells, startRow, endRow, col) => {
   return ids;
 };
 
+const toBoolean = value => {
+  if (value === true) return true;
+  if (value === false) return false;
+  const normalized = String(value || '').trim().toLowerCase();
+  return normalized === 'true' || normalized === 'yes' || normalized === 'y';
+};
+
 const getSharedConfig = (configCsvPath) => {
   const cells = loadConfigCells(configCsvPath);
   const readCell = (row, col) => getCell(cells, row, col);
@@ -80,8 +87,21 @@ const getSharedConfig = (configCsvPath) => {
   const pastPerformanceEnabled = String(readCell(27, 6)).trim() === 'Yes';
   const pastPerformanceWeight = cleanNumber(readCell(27, 7), 0);
 
+  const courseNum = String(readCell(10, 7) || '').trim() || null;
+
   const courseNameRaw = findCourseName(cells);
   const courseNameKey = normalizeCourseName(courseNameRaw);
+
+  const powerChecked = readCell(33, 2);
+  const technicalChecked = readCell(34, 2);
+  const balancedChecked = readCell(35, 2);
+  const courseType = toBoolean(powerChecked)
+    ? 'POWER'
+    : (toBoolean(technicalChecked)
+      ? 'TECHNICAL'
+      : (toBoolean(balancedChecked)
+        ? 'BALANCED'
+        : null));
 
   return {
     cells,
@@ -95,7 +115,9 @@ const getSharedConfig = (configCsvPath) => {
     pastPerformanceEnabled,
     pastPerformanceWeight,
     courseNameRaw,
-    courseNameKey
+    courseNameKey,
+    courseType,
+    courseNum
   };
 };
 
