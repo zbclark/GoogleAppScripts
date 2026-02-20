@@ -26,8 +26,9 @@ const defaultJsonName = `approach_deltas_${new Date().toISOString().slice(0, 10)
 const outJsonPath = args.outJson || `data/approach_deltas/${defaultJsonName}`;
 
 if (!previousPath || !currentPath) {
-  console.error('Usage: node scripts/compute_approach_deltas.js --previous <csv> --current <csv> [--out <csv>] [--outJson <json>]');
+  console.error('Usage: node scripts/compute_approach_deltas.js --previous <csv|snapshot:previous> --current <csv|snapshot:current> [--out <csv>] [--outJson <json>]');
   console.error('Paths can be absolute or relative to the repo root or modelOptemizer/ directory.');
+  console.error('Snapshot selectors: snapshot:current, snapshot:previous, snapshot:latest, snapshot:l24, snapshot:l12, snapshot:YYYY-MM-DD');
   console.error('Optional: --field <csv> to filter deltas to the tournament field.');
   process.exit(1);
 }
@@ -45,6 +46,7 @@ const findDefaultFieldPath = () => {
 };
 
 const resolveInputPath = (value) => {
+  if (typeof value === 'string' && value.startsWith('snapshot:')) return value;
   if (path.isAbsolute(value)) return value;
   const cwdPath = path.resolve(process.cwd(), value);
   if (fs.existsSync(cwdPath)) return cwdPath;

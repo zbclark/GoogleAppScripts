@@ -12,6 +12,7 @@ const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { parse } = require('csv-parse/sync');
+require('dotenv').config();
 
 const { loadCsv } = require('../utilities/csvLoader');
 const { buildPlayerData } = require('../utilities/dataPrep');
@@ -20,16 +21,78 @@ const { getSharedConfig } = require('../utilities/configParser');
 const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
 const { WEIGHT_TEMPLATES } = require('../utilities/weightTemplates');
 const { getDeltaPlayerScoresForEvent } = require('../utilities/deltaPlayerScores');
+const {
+  getDataGolfRankings,
+  getDataGolfApproachSkill,
+  getDataGolfFieldUpdates,
+  getDataGolfPlayerDecompositions,
+  getDataGolfSkillRatings,
+  getDataGolfHistoricalRounds
+} = require('../utilities/dataGolfClient');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 let DATA_DIR = ROOT_DIR;
 let DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
 let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
 const APPROACH_DELTA_DIR = path.resolve(ROOT_DIR, 'data', 'approach_deltas');
+const APPROACH_SNAPSHOT_DIR = path.resolve(ROOT_DIR, 'data', 'approach_snapshot');
+const APPROACH_SNAPSHOT_L24_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l24.json');
+const APPROACH_SNAPSHOT_L12_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l12.json');
+const APPROACH_SNAPSHOT_YTD_LATEST_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_ytd_latest.json');
+const COURSE_CONTEXT_PATH = path.resolve(ROOT_DIR, 'utilities', 'course_context.json');
+const DATAGOLF_CACHE_DIR = path.resolve(ROOT_DIR, 'data', 'cache');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
 let LOGGING_ENABLED = false;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
 const OPT_TESTS_RAW = String(process.env.OPT_TESTS || '').trim();
+const DATAGOLF_API_KEY = String(process.env.DATAGOLF_API_KEY || '').trim();
+const DATAGOLF_RANKINGS_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_RANKINGS_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 24 : Math.max(1, raw);
+})();
+const DATAGOLF_APPROACH_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_APPROACH_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 24 : Math.max(1, raw);
+})();
+const DATAGOLF_APPROACH_PERIOD = String(process.env.DATAGOLF_APPROACH_PERIOD || 'l24')
+  .trim()
+  .toLowerCase();
+const DATAGOLF_FIELD_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_FIELD_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 6 : Math.max(1, raw);
+})();
+const DATAGOLF_FIELD_TOUR = String(process.env.DATAGOLF_FIELD_TOUR || 'pga')
+  .trim()
+  .toLowerCase();
+const DATAGOLF_SKILL_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_SKILL_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 24 : Math.max(1, raw);
+})();
+const DATAGOLF_SKILL_DISPLAY_VALUE = 'value';
+const DATAGOLF_SKILL_DISPLAY_RANK = 'rank';
+const DATAGOLF_DECOMP_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_DECOMP_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 24 : Math.max(1, raw);
+})();
+const DATAGOLF_DECOMP_TOUR = String(process.env.DATAGOLF_DECOMP_TOUR || 'pga')
+  .trim()
+  .toLowerCase();
+const DATAGOLF_HISTORICAL_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_HISTORICAL_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 72 : Math.max(1, raw);
+})();
+const DATAGOLF_HISTORICAL_TOUR = String(process.env.DATAGOLF_HISTORICAL_TOUR || 'pga')
+  .trim()
+  .toLowerCase();
+const DATAGOLF_HISTORICAL_EVENT_ID = String(process.env.DATAGOLF_HISTORICAL_EVENT_ID || 'all')
+  .trim()
+  .toLowerCase();
+const DATAGOLF_HISTORICAL_YEAR_RAW = String(process.env.DATAGOLF_HISTORICAL_YEAR || '')
+  .trim();
+const VALIDATION_APPROACH_MODE = String(process.env.VALIDATION_APPROACH_MODE || 'current_only')
+  .trim()
+  .toLowerCase();
+const VALIDATION_YEAR_WINDOW = 5;
 const MIN_METRIC_COVERAGE = 0.70;
 const VALIDATION_RANGE_PCT = 0.20;
 const VALIDATION_PRIOR_WEIGHT = 0.25;
@@ -1191,6 +1254,16 @@ const GENERATED_METRIC_LABELS = [
   'Approach >200 FW Prox'
 ];
 
+const SKILL_RATING_METRICS = [
+  { label: 'SG Total', skillKey: 'sg_total' },
+  { label: 'SG OTT', skillKey: 'sg_ott' },
+  { label: 'SG Approach', skillKey: 'sg_app' },
+  { label: 'SG Around Green', skillKey: 'sg_arg' },
+  { label: 'SG Putting', skillKey: 'sg_putt' },
+  { label: 'Driving Distance', skillKey: 'driving_dist' },
+  { label: 'Driving Accuracy', skillKey: 'driving_acc' }
+];
+
 const LOWER_BETTER_GENERATED_METRICS = new Set([
   'Poor Shots',
   'Scoring Average',
@@ -1626,6 +1699,192 @@ function buildMetricLabelToNameMap(metricConfig) {
     });
   });
   return map;
+}
+
+function buildSkillRatingsValidation(ranking, skillSnapshot, metricConfig, options = {}) {
+  const { mode = 'value', fallbackSnapshot = null } = options;
+  const resolveSkillPlayers = snapshot => {
+    const payload = snapshot?.payload;
+    if (Array.isArray(payload?.players)) return payload.players;
+    if (Array.isArray(payload?.data)) return payload.data;
+    if (Array.isArray(payload)) return payload;
+    return [];
+  };
+
+  const payload = skillSnapshot?.payload;
+  let skillPlayers = resolveSkillPlayers(skillSnapshot);
+  const fallbackPlayers = resolveSkillPlayers(fallbackSnapshot);
+
+  const buildRankMap = (players, skillKey) => {
+    const values = players
+      .map(player => {
+        const dgId = String(player?.dg_id || '').trim();
+        const value = Number(player?.[skillKey]);
+        if (!dgId || !Number.isFinite(value)) return null;
+        return { dgId, value };
+      })
+      .filter(Boolean)
+      .sort((a, b) => b.value - a.value);
+
+    const rankMap = new Map();
+    values.forEach((entry, index) => {
+      rankMap.set(entry.dgId, index + 1);
+    });
+    return rankMap;
+  };
+
+  const derivedRankMaps = mode === 'rank' && fallbackPlayers.length > 0
+    ? new Map(SKILL_RATING_METRICS.map(entry => [entry.skillKey, buildRankMap(fallbackPlayers, entry.skillKey)]))
+    : null;
+
+  if (skillPlayers.length === 0 && mode === 'rank' && fallbackPlayers.length > 0) {
+    skillPlayers = fallbackPlayers;
+  }
+  if (!ranking || !Array.isArray(ranking.players)) {
+    return { status: 'unavailable', reason: 'ranking_unavailable' };
+  }
+  if (skillPlayers.length === 0) {
+    return { status: 'unavailable', reason: 'skill_ratings_unavailable' };
+  }
+
+  const skillById = new Map();
+  skillPlayers.forEach(player => {
+    const dgId = String(player?.dg_id || '').trim();
+    if (!dgId) return;
+    skillById.set(dgId, player);
+  });
+
+  const labelToMetric = buildMetricLabelToNameMap(metricConfig);
+  const labelIndex = new Map(GENERATED_METRIC_LABELS.map((label, index) => [label, index]));
+
+  let derivedFromValue = false;
+  const metrics = SKILL_RATING_METRICS.map(entry => {
+    const index = labelIndex.get(entry.label);
+    const metricRef = labelToMetric.get(normalizeGeneratedMetricLabel(entry.label));
+    if (typeof index !== 'number' || !metricRef) {
+      return { ...entry, correlation: 0, samples: 0 };
+    }
+
+    const stats = ranking.groupStats?.[metricRef.groupName]?.[metricRef.metricName];
+    const stdDev = stats?.stdDev || 0.001;
+    const mean = typeof stats?.mean === 'number' ? stats.mean : 0;
+
+    const modelValues = [];
+    const skillValues = [];
+    ranking.players.forEach(player => {
+      const dgId = String(player?.dgId || '').trim();
+      if (!dgId) return;
+      const skill = skillById.get(dgId);
+      if (!skill) return;
+      let skillValueRaw = Number(skill?.[entry.skillKey]);
+      if (mode === 'rank' && !Number.isFinite(skillValueRaw) && derivedRankMaps?.has(entry.skillKey)) {
+        const derivedRank = derivedRankMaps.get(entry.skillKey).get(dgId);
+        if (Number.isFinite(derivedRank)) {
+          skillValueRaw = derivedRank;
+          derivedFromValue = true;
+        }
+      }
+      const modelRaw = player?.metrics?.[index];
+      if (!Number.isFinite(skillValueRaw) || !Number.isFinite(modelRaw)) return;
+
+      if (mode === 'rank') {
+        const zScore = (modelRaw - mean) / stdDev;
+        modelValues.push(zScore);
+        skillValues.push(-skillValueRaw);
+      } else {
+        modelValues.push(modelRaw);
+        skillValues.push(skillValueRaw);
+      }
+    });
+
+    const samples = modelValues.length;
+    const correlation = samples >= 5
+      ? calculateSpearmanCorrelation(modelValues, skillValues)
+      : 0;
+
+    return { ...entry, correlation, samples };
+  });
+
+  const validMetrics = metrics.filter(metric => metric.samples > 0);
+  const avgAbsCorrelation = validMetrics.length
+    ? validMetrics.reduce((sum, metric) => sum + Math.abs(metric.correlation || 0), 0) / validMetrics.length
+    : 0;
+
+  const matchedPlayers = ranking.players.filter(player => {
+    const dgId = String(player?.dgId || '').trim();
+    return dgId && skillById.has(dgId);
+  }).length;
+
+  return {
+    status: 'ok',
+    source: skillSnapshot?.source || 'unknown',
+    path: skillSnapshot?.path || null,
+    lastUpdated: payload?.last_updated || null,
+    display: mode,
+    derivedFromValue,
+    matchedPlayers,
+    metrics,
+    avgAbsCorrelation
+  };
+}
+
+function buildPlayerDecompositionValidation(ranking, decompSnapshot) {
+  const payload = decompSnapshot?.payload;
+  const decompPlayers = Array.isArray(payload?.players)
+    ? payload.players
+    : (Array.isArray(payload?.data) ? payload.data : []);
+  if (!ranking || !Array.isArray(ranking.players)) {
+    return { status: 'unavailable', reason: 'ranking_unavailable' };
+  }
+  if (decompPlayers.length === 0) {
+    return { status: 'unavailable', reason: 'player_decompositions_unavailable' };
+  }
+
+  const decompById = new Map();
+  decompPlayers.forEach(player => {
+    const dgId = String(player?.dg_id || '').trim();
+    if (!dgId) return;
+    decompById.set(dgId, player);
+  });
+
+  const modelValues = [];
+  const decompValues = [];
+
+  ranking.players.forEach(player => {
+    const dgId = String(player?.dgId || '').trim();
+    if (!dgId) return;
+    const decomp = decompById.get(dgId);
+    if (!decomp) return;
+    const modelScore = Number.isFinite(player?.refinedWeightedScore)
+      ? player.refinedWeightedScore
+      : (Number.isFinite(player?.weightedScore)
+        ? player.weightedScore
+        : (Number.isFinite(player?.compositeScore)
+          ? player.compositeScore
+          : (Number.isFinite(player?.war) ? player.war : null)));
+    const decompScore = Number(decomp?.final_pred ?? decomp?.baseline_pred);
+    if (!Number.isFinite(modelScore) || !Number.isFinite(decompScore)) return;
+    modelValues.push(modelScore);
+    decompValues.push(decompScore);
+  });
+
+  const samples = modelValues.length;
+  if (samples < 5) {
+    return { status: 'unavailable', reason: 'insufficient_samples', samples };
+  }
+
+  const correlation = calculateSpearmanCorrelation(modelValues, decompValues);
+  return {
+    status: 'ok',
+    source: decompSnapshot?.source || 'unknown',
+    path: decompSnapshot?.path || null,
+    lastUpdated: payload?.last_updated || null,
+    eventName: payload?.event_name || null,
+    courseName: payload?.course_name || null,
+    samples,
+    matchedPlayers: samples,
+    correlation
+  };
 }
 
 function buildFilledGroupWeights(suggestedGroupWeights, fallbackGroupWeights) {
@@ -2763,6 +3022,146 @@ function ensureDirectory(dirPath) {
   }
 }
 
+function readJsonFile(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    return null;
+  }
+}
+
+function writeJsonFile(filePath, payload) {
+  if (!filePath) return;
+  ensureDirectory(path.dirname(filePath));
+  fs.writeFileSync(filePath, JSON.stringify(payload, null, 2));
+}
+
+function loadCourseContext(filePath) {
+  const payload = readJsonFile(filePath);
+  if (!payload || typeof payload !== 'object') return null;
+  return payload;
+}
+
+function resolveCourseContextEntry(context, options = {}) {
+  if (!context || typeof context !== 'object') return null;
+  const eventId = options.eventId ? String(options.eventId).trim() : null;
+  const courseNum = options.courseNum ? String(options.courseNum).trim() : null;
+
+  if (eventId && context.byEventId && context.byEventId[eventId]) {
+    return { ...context.byEventId[eventId], source: 'eventId' };
+  }
+  if (courseNum && context.byCourseNum && context.byCourseNum[courseNum]) {
+    return { ...context.byCourseNum[courseNum], source: 'courseNum' };
+  }
+  return null;
+}
+
+function applyCourseContextOverrides(sharedConfig, overrides) {
+  if (!sharedConfig || !overrides) return false;
+  let applied = false;
+
+  if (Array.isArray(overrides.similarCourseIds) && overrides.similarCourseIds.length > 0) {
+    sharedConfig.similarCourseIds = overrides.similarCourseIds;
+    applied = true;
+  }
+  if (Array.isArray(overrides.puttingCourseIds) && overrides.puttingCourseIds.length > 0) {
+    sharedConfig.puttingCourseIds = overrides.puttingCourseIds;
+    applied = true;
+  }
+  if (typeof overrides.similarCoursesWeight === 'number' && Number.isFinite(overrides.similarCoursesWeight)) {
+    sharedConfig.similarCoursesWeight = overrides.similarCoursesWeight;
+    applied = true;
+  }
+  if (typeof overrides.puttingCoursesWeight === 'number' && Number.isFinite(overrides.puttingCoursesWeight)) {
+    sharedConfig.puttingCoursesWeight = overrides.puttingCoursesWeight;
+    applied = true;
+  }
+
+  if (overrides.shotDistribution && typeof overrides.shotDistribution === 'object') {
+    sharedConfig.courseSetupWeights = {
+      ...sharedConfig.courseSetupWeights,
+      ...overrides.shotDistribution
+    };
+    applied = true;
+  }
+
+  return applied;
+}
+
+function extractApproachRowsFromSnapshotPayload(payload) {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.players)) return payload.players;
+  if (Array.isArray(payload.rows)) return payload.rows;
+  return [];
+}
+
+function loadApproachSnapshotFromDisk(filePath) {
+  if (!filePath || !fs.existsSync(filePath)) {
+    return { source: 'missing', path: filePath || null, payload: null };
+  }
+  return { source: 'snapshot', path: filePath, payload: readJsonFile(filePath) };
+}
+
+async function getOrCreateApproachSnapshot({ period, snapshotPath, apiKey, cacheDir, ttlMs }) {
+  if (snapshotPath && fs.existsSync(snapshotPath)) {
+    return loadApproachSnapshotFromDisk(snapshotPath);
+  }
+
+  const fetched = await getDataGolfApproachSkill({
+    apiKey,
+    cacheDir,
+    ttlMs,
+    allowStale: true,
+    period,
+    fileFormat: 'json'
+  });
+
+  if (fetched?.payload && snapshotPath) {
+    writeJsonFile(snapshotPath, fetched.payload);
+    return { ...fetched, path: snapshotPath };
+  }
+
+  if (snapshotPath && fs.existsSync(snapshotPath)) {
+    return { source: 'snapshot-stale', path: snapshotPath, payload: readJsonFile(snapshotPath) };
+  }
+
+  return fetched;
+}
+
+async function refreshYtdApproachSnapshot({ apiKey, cacheDir, ttlMs }) {
+  const fetched = await getDataGolfApproachSkill({
+    apiKey,
+    cacheDir,
+    ttlMs,
+    allowStale: true,
+    period: 'ytd',
+    fileFormat: 'json'
+  });
+
+  if (fetched?.payload) {
+    writeJsonFile(APPROACH_SNAPSHOT_YTD_LATEST_PATH, fetched.payload);
+    const archiveStamp = new Date().toISOString().slice(0, 10);
+    const archivePath = path.resolve(APPROACH_SNAPSHOT_DIR, `approach_ytd_${archiveStamp}.json`);
+    if (!fs.existsSync(archivePath)) {
+      writeJsonFile(archivePath, fetched.payload);
+    }
+    return { ...fetched, path: APPROACH_SNAPSHOT_YTD_LATEST_PATH, archivePath };
+  }
+
+  if (fs.existsSync(APPROACH_SNAPSHOT_YTD_LATEST_PATH)) {
+    return {
+      source: 'snapshot',
+      path: APPROACH_SNAPSHOT_YTD_LATEST_PATH,
+      payload: readJsonFile(APPROACH_SNAPSHOT_YTD_LATEST_PATH)
+    };
+  }
+
+  return fetched;
+}
+
 function deleteArchiveBackups(outputDir) {
   if (!outputDir) return 0;
   const archiveDir = path.resolve(outputDir, 'archive');
@@ -3454,7 +3853,7 @@ function writeDeltaPlayerScoresFiles(targets, deltaScoresByEvent, options = {}) 
   return outputs;
 }
 
-function runAdaptiveOptimizer() {
+async function runAdaptiveOptimizer() {
   const requiredFiles = [
     { name: 'Configuration Sheet', path: null },
     { name: 'Tournament Field', path: null },
@@ -3466,7 +3865,7 @@ function runAdaptiveOptimizer() {
   const CURRENT_SEASON = OVERRIDE_SEASON ?? 2026;
   const tournamentNameFallback = TOURNAMENT_NAME || 'Sony Open';
   const APPROACH_DELTA_PATH = findApproachDeltaFile([APPROACH_DELTA_DIR, OUTPUT_DIR, DATA_DIR, DEFAULT_DATA_DIR], TOURNAMENT_NAME, tournamentNameFallback);
-  const CONFIG_PATH = resolveTournamentFile('Configuration Sheet', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
+  let CONFIG_PATH = resolveTournamentFile('Configuration Sheet', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const FIELD_PATH = resolveTournamentFile('Tournament Field', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const HISTORY_PATH = resolveTournamentFile('Historical Data', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const APPROACH_PATH = resolveTournamentFile('Approach Skill', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
@@ -3503,10 +3902,35 @@ function runAdaptiveOptimizer() {
   }
 
   console.log('\n🔄 Loading configuration...');
+  const courseContext = loadCourseContext(COURSE_CONTEXT_PATH);
+  const courseContextEntry = resolveCourseContextEntry(courseContext, {
+    eventId: CURRENT_EVENT_ID
+  });
+  if (courseContextEntry?.sourcePath && fs.existsSync(courseContextEntry.sourcePath)) {
+    CONFIG_PATH = courseContextEntry.sourcePath;
+    requiredFiles[0].path = CONFIG_PATH;
+    console.log(`ℹ️  Using course-context configuration sheet: ${path.basename(CONFIG_PATH)}`);
+  }
+
   const sharedConfig = getSharedConfig(CONFIG_PATH);
   console.log('✓ Configuration loaded');
+  const courseContextEntryWithCourse = courseContextEntry || resolveCourseContextEntry(courseContext, {
+    eventId: CURRENT_EVENT_ID,
+    courseNum: sharedConfig.courseNum
+  });
+  const courseContextEntryFinal = courseContextEntryWithCourse;
+  if (courseContextEntry && applyCourseContextOverrides(sharedConfig, courseContextEntry)) {
+    console.log(`✓ Applied course context overrides (${courseContextEntry.source})`);
+  } else if (courseContextEntryWithCourse && applyCourseContextOverrides(sharedConfig, courseContextEntryWithCourse)) {
+    console.log(`✓ Applied course context overrides (${courseContextEntryWithCourse.source})`);
+  }
   const resolvedSeason = parseInt(sharedConfig.currentSeason || sharedConfig.currentYear || CURRENT_SEASON);
   const effectiveSeason = Number.isNaN(resolvedSeason) ? CURRENT_SEASON : resolvedSeason;
+
+  const historicalYear = (() => {
+    const parsed = parseInt(DATAGOLF_HISTORICAL_YEAR_RAW, 10);
+    return Number.isNaN(parsed) ? effectiveSeason : parsed;
+  })();
   let courseTemplateKey = null;
 
   const currentEventRoundsPolicy = INCLUDE_CURRENT_EVENT_ROUNDS === null
@@ -3564,6 +3988,236 @@ function runAdaptiveOptimizer() {
   const metricConfig = baseMetricConfig;
 
   const validationData = loadValidationOutputs(metricConfig, [DATA_DIR, DEFAULT_DATA_DIR]);
+  if (!validationData?.weightTemplatesPath || !validationData?.deltaTrendsPath) {
+    const missing = [];
+    if (!validationData?.weightTemplatesPath) missing.push('validation weight templates CSV');
+    if (!validationData?.deltaTrendsPath) missing.push('validation delta trends CSV');
+    console.error('\n❌ Validation outputs missing:');
+    missing.forEach(item => console.error(`   - ${item}`));
+    console.error('\nThis optimizer run requires the Algo Validation outputs (weight templates + delta trends).');
+    console.error('Run the GAS validation workflow first, then place the resulting CSVs in:');
+    console.error(`   - ${DATA_DIR}`);
+    console.error(`   - ${DEFAULT_DATA_DIR}`);
+    console.error('\nFix: re-run validation and copy the CSVs into one of those folders, or update filenames in optimizer.js.');
+    process.exit(1);
+  }
+
+  let rankingsSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    rankingsSnapshot = await getDataGolfRankings({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_RANKINGS_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true
+    });
+
+    if (rankingsSnapshot?.payload?.last_updated) {
+      console.log(`✓ DataGolf rankings loaded (${rankingsSnapshot.source}, updated ${rankingsSnapshot.payload.last_updated})`);
+    } else if (rankingsSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf rankings skipped (DATAGOLF_API_KEY not set).');
+    } else if (rankingsSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf rankings using stale cache (API unavailable).');
+    } else if (!rankingsSnapshot.payload) {
+      console.warn('ℹ️  DataGolf rankings unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf rankings fetch failed: ${error.message}`);
+  }
+  let approachSkillSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    approachSkillSnapshot = await getDataGolfApproachSkill({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      period: DATAGOLF_APPROACH_PERIOD,
+      fileFormat: 'json'
+    });
+
+    if (approachSkillSnapshot?.payload?.last_updated) {
+      const timePeriod = approachSkillSnapshot.payload.time_period || DATAGOLF_APPROACH_PERIOD;
+      console.log(`✓ DataGolf approach skill loaded (${approachSkillSnapshot.source}, ${timePeriod}, updated ${approachSkillSnapshot.payload.last_updated})`);
+    } else if (approachSkillSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf approach skill skipped (DATAGOLF_API_KEY not set).');
+    } else if (approachSkillSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf approach skill using stale cache (API unavailable).');
+    } else if (!approachSkillSnapshot.payload) {
+      console.warn('ℹ️  DataGolf approach skill unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf approach skill fetch failed: ${error.message}`);
+  }
+
+  ensureDirectory(APPROACH_SNAPSHOT_DIR);
+  let approachSnapshotL24 = { source: 'unavailable', path: APPROACH_SNAPSHOT_L24_PATH, payload: null };
+  let approachSnapshotL12 = { source: 'unavailable', path: APPROACH_SNAPSHOT_L12_PATH, payload: null };
+  let approachSnapshotYtd = { source: 'unavailable', path: APPROACH_SNAPSHOT_YTD_LATEST_PATH, payload: null };
+
+  try {
+    approachSnapshotL24 = await getOrCreateApproachSnapshot({
+      period: 'l24',
+      snapshotPath: APPROACH_SNAPSHOT_L24_PATH,
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+    });
+    if (approachSnapshotL24?.payload?.last_updated) {
+      console.log(`✓ Approach snapshot l24 ready (${approachSnapshotL24.source}, updated ${approachSnapshotL24.payload.last_updated})`);
+    }
+  } catch (error) {
+    console.warn(`ℹ️  Approach snapshot l24 fetch failed: ${error.message}`);
+  }
+
+  try {
+    approachSnapshotL12 = await getOrCreateApproachSnapshot({
+      period: 'l12',
+      snapshotPath: APPROACH_SNAPSHOT_L12_PATH,
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+    });
+    if (approachSnapshotL12?.payload?.last_updated) {
+      console.log(`✓ Approach snapshot l12 ready (${approachSnapshotL12.source}, updated ${approachSnapshotL12.payload.last_updated})`);
+    }
+  } catch (error) {
+    console.warn(`ℹ️  Approach snapshot l12 fetch failed: ${error.message}`);
+  }
+
+  try {
+    approachSnapshotYtd = await refreshYtdApproachSnapshot({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+    });
+    if (approachSnapshotYtd?.payload?.last_updated) {
+      console.log(`✓ Approach snapshot ytd ready (${approachSnapshotYtd.source}, updated ${approachSnapshotYtd.payload.last_updated})`);
+    }
+  } catch (error) {
+    console.warn(`ℹ️  Approach snapshot ytd fetch failed: ${error.message}`);
+  }
+  let fieldUpdatesSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    fieldUpdatesSnapshot = await getDataGolfFieldUpdates({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_FIELD_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      tour: DATAGOLF_FIELD_TOUR,
+      fileFormat: 'json'
+    });
+
+    if (fieldUpdatesSnapshot?.payload?.event_name) {
+      console.log(`✓ DataGolf field updates loaded (${fieldUpdatesSnapshot.source}, ${fieldUpdatesSnapshot.payload.event_name})`);
+    } else if (fieldUpdatesSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf field updates skipped (DATAGOLF_API_KEY not set).');
+    } else if (fieldUpdatesSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf field updates using stale cache (API unavailable).');
+    } else if (!fieldUpdatesSnapshot.payload) {
+      console.warn('ℹ️  DataGolf field updates unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf field updates fetch failed: ${error.message}`);
+  }
+
+  let playerDecompositionsSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    playerDecompositionsSnapshot = await getDataGolfPlayerDecompositions({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_DECOMP_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      tour: DATAGOLF_DECOMP_TOUR,
+      fileFormat: 'json'
+    });
+
+    if (playerDecompositionsSnapshot?.payload?.last_updated) {
+      console.log(`✓ DataGolf player decompositions loaded (${playerDecompositionsSnapshot.source}, updated ${playerDecompositionsSnapshot.payload.last_updated})`);
+    } else if (playerDecompositionsSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf player decompositions skipped (DATAGOLF_API_KEY not set).');
+    } else if (playerDecompositionsSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf player decompositions using stale cache (API unavailable).');
+    } else if (!playerDecompositionsSnapshot.payload) {
+      console.warn('ℹ️  DataGolf player decompositions unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf player decompositions fetch failed: ${error.message}`);
+  }
+
+  let skillRatingsValueSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    skillRatingsValueSnapshot = await getDataGolfSkillRatings({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_SKILL_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      display: DATAGOLF_SKILL_DISPLAY_VALUE,
+      fileFormat: 'json'
+    });
+
+    if (skillRatingsValueSnapshot?.payload?.last_updated) {
+      console.log(`✓ DataGolf skill ratings loaded (${skillRatingsValueSnapshot.source}, display ${DATAGOLF_SKILL_DISPLAY_VALUE}, updated ${skillRatingsValueSnapshot.payload.last_updated})`);
+    } else if (skillRatingsValueSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf skill ratings skipped (DATAGOLF_API_KEY not set).');
+    } else if (skillRatingsValueSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf skill ratings using stale cache (API unavailable).');
+    } else if (!skillRatingsValueSnapshot.payload) {
+      console.warn('ℹ️  DataGolf skill ratings unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf skill ratings fetch failed: ${error.message}`);
+  }
+
+  let skillRatingsRankSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    skillRatingsRankSnapshot = await getDataGolfSkillRatings({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_SKILL_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      display: DATAGOLF_SKILL_DISPLAY_RANK,
+      fileFormat: 'json'
+    });
+
+    if (skillRatingsRankSnapshot?.payload?.last_updated) {
+      console.log(`✓ DataGolf skill ratings loaded (${skillRatingsRankSnapshot.source}, display ${DATAGOLF_SKILL_DISPLAY_RANK}, updated ${skillRatingsRankSnapshot.payload.last_updated})`);
+    } else if (skillRatingsRankSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf skill ratings skipped (DATAGOLF_API_KEY not set).');
+    } else if (skillRatingsRankSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf skill ratings using stale cache (API unavailable).');
+    } else if (!skillRatingsRankSnapshot.payload) {
+      console.warn('ℹ️  DataGolf skill ratings unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf skill ratings (rank) fetch failed: ${error.message}`);
+  }
+
+  let historicalRoundsSnapshot = { source: 'unavailable', path: null, payload: null };
+  try {
+    historicalRoundsSnapshot = await getDataGolfHistoricalRounds({
+      apiKey: DATAGOLF_API_KEY,
+      cacheDir: DATAGOLF_CACHE_DIR,
+      ttlMs: DATAGOLF_HISTORICAL_TTL_HOURS * 60 * 60 * 1000,
+      allowStale: true,
+      tour: DATAGOLF_HISTORICAL_TOUR,
+      eventId: DATAGOLF_HISTORICAL_EVENT_ID,
+      year: historicalYear,
+      fileFormat: 'json'
+    });
+
+    if (historicalRoundsSnapshot?.payload) {
+      console.log(`✓ DataGolf historical rounds loaded (${historicalRoundsSnapshot.source}, ${DATAGOLF_HISTORICAL_TOUR} ${historicalYear})`);
+    } else if (historicalRoundsSnapshot.source === 'missing-key') {
+      console.warn('ℹ️  DataGolf historical rounds skipped (DATAGOLF_API_KEY not set).');
+    } else if (historicalRoundsSnapshot.source === 'missing-year') {
+      console.warn('ℹ️  DataGolf historical rounds skipped (year not set).');
+    } else if (historicalRoundsSnapshot.source === 'cache-stale') {
+      console.warn('ℹ️  DataGolf historical rounds using stale cache (API unavailable).');
+    } else if (!historicalRoundsSnapshot.payload) {
+      console.warn('ℹ️  DataGolf historical rounds unavailable (no cache + API failed).');
+    }
+  } catch (error) {
+    console.warn(`ℹ️  DataGolf historical rounds fetch failed: ${error.message}`);
+  }
   let validationCourseType = validationData.courseType;
   let validationTemplateConfig = null;
   let validationMetricConstraints = null;
@@ -3654,6 +4308,39 @@ function runAdaptiveOptimizer() {
   
   const approachData = loadCsv(APPROACH_PATH, { skipFirstColumn: true });
   console.log(`✓ Loaded approach: ${approachData.length} rows`);
+
+  const approachSnapshotRows = {
+    l24: extractApproachRowsFromSnapshotPayload(approachSnapshotL24?.payload),
+    l12: extractApproachRowsFromSnapshotPayload(approachSnapshotL12?.payload),
+    ytd: extractApproachRowsFromSnapshotPayload(approachSnapshotYtd?.payload)
+  };
+
+  const approachDataCurrent = approachSnapshotRows.ytd.length > 0
+    ? approachSnapshotRows.ytd
+    : approachData;
+
+  if (approachSnapshotRows.ytd.length > 0) {
+    console.log(`✓ Using YTD approach snapshot for current season (${approachSnapshotRows.ytd.length} rows)`);
+  } else {
+    console.log('ℹ️  YTD approach snapshot unavailable; using approach CSV for current season.');
+  }
+
+  const resolveApproachRowsForYear = year => {
+    if (VALIDATION_APPROACH_MODE === 'none') return [];
+    const yearValue = parseInt(String(year || '').trim(), 10);
+    if (Number.isNaN(yearValue)) return [];
+    const diff = effectiveSeason - yearValue;
+    if (diff === 0) return approachDataCurrent;
+    if (diff === 1) {
+      if (approachSnapshotRows.l12.length > 0) return approachSnapshotRows.l12;
+      if (approachSnapshotRows.l24.length > 0) return approachSnapshotRows.l24;
+      return [];
+    }
+    if (diff >= 2 && diff <= 4) {
+      return approachSnapshotRows.l24.length > 0 ? approachSnapshotRows.l24 : [];
+    }
+    return [];
+  };
 
   const fallbackTemplateKey = normalizeTemplateKey(TOURNAMENT_NAME) || `EVENT_${CURRENT_EVENT_ID}`;
   const fieldCourseName = fieldData.find(row => row && (row.course_name || row.course))?.course_name
@@ -3856,7 +4543,7 @@ function runAdaptiveOptimizer() {
 
     const ranking = runRanking({
       roundsRawData: eventRows,
-      approachRawData: approachData,
+      approachRawData: approachDataCurrent,
       groupWeights: currentTemplate.groupWeights,
       metricWeights: currentTemplate.metricWeights,
       includeCurrentEventRounds: true
@@ -4044,8 +4731,14 @@ function runAdaptiveOptimizer() {
 
   const resultsByYear = buildResultsByYear(historicalDataForField, CURRENT_EVENT_ID);
   const availableYears = Object.keys(resultsByYear).sort();
+  const validationYears = availableYears
+    .map(year => parseInt(String(year), 10))
+    .filter(year => !Number.isNaN(year))
+    .filter(year => year >= (effectiveSeason - (VALIDATION_YEAR_WINDOW - 1)) && year <= effectiveSeason)
+    .sort((a, b) => a - b);
 
   console.log(`\n✓ Years available for evaluation: ${availableYears.join(', ') || 'none'}`);
+  console.log(`✓ Validation years (last ${VALIDATION_YEAR_WINDOW} incl current): ${validationYears.join(', ') || 'none'}`);
   console.log(`✓ Total historical rounds for event ${CURRENT_EVENT_ID} (all players): ${allEventRounds.length}`);
   console.log(`✓ Total historical rounds for event ${CURRENT_EVENT_ID} (current field only): ${historicalDataForField.length}\n`);
 
@@ -4349,7 +5042,7 @@ function runAdaptiveOptimizer() {
       if (roundsForMetrics.length > 0) {
         const currentRankingForMetrics = runRanking({
           roundsRawData: roundsForMetrics,
-          approachRawData: approachData,
+          approachRawData: approachDataCurrent,
           groupWeights: currentTemplate.groupWeights,
           metricWeights: currentTemplate.metricWeights,
           includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
@@ -4423,7 +5116,7 @@ function runAdaptiveOptimizer() {
         if (similarCourseRounds.length > 0 && similarCourseResults.length > 0) {
           const similarRanking = runRanking({
             roundsRawData: similarCourseRounds,
-            approachRawData: approachData,
+            approachRawData: approachDataCurrent,
             groupWeights: currentTemplate.groupWeights,
             metricWeights: currentTemplate.metricWeights,
             includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
@@ -4447,7 +5140,7 @@ function runAdaptiveOptimizer() {
         if (puttingCourseRounds.length > 0 && puttingCourseResults.length > 0) {
           const puttingRanking = runRanking({
             roundsRawData: puttingCourseRounds,
-            approachRawData: approachData,
+            approachRawData: approachDataCurrent,
             groupWeights: currentTemplate.groupWeights,
             metricWeights: currentTemplate.metricWeights,
             includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonMetrics)
@@ -4569,6 +5262,101 @@ function runAdaptiveOptimizer() {
       season: CURRENT_SEASON,
       tournament: TOURNAMENT_NAME || 'Event',
       dryRun: DRY_RUN,
+      apiSnapshots: {
+        dataGolfRankings: {
+          source: rankingsSnapshot?.source || 'unknown',
+          path: rankingsSnapshot?.path || null,
+          lastUpdated: rankingsSnapshot?.payload?.last_updated || null,
+          count: Array.isArray(rankingsSnapshot?.payload?.rankings)
+            ? rankingsSnapshot.payload.rankings.length
+            : null
+        },
+        dataGolfApproachSkill: {
+          source: approachSkillSnapshot?.source || 'unknown',
+          path: approachSkillSnapshot?.path || null,
+          lastUpdated: approachSkillSnapshot?.payload?.last_updated || null,
+          timePeriod: approachSkillSnapshot?.payload?.time_period || DATAGOLF_APPROACH_PERIOD || null,
+          count: Array.isArray(approachSkillSnapshot?.payload?.data)
+            ? approachSkillSnapshot.payload.data.length
+            : null
+        },
+        dataGolfApproachSnapshotL24: {
+          source: approachSnapshotL24?.source || 'unknown',
+          path: approachSnapshotL24?.path || null,
+          lastUpdated: approachSnapshotL24?.payload?.last_updated || null,
+          timePeriod: approachSnapshotL24?.payload?.time_period || 'l24',
+          count: Array.isArray(approachSnapshotL24?.payload?.data)
+            ? approachSnapshotL24.payload.data.length
+            : null
+        },
+        dataGolfApproachSnapshotL12: {
+          source: approachSnapshotL12?.source || 'unknown',
+          path: approachSnapshotL12?.path || null,
+          lastUpdated: approachSnapshotL12?.payload?.last_updated || null,
+          timePeriod: approachSnapshotL12?.payload?.time_period || 'l12',
+          count: Array.isArray(approachSnapshotL12?.payload?.data)
+            ? approachSnapshotL12.payload.data.length
+            : null
+        },
+        dataGolfApproachSnapshotYtd: {
+          source: approachSnapshotYtd?.source || 'unknown',
+          path: approachSnapshotYtd?.path || null,
+          archivePath: approachSnapshotYtd?.archivePath || null,
+          lastUpdated: approachSnapshotYtd?.payload?.last_updated || null,
+          timePeriod: approachSnapshotYtd?.payload?.time_period || 'ytd',
+          count: Array.isArray(approachSnapshotYtd?.payload?.data)
+            ? approachSnapshotYtd.payload.data.length
+            : null
+        },
+        dataGolfFieldUpdates: {
+          source: fieldUpdatesSnapshot?.source || 'unknown',
+          path: fieldUpdatesSnapshot?.path || null,
+          eventName: fieldUpdatesSnapshot?.payload?.event_name || null,
+          eventId: fieldUpdatesSnapshot?.payload?.event_id || null,
+          tour: fieldUpdatesSnapshot?.payload?.tour || DATAGOLF_FIELD_TOUR || null,
+          fieldCount: Array.isArray(fieldUpdatesSnapshot?.payload?.field)
+            ? fieldUpdatesSnapshot.payload.field.length
+            : null
+        },
+        dataGolfPlayerDecompositions: {
+          source: playerDecompositionsSnapshot?.source || 'unknown',
+          path: playerDecompositionsSnapshot?.path || null,
+          lastUpdated: playerDecompositionsSnapshot?.payload?.last_updated || null,
+          eventName: playerDecompositionsSnapshot?.payload?.event_name || null,
+          tour: DATAGOLF_DECOMP_TOUR || null,
+          count: Array.isArray(playerDecompositionsSnapshot?.payload?.players)
+            ? playerDecompositionsSnapshot.payload.players.length
+            : null
+        },
+        dataGolfSkillRatingsValue: {
+          source: skillRatingsValueSnapshot?.source || 'unknown',
+          path: skillRatingsValueSnapshot?.path || null,
+          lastUpdated: skillRatingsValueSnapshot?.payload?.last_updated || null,
+          display: DATAGOLF_SKILL_DISPLAY_VALUE || null,
+          count: Array.isArray(skillRatingsValueSnapshot?.payload?.players)
+            ? skillRatingsValueSnapshot.payload.players.length
+            : null
+        },
+        dataGolfSkillRatingsRank: {
+          source: skillRatingsRankSnapshot?.source || 'unknown',
+          path: skillRatingsRankSnapshot?.path || null,
+          lastUpdated: skillRatingsRankSnapshot?.payload?.last_updated || null,
+          display: DATAGOLF_SKILL_DISPLAY_RANK || null,
+          count: Array.isArray(skillRatingsRankSnapshot?.payload?.players)
+            ? skillRatingsRankSnapshot.payload.players.length
+            : null
+        },
+        dataGolfHistoricalRounds: {
+          source: historicalRoundsSnapshot?.source || 'unknown',
+          path: historicalRoundsSnapshot?.path || null,
+          tour: DATAGOLF_HISTORICAL_TOUR || null,
+          eventId: DATAGOLF_HISTORICAL_EVENT_ID || null,
+          year: historicalYear || null,
+          count: historicalRoundsSnapshot?.payload && typeof historicalRoundsSnapshot.payload === 'object'
+            ? Object.keys(historicalRoundsSnapshot.payload).length
+            : null
+        }
+      },
       trainingSource: 'historical+similar-course',
       trainingMetrics: trainingMetricNotes,
       historicalMetricCorrelations,
@@ -4891,7 +5679,7 @@ function runAdaptiveOptimizer() {
       const adjustedGroupWeights = useApproach ? config.groupWeights : removeApproachGroupWeights(config.groupWeights);
       const ranking = runRanking({
         roundsRawData: rounds,
-        approachRawData: useApproach ? approachData : [],
+        approachRawData: useApproach ? approachDataCurrent : [],
         groupWeights: adjustedGroupWeights,
         metricWeights: config.metricWeights,
         includeCurrentEventRounds: resolveIncludeCurrentEventRounds(useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonBaseline : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
@@ -4962,6 +5750,20 @@ function runAdaptiveOptimizer() {
     return bTop20 - aTop20;
   })[0];
 
+  const preferredTemplateName = courseContextEntryFinal?.templateKey
+    ? String(courseContextEntryFinal.templateKey).trim()
+    : null;
+
+  if (!TEMPLATE && preferredTemplateName) {
+    const preferredResult = templateResults.find(result => result.name === preferredTemplateName);
+    if (preferredResult) {
+      bestTemplate = preferredResult;
+      console.log(`ℹ️  Using course-context template: ${preferredTemplateName}`);
+    } else {
+      console.warn(`ℹ️  Course-context template not found in weightTemplates: ${preferredTemplateName}`);
+    }
+  }
+
   if (validationTemplateName && validationTemplateConfig) {
     const validationResult = templateResults.find(result => result.name === validationTemplateName);
     if (validationResult) {
@@ -5015,7 +5817,7 @@ function runAdaptiveOptimizer() {
         : removeApproachGroupWeights(normalizedCandidate);
       const ranking = runRanking({
         roundsRawData: rounds,
-        approachRawData: useApproach ? approachData : [],
+        approachRawData: useApproach ? approachDataCurrent : [],
         groupWeights: adjustedGroupWeights,
         metricWeights: step2MetricWeights,
         includeCurrentEventRounds: resolveIncludeCurrentEventRounds(
@@ -5109,7 +5911,7 @@ function runAdaptiveOptimizer() {
       roundsRawData: getCurrentSeasonRoundsForRanking(
         resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
       ),
-      approachRawData: approachData,
+      approachRawData: approachDataCurrent,
       groupWeights: normalizedWeights,
       metricWeights: adjustedMetricWeights,
       includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
@@ -5166,7 +5968,7 @@ function runAdaptiveOptimizer() {
     roundsRawData: getCurrentSeasonRoundsForRanking(
       resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
     ),
-    approachRawData: approachData,
+    approachRawData: approachDataCurrent,
     groupWeights: bestOptimized.weights,
     metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
     includeCurrentEventRounds: resolveIncludeCurrentEventRounds(CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization)
@@ -5177,72 +5979,250 @@ function runAdaptiveOptimizer() {
     : null;
 
   // ============================================================================
-  // STEP 4: MULTI-YEAR VALIDATION
+  // STEP 4a/4b: MULTI-YEAR VALIDATION (BASELINE + OPTIMIZED)
   // ============================================================================
   console.log('---');
-  console.log('STEP 4: MULTI-YEAR VALIDATION');
-  console.log('Test optimized weights across all available years');
+  console.log('STEP 4a/4b: MULTI-YEAR VALIDATION');
+  console.log('Test baseline vs optimized weights across all available years');
   console.log('---');
 
-  console.log('\n🔄 Building multi-year validation data...');
-  console.log('   Using 2026 approach metrics for all historical years');
-  console.log('   Filtering to only players with approach data available\n');
+  const skillRatingsValidationValue = buildSkillRatingsValidation(
+    optimizedRankingCurrent,
+    skillRatingsValueSnapshot,
+    metricConfig,
+    { mode: DATAGOLF_SKILL_DISPLAY_VALUE }
+  );
+  const skillRatingsValidationRank = buildSkillRatingsValidation(
+    optimizedRankingCurrent,
+    skillRatingsRankSnapshot,
+    metricConfig,
+    { mode: DATAGOLF_SKILL_DISPLAY_RANK, fallbackSnapshot: skillRatingsValueSnapshot }
+  );
+  const playerDecompositionValidation = buildPlayerDecompositionValidation(
+    optimizedRankingCurrent,
+    playerDecompositionsSnapshot
+  );
 
-  // Get DG IDs of players with approach data
-  const playersWithApproach = new Set(approachData.map(row => String(row['dg_id'] || '').trim()).filter(id => id));
-  console.log(`✓ ${playersWithApproach.size} players have 2026 approach data`);
-
-  // Group historical by year, filtered to players with approach data
-  console.log(`\n📊 Historical rounds by year (2026 field + approach data available):`);
-  const multiYearResults = {};
-  
-  for (const [year, rounds] of Object.entries(roundsByYear)) {
-    console.log(`\n  ${year}: ${rounds.length} rounds`);
-    
-    // Build player data for this year with 2026 approach metrics
-    const useApproach = String(year) === String(CURRENT_SEASON);
-    const adjustedGroupWeights = useApproach ? bestOptimized.weights : removeApproachGroupWeights(bestOptimized.weights);
-    const ranking = runRanking({
-      roundsRawData: rounds,
-      approachRawData: useApproach ? approachData : [],
-      groupWeights: adjustedGroupWeights,
-      metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights,
-      includeCurrentEventRounds: resolveIncludeCurrentEventRounds(useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation)
-    });
-
-    const evaluationResults = resultsByYear[year] && resultsByYear[year].length > 0
-      ? resultsByYear[year]
-      : resultsCurrent;
-    const evaluation = evaluateRankings(ranking.players, evaluationResults, {
-      includeTopN: true,
-      includeTopNDetails: true,
-      includeAdjusted: true
-    });
-    multiYearResults[year] = evaluation;
-    
-    const top10Text = typeof evaluation.top10 === 'number' ? `${evaluation.top10.toFixed(1)}%` : 'n/a';
-    const top20Text = typeof evaluation.top20 === 'number' ? `${evaluation.top20.toFixed(1)}%` : 'n/a';
-    const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
-    const top10OverlapText = evaluation.top10Details ? `${evaluation.top10Details.overlapCount}/10` : 'n/a';
-    const top20OverlapText = evaluation.top20Details ? `${evaluation.top20Details.overlapCount}/20` : 'n/a';
-    const stress = evaluateStressTest(evaluation, {
-      minPlayers: 20,
-      minCorr: 0.1,
-      minTop20Weighted: 60
-    });
-    const stressText = stress.status
-      ? `${stress.status.toUpperCase()}${stress.reason ? ` (${stress.reason})` : ''}`
-      : 'n/a';
-    const subsetEval = evaluation.adjusted?.subset || null;
-    const percentileEval = evaluation.adjusted?.percentile || null;
-    const subsetTop10Text = subsetEval && typeof subsetEval.top10 === 'number' ? `${subsetEval.top10.toFixed(1)}%` : 'n/a';
-    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
-    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
-    const pctTop10Text = percentileEval && typeof percentileEval.top10 === 'number' ? `${percentileEval.top10.toFixed(1)}%` : 'n/a';
-    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
-    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
-    console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText} | Subset RMSE: ${subsetRmseText} | Subset Top-10: ${subsetTop10Text} | Subset Top-20: ${subsetTop20Text} | Pct RMSE: ${pctRmseText} | Pct Top-10: ${pctTop10Text} | Pct Top-20: ${pctTop20Text} | Stress: ${stressText} | Top-10 Overlap: ${top10OverlapText} | Top-20 Overlap: ${top20OverlapText}`);
+  if (skillRatingsValidationValue.status === 'ok') {
+    console.log(`✓ Skill ratings (value) validation: avg |ρ|=${skillRatingsValidationValue.avgAbsCorrelation.toFixed(3)} across ${skillRatingsValidationValue.metrics.length} metrics (matched players: ${skillRatingsValidationValue.matchedPlayers})`);
+  } else {
+    console.log(`ℹ️  Skill ratings (value) validation skipped (${skillRatingsValidationValue.reason || 'unavailable'})`);
   }
+
+  if (skillRatingsValidationRank.status === 'ok') {
+    const rankNote = skillRatingsValidationRank.derivedFromValue ? ' (derived from value)' : '';
+    console.log(`✓ Skill ratings (rank) validation${rankNote}: avg |ρ|=${skillRatingsValidationRank.avgAbsCorrelation.toFixed(3)} across ${skillRatingsValidationRank.metrics.length} metrics (matched players: ${skillRatingsValidationRank.matchedPlayers})`);
+  } else {
+    console.log(`ℹ️  Skill ratings (rank) validation skipped (${skillRatingsValidationRank.reason || 'unavailable'})`);
+  }
+
+  if (playerDecompositionValidation.status === 'ok') {
+    console.log(`✓ Player decompositions validation: ρ=${playerDecompositionValidation.correlation.toFixed(3)} (matched players: ${playerDecompositionValidation.matchedPlayers})`);
+  } else {
+    console.log(`ℹ️  Player decompositions validation skipped (${playerDecompositionValidation.reason || 'unavailable'})`);
+  }
+
+  const runMultiYearValidation = ({ label, groupWeights, metricWeights }) => {
+    console.log(`\n🔄 ${label}: building multi-year validation data...`);
+    console.log(`   Approach mode: ${VALIDATION_APPROACH_MODE}`);
+
+    const results = {};
+    console.log(`\n📊 Historical rounds by year (${label}):`);
+
+    for (const year of validationYears) {
+      const rounds = roundsByYear[year] || [];
+      console.log(`\n  ${year}: ${rounds.length} rounds`);
+
+      const approachRows = resolveApproachRowsForYear(year);
+      const useApproach = approachRows.length > 0;
+      const adjustedGroupWeights = useApproach
+        ? groupWeights
+        : removeApproachGroupWeights(groupWeights);
+      const ranking = runRanking({
+        roundsRawData: rounds,
+        approachRawData: useApproach ? approachRows : [],
+        groupWeights: adjustedGroupWeights,
+        metricWeights,
+        includeCurrentEventRounds: resolveIncludeCurrentEventRounds(
+          useApproach ? CURRENT_EVENT_ROUNDS_DEFAULTS.currentSeasonOptimization : CURRENT_EVENT_ROUNDS_DEFAULTS.historicalEvaluation
+        )
+      });
+
+      const evaluationResults = resultsByYear[year] && resultsByYear[year].length > 0
+        ? resultsByYear[year]
+        : resultsCurrent;
+      const evaluation = evaluateRankings(ranking.players, evaluationResults, {
+        includeTopN: true,
+        includeTopNDetails: true,
+        includeAdjusted: true
+      });
+      results[year] = evaluation;
+
+      const top10Text = typeof evaluation.top10 === 'number' ? `${evaluation.top10.toFixed(1)}%` : 'n/a';
+      const top20Text = typeof evaluation.top20 === 'number' ? `${evaluation.top20.toFixed(1)}%` : 'n/a';
+      const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
+      const top10OverlapText = evaluation.top10Details ? `${evaluation.top10Details.overlapCount}/10` : 'n/a';
+      const top20OverlapText = evaluation.top20Details ? `${evaluation.top20Details.overlapCount}/20` : 'n/a';
+      const stress = evaluateStressTest(evaluation, {
+        minPlayers: 20,
+        minCorr: 0.1,
+        minTop20Weighted: 60
+      });
+      const stressText = stress.status
+        ? `${stress.status.toUpperCase()}${stress.reason ? ` (${stress.reason})` : ''}`
+        : 'n/a';
+      const subsetEval = evaluation.adjusted?.subset || null;
+      const percentileEval = evaluation.adjusted?.percentile || null;
+      const subsetTop10Text = subsetEval && typeof subsetEval.top10 === 'number' ? `${subsetEval.top10.toFixed(1)}%` : 'n/a';
+      const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+      const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+      const pctTop10Text = percentileEval && typeof percentileEval.top10 === 'number' ? `${percentileEval.top10.toFixed(1)}%` : 'n/a';
+      const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+      const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+      console.log(`     Correlation: ${evaluation.correlation.toFixed(4)} | Top-10: ${top10Text} | Top-20: ${top20Text} | Top-20 Weighted: ${top20WeightedText} | Subset RMSE: ${subsetRmseText} | Subset Top-10: ${subsetTop10Text} | Subset Top-20: ${subsetTop20Text} | Pct RMSE: ${pctRmseText} | Pct Top-10: ${pctTop10Text} | Pct Top-20: ${pctTop20Text} | Stress: ${stressText} | Top-10 Overlap: ${top10OverlapText} | Top-20 Overlap: ${top20OverlapText}`);
+    }
+
+    return results;
+  };
+
+  const aggregateFoldEvaluations = folds => {
+    if (!Array.isArray(folds) || folds.length === 0) return null;
+    const totals = folds.reduce((acc, evaluation) => {
+      const weight = evaluation?.matchedPlayers || 0;
+      acc.matchedPlayers += weight;
+      acc.correlation += (evaluation?.correlation || 0) * weight;
+      acc.rmse += (evaluation?.rmse || 0) * weight;
+      acc.rSquared += (evaluation?.rSquared || 0) * weight;
+      acc.meanError += (evaluation?.meanError || 0) * weight;
+      acc.stdDevError += (evaluation?.stdDevError || 0) * weight;
+      acc.mae += (evaluation?.mae || 0) * weight;
+      if (typeof evaluation?.top10 === 'number') {
+        acc.top10 += evaluation.top10 * weight;
+      }
+      if (typeof evaluation?.top20 === 'number') {
+        acc.top20 += evaluation.top20 * weight;
+        acc.top20WeightedScore += (evaluation?.top20WeightedScore || 0) * weight;
+      }
+      return acc;
+    }, {
+      correlation: 0,
+      rmse: 0,
+      rSquared: 0,
+      meanError: 0,
+      stdDevError: 0,
+      mae: 0,
+      top10: 0,
+      top20: 0,
+      top20WeightedScore: 0,
+      matchedPlayers: 0
+    });
+
+    if (totals.matchedPlayers === 0) return null;
+    return {
+      correlation: totals.correlation / totals.matchedPlayers,
+      rmse: totals.rmse / totals.matchedPlayers,
+      rSquared: totals.rSquared / totals.matchedPlayers,
+      meanError: totals.meanError / totals.matchedPlayers,
+      stdDevError: totals.stdDevError / totals.matchedPlayers,
+      mae: totals.mae / totals.matchedPlayers,
+      top10: totals.top10 > 0 ? totals.top10 / totals.matchedPlayers : null,
+      top20: totals.top20 > 0 ? totals.top20 / totals.matchedPlayers : null,
+      top20WeightedScore: totals.top20WeightedScore > 0 ? totals.top20WeightedScore / totals.matchedPlayers : null,
+      matchedPlayers: totals.matchedPlayers
+    };
+  };
+
+  const runEventKFoldValidation = ({ label, groupWeights, metricWeights }) => {
+    console.log(`\n🔄 ${label}: event-based K-fold validation...`);
+    const results = {};
+
+    validationYears.forEach(year => {
+      const yearRows = historyData.filter(row => {
+        const rowYear = parseInt(String(row?.year || row?.season || '').trim(), 10);
+        return !Number.isNaN(rowYear) && rowYear === year;
+      });
+
+      const events = new Map();
+      yearRows.forEach(row => {
+        const eventId = String(row?.event_id || '').trim();
+        if (!eventId) return;
+        if (!events.has(eventId)) events.set(eventId, []);
+        events.get(eventId).push(row);
+      });
+
+      const eventEntries = Array.from(events.entries());
+      if (eventEntries.length < 3) {
+        results[year] = {
+          status: 'unavailable',
+          reason: 'not_enough_events',
+          eventCount: eventEntries.length
+        };
+        return;
+      }
+
+      const fieldDataOverride = buildFieldDataFromHistory(yearRows, null);
+      const approachRows = resolveApproachRowsForYear(year);
+      const useApproach = approachRows.length > 0;
+      const adjustedGroupWeights = useApproach
+        ? groupWeights
+        : removeApproachGroupWeights(groupWeights);
+
+      const foldEvaluations = [];
+      eventEntries.forEach(([eventId, eventRows]) => {
+        const trainingRows = yearRows.filter(row => String(row?.event_id || '').trim() !== eventId);
+        if (trainingRows.length < 30 || eventRows.length < 10) return;
+
+        const ranking = runRanking({
+          roundsRawData: trainingRows,
+          approachRawData: useApproach ? approachRows : [],
+          groupWeights: adjustedGroupWeights,
+          metricWeights,
+          includeCurrentEventRounds: false,
+          fieldDataOverride
+        });
+
+        const testResults = buildResultsFromRows(eventRows);
+        if (!testResults.length) return;
+        const evaluation = evaluateRankings(ranking.players, testResults, {
+          includeTopN: true,
+          includeTopNDetails: false,
+          includeAdjusted: true
+        });
+        foldEvaluations.push(evaluation);
+      });
+
+      const aggregate = aggregateFoldEvaluations(foldEvaluations);
+      results[year] = aggregate
+        ? { status: 'ok', eventCount: eventEntries.length, foldsUsed: foldEvaluations.length, evaluation: aggregate }
+        : { status: 'unavailable', reason: 'no_valid_folds', eventCount: eventEntries.length };
+    });
+
+    return results;
+  };
+
+  const baselineMultiYearResults = runMultiYearValidation({
+    label: 'STEP 4a BASELINE',
+    groupWeights: bestTemplate.groupWeights,
+    metricWeights: bestTemplate.metricWeights
+  });
+
+  const optimizedMultiYearResults = runMultiYearValidation({
+    label: 'STEP 4b OPTIMIZED',
+    groupWeights: bestOptimized.weights,
+    metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
+  });
+
+  const baselineEventKFold = runEventKFoldValidation({
+    label: 'STEP 4a BASELINE',
+    groupWeights: bestTemplate.groupWeights,
+    metricWeights: bestTemplate.metricWeights
+  });
+
+  const optimizedEventKFold = runEventKFoldValidation({
+    label: 'STEP 4b OPTIMIZED',
+    groupWeights: bestOptimized.weights,
+    metricWeights: bestOptimized.metricWeights || bestTemplate.metricWeights
+  });
 
   // ============================================================================
   // FINAL RESULTS
@@ -5267,8 +6247,8 @@ function runAdaptiveOptimizer() {
   console.log(`  Top-20: ${bestOptimizedTop20}`);
   console.log(`  Top-20 Weighted Score: ${bestOptimizedTop20Weighted}`);
 
-  console.log('\nMulti-Year Validation:');
-  Object.entries(multiYearResults).forEach(([year, evalResult]) => {
+  console.log('\nMulti-Year Validation (Baseline):');
+  Object.entries(baselineMultiYearResults).forEach(([year, evalResult]) => {
     const top10Text = typeof evalResult.top10 === 'number' ? `${evalResult.top10.toFixed(1)}%` : 'n/a';
     const top20Text = typeof evalResult.top20 === 'number' ? `${evalResult.top20.toFixed(1)}%` : 'n/a';
     const top20WeightedText = typeof evalResult.top20WeightedScore === 'number' ? `${evalResult.top20WeightedScore.toFixed(1)}%` : 'n/a';
@@ -5281,7 +6261,23 @@ function runAdaptiveOptimizer() {
     const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
     const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
     console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Subset RMSE=${subsetRmseText} | Subset Top-20=${subsetTop20Text} | Pct RMSE=${pctRmseText} | Pct Top-20=${pctTop20Text} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
-  });
+    });
+
+    console.log('\nMulti-Year Validation (Optimized):');
+    Object.entries(optimizedMultiYearResults).forEach(([year, evalResult]) => {
+      const top10Text = typeof evalResult.top10 === 'number' ? `${evalResult.top10.toFixed(1)}%` : 'n/a';
+      const top20Text = typeof evalResult.top20 === 'number' ? `${evalResult.top20.toFixed(1)}%` : 'n/a';
+      const top20WeightedText = typeof evalResult.top20WeightedScore === 'number' ? `${evalResult.top20WeightedScore.toFixed(1)}%` : 'n/a';
+      const top10OverlapText = evalResult.top10Details ? `${evalResult.top10Details.overlapCount}/10` : 'n/a';
+      const top20OverlapText = evalResult.top20Details ? `${evalResult.top20Details.overlapCount}/20` : 'n/a';
+      const subsetEval = evalResult.adjusted?.subset || null;
+      const percentileEval = evalResult.adjusted?.percentile || null;
+      const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+      const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+      const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+      const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+      console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Subset RMSE=${subsetRmseText} | Subset Top-20=${subsetTop20Text} | Pct RMSE=${pctRmseText} | Pct Top-20=${pctTop20Text} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
+    });
 
   // Summary output
   console.log('---');
@@ -5309,8 +6305,24 @@ function runAdaptiveOptimizer() {
     console.log(`   ${metric}: ${(weight * 100).toFixed(1)}%`);
   });
 
-  console.log('\n✓ Step 4: Multi-Year Validation Results');
-  Object.entries(multiYearResults).sort().forEach(([year, result]) => {
+  console.log('\n✓ Step 4a: Multi-Year Validation (Baseline)');
+  Object.entries(baselineMultiYearResults).sort().forEach(([year, result]) => {
+    const top10Text = typeof result.top10 === 'number' ? `${result.top10.toFixed(1)}%` : 'n/a';
+    const top20Text = typeof result.top20 === 'number' ? `${result.top20.toFixed(1)}%` : 'n/a';
+    const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `${result.top20WeightedScore.toFixed(1)}%` : 'n/a';
+    const top10OverlapText = result.top10Details ? `${result.top10Details.overlapCount}/10` : 'n/a';
+    const top20OverlapText = result.top20Details ? `${result.top20Details.overlapCount}/20` : 'n/a';
+    const subsetEval = result.adjusted?.subset || null;
+    const percentileEval = result.adjusted?.percentile || null;
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? subsetEval.rmse.toFixed(2) : 'n/a';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `${subsetEval.top20.toFixed(1)}%` : 'n/a';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? percentileEval.rmse.toFixed(2) : 'n/a';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `${percentileEval.top20.toFixed(1)}%` : 'n/a';
+    console.log(`   ${year}: Correlation=${result.correlation.toFixed(4)}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}, Subset RMSE=${subsetRmseText}, Subset Top-20=${subsetTop20Text}, Pct RMSE=${pctRmseText}, Pct Top-20=${pctTop20Text}, Top-10 Overlap=${top10OverlapText}, Top-20 Overlap=${top20OverlapText}, Players=${result.matchedPlayers}`);
+  });
+
+  console.log('\n✓ Step 4b: Multi-Year Validation (Optimized)');
+  Object.entries(optimizedMultiYearResults).sort().forEach(([year, result]) => {
     const top10Text = typeof result.top10 === 'number' ? `${result.top10.toFixed(1)}%` : 'n/a';
     const top20Text = typeof result.top20 === 'number' ? `${result.top20.toFixed(1)}%` : 'n/a';
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `${result.top20WeightedScore.toFixed(1)}%` : 'n/a';
@@ -5355,6 +6367,101 @@ function runAdaptiveOptimizer() {
     dryRun: DRY_RUN,
     optSeed: OPT_SEED_RAW || null,
     runFingerprint,
+    apiSnapshots: {
+      dataGolfRankings: {
+        source: rankingsSnapshot?.source || 'unknown',
+        path: rankingsSnapshot?.path || null,
+        lastUpdated: rankingsSnapshot?.payload?.last_updated || null,
+        count: Array.isArray(rankingsSnapshot?.payload?.rankings)
+          ? rankingsSnapshot.payload.rankings.length
+          : null
+      },
+      dataGolfApproachSkill: {
+        source: approachSkillSnapshot?.source || 'unknown',
+        path: approachSkillSnapshot?.path || null,
+        lastUpdated: approachSkillSnapshot?.payload?.last_updated || null,
+        timePeriod: approachSkillSnapshot?.payload?.time_period || DATAGOLF_APPROACH_PERIOD || null,
+        count: Array.isArray(approachSkillSnapshot?.payload?.data)
+          ? approachSkillSnapshot.payload.data.length
+          : null
+      },
+      dataGolfApproachSnapshotL24: {
+        source: approachSnapshotL24?.source || 'unknown',
+        path: approachSnapshotL24?.path || null,
+        lastUpdated: approachSnapshotL24?.payload?.last_updated || null,
+        timePeriod: approachSnapshotL24?.payload?.time_period || 'l24',
+        count: Array.isArray(approachSnapshotL24?.payload?.data)
+          ? approachSnapshotL24.payload.data.length
+          : null
+      },
+      dataGolfApproachSnapshotL12: {
+        source: approachSnapshotL12?.source || 'unknown',
+        path: approachSnapshotL12?.path || null,
+        lastUpdated: approachSnapshotL12?.payload?.last_updated || null,
+        timePeriod: approachSnapshotL12?.payload?.time_period || 'l12',
+        count: Array.isArray(approachSnapshotL12?.payload?.data)
+          ? approachSnapshotL12.payload.data.length
+          : null
+      },
+      dataGolfApproachSnapshotYtd: {
+        source: approachSnapshotYtd?.source || 'unknown',
+        path: approachSnapshotYtd?.path || null,
+        archivePath: approachSnapshotYtd?.archivePath || null,
+        lastUpdated: approachSnapshotYtd?.payload?.last_updated || null,
+        timePeriod: approachSnapshotYtd?.payload?.time_period || 'ytd',
+        count: Array.isArray(approachSnapshotYtd?.payload?.data)
+          ? approachSnapshotYtd.payload.data.length
+          : null
+      },
+      dataGolfFieldUpdates: {
+        source: fieldUpdatesSnapshot?.source || 'unknown',
+        path: fieldUpdatesSnapshot?.path || null,
+        eventName: fieldUpdatesSnapshot?.payload?.event_name || null,
+        eventId: fieldUpdatesSnapshot?.payload?.event_id || null,
+        tour: fieldUpdatesSnapshot?.payload?.tour || DATAGOLF_FIELD_TOUR || null,
+        fieldCount: Array.isArray(fieldUpdatesSnapshot?.payload?.field)
+          ? fieldUpdatesSnapshot.payload.field.length
+          : null
+      },
+      dataGolfPlayerDecompositions: {
+        source: playerDecompositionsSnapshot?.source || 'unknown',
+        path: playerDecompositionsSnapshot?.path || null,
+        lastUpdated: playerDecompositionsSnapshot?.payload?.last_updated || null,
+        eventName: playerDecompositionsSnapshot?.payload?.event_name || null,
+        tour: DATAGOLF_DECOMP_TOUR || null,
+        count: Array.isArray(playerDecompositionsSnapshot?.payload?.players)
+          ? playerDecompositionsSnapshot.payload.players.length
+          : null
+      },
+      dataGolfSkillRatingsValue: {
+        source: skillRatingsValueSnapshot?.source || 'unknown',
+        path: skillRatingsValueSnapshot?.path || null,
+        lastUpdated: skillRatingsValueSnapshot?.payload?.last_updated || null,
+        display: DATAGOLF_SKILL_DISPLAY_VALUE || null,
+        count: Array.isArray(skillRatingsValueSnapshot?.payload?.players)
+          ? skillRatingsValueSnapshot.payload.players.length
+          : null
+      },
+      dataGolfSkillRatingsRank: {
+        source: skillRatingsRankSnapshot?.source || 'unknown',
+        path: skillRatingsRankSnapshot?.path || null,
+        lastUpdated: skillRatingsRankSnapshot?.payload?.last_updated || null,
+        display: DATAGOLF_SKILL_DISPLAY_RANK || null,
+        count: Array.isArray(skillRatingsRankSnapshot?.payload?.players)
+          ? skillRatingsRankSnapshot.payload.players.length
+          : null
+      },
+      dataGolfHistoricalRounds: {
+        source: historicalRoundsSnapshot?.source || 'unknown',
+        path: historicalRoundsSnapshot?.path || null,
+        tour: DATAGOLF_HISTORICAL_TOUR || null,
+        eventId: DATAGOLF_HISTORICAL_EVENT_ID || null,
+        year: historicalYear || null,
+        count: historicalRoundsSnapshot?.payload && typeof historicalRoundsSnapshot.payload === 'object'
+          ? Object.keys(historicalRoundsSnapshot.payload).length
+          : null
+      }
+    },
     historicalMetricCorrelations,
     currentGeneratedMetricCorrelations,
     currentGeneratedTop20Correlations,
@@ -5388,8 +6495,14 @@ function runAdaptiveOptimizer() {
       validationPriorWeight: VALIDATION_PRIOR_WEIGHT,
       deltaTrendPriorWeight: DELTA_TREND_PRIOR_WEIGHT,
       approachDeltaPriorWeight: APPROACH_DELTA_PRIOR_WEIGHT,
+      approachMode: VALIDATION_APPROACH_MODE,
       deltaTrendsPath: validationData.deltaTrendsPath || null,
-      deltaTrendSummary
+      deltaTrendSummary,
+      skillRatingsValidation: {
+        value: skillRatingsValidationValue,
+        rank: skillRatingsValidationRank
+      },
+      playerDecompositionValidation
     },
     approachDeltaPrior: {
       label: APPROACH_DELTA_PRIOR_LABEL,
@@ -5431,7 +6544,10 @@ function runAdaptiveOptimizer() {
       baselineGroupWeights: bestTemplate.groupWeights,
       groupWeightDelta: computeWeightDeltas(bestTemplate.groupWeights, bestOptimized.weights)
     },
-    step4_multiYear: multiYearResults,
+    step4a_multiYearBaseline: baselineMultiYearResults,
+    step4b_multiYearOptimized: optimizedMultiYearResults,
+    step4a_eventKFold: baselineEventKFold,
+    step4b_eventKFold: optimizedEventKFold,
     recommendation: {
       approach: improvement > 0.01 ? 'Use optimized weights' : (improvement > 0 ? 'Marginal improvement' : 'Use template baseline'),
       baselineTemplate: bestTemplate.name,
@@ -5824,9 +6940,38 @@ function runAdaptiveOptimizer() {
     textLines.push(`  ${player.rank ?? 'n/a'}: ${player.dgId}${name} | refined=${refined}, weighted=${weighted}`);
   });
   textLines.push('');
-  textLines.push('STEP 4: MULTI-YEAR VALIDATION (with 2026 approach metrics)');
+  textLines.push('STEP 4a: MULTI-YEAR VALIDATION (Baseline)');
+  textLines.push(`Approach mode: ${VALIDATION_APPROACH_MODE}`);
   textLines.push('Functions: runRanking, aggregateYearlyEvaluations (optimizer.js)');
-  Object.entries(multiYearResults).sort().forEach(([year, result]) => {
+  Object.entries(baselineMultiYearResults).sort().forEach(([year, result]) => {
+    const top10Text = typeof result.top10 === 'number' ? `, Top-10=${result.top10.toFixed(1)}%` : '';
+    const top20Text = typeof result.top20 === 'number' ? `, Top-20=${result.top20.toFixed(1)}%` : '';
+    const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `, Top-20 Weighted=${result.top20WeightedScore.toFixed(1)}%` : '';
+    const top10OverlapText = result.top10Details ? `, Top-10 Overlap=${result.top10Details.overlapCount}/10` : '';
+    const top20OverlapText = result.top20Details ? `, Top-20 Overlap=${result.top20Details.overlapCount}/20` : '';
+    const subsetEval = result.adjusted?.subset || null;
+    const percentileEval = result.adjusted?.percentile || null;
+    const subsetRmseText = subsetEval && typeof subsetEval.rmse === 'number' ? `, Subset RMSE=${subsetEval.rmse.toFixed(2)}` : '';
+    const subsetTop20Text = subsetEval && typeof subsetEval.top20 === 'number' ? `, Subset Top-20=${subsetEval.top20.toFixed(1)}%` : '';
+    const pctRmseText = percentileEval && typeof percentileEval.rmse === 'number' ? `, Pct RMSE=${percentileEval.rmse.toFixed(2)}` : '';
+    const pctTop20Text = percentileEval && typeof percentileEval.top20 === 'number' ? `, Pct Top-20=${percentileEval.top20.toFixed(1)}%` : '';
+    const stress = evaluateStressTest(result, {
+      minPlayers: 20,
+      minCorr: 0.1,
+      minTop20Weighted: 60
+    });
+    const stressText = stress.status
+      ? `, Stress=${stress.status.toUpperCase()}${stress.reason ? ` (${stress.reason})` : ''}`
+      : '';
+    textLines.push(
+      `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}${subsetRmseText}${subsetTop20Text}${pctRmseText}${pctTop20Text}${stressText}${top10OverlapText}${top20OverlapText}, Players=${result.matchedPlayers}`
+    );
+  });
+  textLines.push('');
+  textLines.push('STEP 4b: MULTI-YEAR VALIDATION (Optimized)');
+  textLines.push(`Approach mode: ${VALIDATION_APPROACH_MODE}`);
+  textLines.push('Functions: runRanking, aggregateYearlyEvaluations (optimizer.js)');
+  Object.entries(optimizedMultiYearResults).sort().forEach(([year, result]) => {
     const top10Text = typeof result.top10 === 'number' ? `, Top-10=${result.top10.toFixed(1)}%` : '';
     const top20Text = typeof result.top20 === 'number' ? `, Top-20=${result.top20.toFixed(1)}%` : '';
     const top20WeightedText = typeof result.top20WeightedScore === 'number' ? `, Top-20 Weighted=${result.top20WeightedScore.toFixed(1)}%` : '';
@@ -6023,6 +7168,9 @@ function runAdaptiveOptimizer() {
   console.log(`✅ Text results saved to: output/optimizer_${outputBaseName}_post_tournament_results.txt\n`);
 }
 
-runAdaptiveOptimizer();
+runAdaptiveOptimizer().catch(error => {
+  console.error(`\n❌ Optimizer failed: ${error.message}`);
+  process.exit(1);
+});
 
 // Note: Text output functionality added via separate command

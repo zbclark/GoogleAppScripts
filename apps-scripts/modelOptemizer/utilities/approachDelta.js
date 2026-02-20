@@ -1,3 +1,4 @@
+const fs = require('fs');
 const path = require('path');
 const { loadCsv } = require('./csvLoader');
 
@@ -219,10 +220,100 @@ const computeApproachDeltas = ({ previousRows, currentRows }) => {
   return deltaRows;
 };
 
-const loadApproachCsv = (filePath) => loadCsv(path.resolve(filePath), {
-  headerRow: 4,
-  skipFirstColumn: true
-});
+const APPROACH_SNAPSHOT_DIR = path.resolve(__dirname, '..', 'data', 'approach_snapshot');
+const SNAPSHOT_PREFIX = 'snapshot:';
+
+const listYtdArchives = () => {
+  if (!fs.existsSync(APPROACH_SNAPSHOT_DIR)) return [];
+  return fs.readdirSync(APPROACH_SNAPSHOT_DIR)
+    .filter(name => /^approach_ytd_\d{4}-\d{2}-\d{2}\.json$/i.test(name))
+    .map(name => ({
+      name,
+      path: path.resolve(APPROACH_SNAPSHOT_DIR, name),
+      date: name.match(/\d{4}-\d{2}-\d{2}/)?.[0] || ''
+    }))
+    .sort((a, b) => a.date.localeCompare(b.date));
+};
+
+const resolveSnapshotSelector = (selector) => {
+  const normalized = String(selector || '').trim().toLowerCase();
+  if (!normalized) return null;
+
+  if (normalized === 'l24') {
+    return path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l24.json');
+  }
+  if (normalized === 'l12') {
+    return path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l12.json');
+  }
+  if (normalized === 'ytd_latest' || normalized === 'latest') {
+    return path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_ytd_latest.json');
+  }
+
+  if (normalized === 'current') {
+    const archives = listYtdArchives();
+    if (archives.length > 0) return archives[archives.length - 1].path;
+    return path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_ytd_latest.json');
+  }
+
+  if (normalized === 'previous') {
+    const archives = listYtdArchives();
+    if (archives.length > 1) return archives[archives.length - 2].path;
+    if (archives.length === 1) return archives[0].path;
+    return path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_ytd_latest.json');
+  }
+
+  if (/^\d{4}-\d{2}-\d{2}$/.test(normalized)) {
+    return path.resolve(APPROACH_SNAPSHOT_DIR, `approach_ytd_${normalized}.json`);
+  }
+
+  return null;
+};
+
+const extractApproachRowsFromJson = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.players)) return payload.players;
+  if (Array.isArray(payload.rows)) return payload.rows;
+  return [];
+};
+
+const loadApproachCsv = (filePath) => {
+  if (!filePath) return [];
+  let targetPath = filePath;
+
+  if (typeof filePath === 'string' && filePath.startsWith(SNAPSHOT_PREFIX)) {
+    const selector = filePath.slice(SNAPSHOT_PREFIX.length);
+    const resolved = resolveSnapshotSelector(selector);
+    if (resolved) targetPath = resolved;
+  }
+
+  if (typeof targetPath === 'string' && targetPath.startsWith(SNAPSHOT_PREFIX)) {
+    const selector = targetPath.slice(SNAPSHOT_PREFIX.length);
+    const resolved = resolveSnapshotSelector(selector);
+    if (resolved) targetPath = resolved;
+  }
+
+  const resolvedPath = path.isAbsolute(targetPath)
+    ? targetPath
+    : path.resolve(targetPath);
+
+  if (!fs.existsSync(resolvedPath)) return [];
+
+  if (resolvedPath.toLowerCase().endsWith('.json')) {
+    try {
+      const payload = JSON.parse(fs.readFileSync(resolvedPath, 'utf8'));
+      return extractApproachRowsFromJson(payload);
+    } catch (error) {
+      return [];
+    }
+  }
+
+  return loadCsv(resolvedPath, {
+    headerRow: 4,
+    skipFirstColumn: true
+  });
+};
 
 module.exports = {
   METRIC_DEFS,

@@ -1,0 +1,1543 @@
+{
+  "updatedAt": "2026-02-20T23:28:00.000Z",
+  "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data",
+  "byEventId": {
+    "3": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
+      "eventId": "3",
+      "templateKey": "POWER",
+      "courseNum": "510",
+      "courseNums": [
+        "510"
+      ],
+      "courseNameKey": "TPC_SCOTTSDALE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "536",
+        "23",
+        "12",
+        "28",
+        "7"
+      ],
+      "puttingCourseIds": [
+        "475",
+        "11"
+      ],
+      "similarCourseCourseNums": {
+        "7": [
+          "500"
+        ],
+        "12": [
+          "12"
+        ],
+        "23": [
+          "536"
+        ],
+        "28": [
+          "896"
+        ],
+        "536": [
+          "23"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.75,
+      "shotDistribution": {
+        "under100": 0.075,
+        "from100to150": 0.276,
+        "from150to200": 0.405,
+        "over200": 0.244
+      }
+    },
+    "5": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/pebble_beach/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "eventId": "5",
+      "templateKey": "TECHNICAL",
+      "courseNum": "5",
+      "courseNums": [
+        "5"
+      ],
+      "courseNameKey": "PEBBLE_BEACH_GOLF_LINKS",
+      "courseType": "TECHNICAL",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "493",
+        "549",
+        "528",
+        "548",
+        "12",
+        "6"
+      ],
+      "puttingCourseIds": [
+        "505",
+        "4",
+        "7"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "7": [
+          "500"
+        ]
+      },
+      "similarCoursesWeight": 0.65,
+      "puttingCoursesWeight": 0.75,
+      "shotDistribution": {
+        "under100": 0.114,
+        "from100to150": 0.328,
+        "from150to200": 0.288,
+        "over200": 0.271
+      }
+    },
+    "7": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "eventId": "7",
+      "templateKey": "BALANCED",
+      "courseNum": "500",
+      "courseNums": [
+        "500",
+        "939"
+      ],
+      "courseNameKey": "THE_RIVIERA_COUNTRY_CLUB",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "14",
+        "538",
+        "33",
+        "480",
+        "9",
+        "536",
+        "23"
+      ],
+      "puttingCourseIds": [
+        "4",
+        "5",
+        "26"
+      ],
+      "similarCourseCourseNums": {
+        "9": [
+          "9"
+        ],
+        "14": [
+          "14"
+        ],
+        "23": [
+          "23"
+        ],
+        "33": [
+          "241",
+          "872"
+        ],
+        "480": [
+          "241",
+          "872"
+        ],
+        "536": [
+          "23"
+        ],
+        "538": [
+          "241",
+          "872"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "4": [
+          "4",
+          "939",
+          "104"
+        ],
+        "5": [
+          "5"
+        ],
+        "26": [
+          "43"
+        ]
+      },
+      "similarCoursesWeight": 0.55,
+      "puttingCoursesWeight": 0.55,
+      "shotDistribution": {
+        "under100": 0.082,
+        "from100to150": 0.194,
+        "from150to200": 0.388,
+        "over200": 0.331
+      }
+    },
+    "9": {
+      "sourcePath": null,
+      "eventId": "9",
+      "templateKey": "BALANCED",
+      "courseNum": "9",
+      "courseNums": [
+        "9"
+      ],
+      "courseNameKey": "BAY_HILL_CLUB_AND_LODGE",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [],
+      "puttingCourseIds": [
+      ],
+      "similarCourseCourseNums": {},
+      "puttingCourseCourseNums": {
+        "9": [
+          "9"
+        ]
+      },
+      "similarCoursesWeight": null,
+      "puttingCoursesWeight": null,
+      "shotDistribution": null
+    },
+    "10": {
+      "sourcePath": null,
+      "eventId": "10",
+      "templateKey": "POWER",
+      "courseNum": "928",
+      "courseNums": [
+        "928"
+      ],
+      "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "541",
+        "483"
+      ],
+      "puttingCourseIds": [
+      ],
+      "similarCourseCourseNums": {
+        "483": [
+          "742"
+        ],
+        "541": [
+          "977"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "10": [
+          "928"
+        ]
+      },
+      "similarCoursesWeight": null,
+      "puttingCoursesWeight": null,
+      "shotDistribution": null
+    },
+    "11": {
+      "sourcePath": null,
+      "eventId": "11",
+      "templateKey": "BALANCED",
+      "courseNum": "11",
+      "courseNums": [
+        "11"
+      ],
+      "courseNameKey": "TPC_SAWGRASS",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "21",
+        "475",
+        "12",
+        "13"
+      ],
+      "puttingCourseIds": [
+        "3",
+        "475"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.102,
+        "from100to150": 0.323,
+        "from150to200": 0.3,
+        "over200": 0.275
+      }
+    },
+    "12": {
+      "sourcePath": null,
+      "eventId": "12",
+      "templateKey": "TECHNICAL",
+      "courseNum": "12",
+      "courseNums": [
+        "12"
+      ],
+      "courseNameKey": "HARBOUR_TOWN_GOLF_LINKS",
+      "courseType": "TECHNICAL",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "21",
+        "11",
+        "13",
+        "34"
+      ],
+      "puttingCourseIds": [
+        "41",
+        "20",
+        "475",
+        "11"
+      ],
+      "similarCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "34": [
+          "503"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "12": [
+          "12"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.85,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.1,
+        "from100to150": 0.178,
+        "from150to200": 0.477,
+        "over200": 0.14
+      }
+    },
+    "14": {
+      "sourcePath": null,
+      "eventId": "14",
+      "templateKey": "BALANCED",
+      "courseNum": "14",
+      "courseNums": [
+        "14"
+      ],
+      "courseNameKey": "AUGUSTA_NATIONAL_GOLF_CLUB",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "536",
+        "7",
+        "33",
+        "20",
+        "26"
+      ],
+      "puttingCourseIds": [
+        "4",
+        "7",
+        "5"
+      ],
+      "similarCourseCourseNums": {
+        "7": [
+          "500"
+        ],
+        "20": [
+          "897"
+        ],
+        "26": [
+          "528"
+        ],
+        "33": [
+          "611"
+        ],
+        "536": [
+          "14"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "4": [
+          "4"
+        ],
+        "5": [
+          "5"
+        ],
+        "7": [
+          "500"
+        ]
+      },
+      "similarCoursesWeight": 0.5,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.073,
+        "from100to150": 0.238,
+        "from150to200": 0.37,
+        "over200": 0.319
+      }
+    },
+    "18": {
+      "sourcePath": null,
+      "eventId": "18",
+      "templateKey": "TPC_LOUISIANA",
+      "courseNum": "714",
+      "courseNums": [
+        "714"
+      ],
+      "courseNameKey": "TPC_LOUISIANA",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "11",
+        "12",
+        "525",
+        "34"
+      ],
+      "puttingCourseIds": [
+        "88",
+        "12",
+        "27",
+        "25",
+        "476",
+        "34"
+      ],
+      "similarCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "12": [
+          "12"
+        ],
+        "34": [
+          "503"
+        ],
+        "525": [
+          "883"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "18": [
+          "714"
+        ],
+        "25": [
+          "513"
+        ],
+        "27": [
+          "513"
+        ],
+        "34": [
+          "503"
+        ],
+        "88": [
+          "927"
+        ],
+        "476": [
+          "513"
+        ]
+      },
+      "similarCoursesWeight": 0.45,
+      "puttingCoursesWeight": 0.3,
+      "shotDistribution": {
+        "under100": 0.047,
+        "from100to150": 0.273,
+        "from150to200": 0.436,
+        "over200": 0.244
+      }
+    },
+    "20": {
+      "sourcePath": null,
+      "eventId": "20",
+      "templateKey": "POWER",
+      "courseNum": "897",
+      "courseNums": [
+        "897"
+      ],
+      "courseNameKey": "MEMORIAL_PARK_GOLF_COURSE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "14",
+        "26",
+        "54"
+      ],
+      "puttingCourseIds": [
+        "3",
+        "2"
+      ],
+      "similarCourseCourseNums": {
+        "14": [
+          "14"
+        ],
+        "26": [
+          "528"
+        ],
+        "54": [
+          "746"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "2": [
+          "202"
+        ],
+        "3": [
+          "510"
+        ],
+        "20": [
+          "897"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.053,
+        "from100to150": 0.24,
+        "from150to200": 0.381,
+        "over200": 0.326
+      }
+    },
+    "21": {
+      "sourcePath": null,
+      "eventId": "21",
+      "templateKey": "BALANCED",
+      "courseNum": "21",
+      "courseNums": [
+        "21"
+      ],
+      "courseNameKey": "COLONIAL_COUNTRY_CLUB",
+      "courseType": null,
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "493",
+        "549",
+        "12",
+        "41",
+        "20"
+      ],
+      "puttingCourseIds": [
+        "14",
+        "536",
+        "33"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "493": [
+          "889"
+        ],
+        "549": [
+          "889"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "14": [
+          "14"
+        ],
+        "21": [
+          "21"
+        ],
+        "33": [
+          "611"
+        ],
+        "536": [
+          "14"
+        ]
+      },
+      "similarCoursesWeight": 0.65,
+      "puttingCoursesWeight": 0.5,
+      "shotDistribution": {
+        "under100": 0.075,
+        "from100to150": 0.146,
+        "from150to200": 0.354,
+        "over200": 0.425
+      }
+    },
+    "41": {
+      "sourcePath": null,
+      "eventId": "41",
+      "templateKey": "POWER",
+      "courseNum": "770",
+      "courseNums": [
+        "770"
+      ],
+      "courseNameKey": "TPC_SAN_ANTONIO",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "20",
+        "475",
+        "13",
+        "541"
+      ],
+      "puttingCourseIds": [
+        "20",
+        "475",
+        "11",
+        "3"
+      ],
+      "similarCourseCourseNums": {
+        "13": [
+          "752"
+        ],
+        "20": [
+          "897"
+        ],
+        "475": [
+          "665"
+        ],
+        "541": [
+          "977"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.4,
+      "puttingCoursesWeight": 0.3,
+      "shotDistribution": {
+        "under100": 0.114,
+        "from100to150": 0.259,
+        "from150to200": 0.339,
+        "over200": 0.288
+      }
+    },
+    "100": {
+      "sourcePath": null,
+      "eventId": "100",
+      "templateKey": "ROYAL_PORTRUSH",
+      "courseNum": "885",
+      "courseNums": [
+        "885"
+      ],
+      "courseNameKey": "ROYAL_PORTRUSH",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "26"
+      ],
+      "puttingCourseIds": [
+        "33"
+      ],
+      "similarCourseCourseNums": {
+        "26": [
+          "528"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "33": [
+          "697"
+        ],
+        "100": [
+          "724",
+          "709",
+          "778",
+          "668"
+        ]
+      },
+      "similarCoursesWeight": 0.1,
+      "puttingCoursesWeight": 0.1,
+      "shotDistribution": {
+        "under100": 0.088,
+        "from100to150": 0.276,
+        "from150to200": 0.318,
+        "over200": 0.318
+      }
+    },
+    "475": {
+      "sourcePath": null,
+      "eventId": "475",
+      "templateKey": "BALANCED",
+      "courseNum": "665",
+      "courseNums": [
+        "665"
+      ],
+      "courseNameKey": "INNISBROOK_COPPERHEAD",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "12",
+        "21",
+        "6",
+        "10"
+      ],
+      "puttingCourseIds": [
+        "11",
+        "3"
+      ],
+      "similarCourseCourseNums": {
+        "6": [
+          "6"
+        ],
+        "10": [
+          "928"
+        ],
+        "12": [
+          "12"
+        ],
+        "21": [
+          "21"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.4,
+      "puttingCoursesWeight": 0.6,
+      "shotDistribution": {
+        "under100": 0.073,
+        "from100to150": 0.238,
+        "from150to200": 0.37,
+        "over200": 0.319
+      }
+    }
+  },
+  "byCourseNum": {
+    "5": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/pebble_beach/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "eventId": "5",
+      "templateKey": "TECHNICAL",
+      "courseNum": "5",
+      "courseNums": [
+        "5"
+      ],
+      "courseNameKey": "PEBBLE_BEACH_GOLF_LINKS",
+      "courseType": "TECHNICAL",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "493",
+        "549",
+        "528",
+        "548",
+        "12",
+        "6"
+      ],
+      "puttingCourseIds": [
+        "505",
+        "4",
+        "7"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "7": [
+          "500"
+        ]
+      },
+      "similarCoursesWeight": 0.65,
+      "puttingCoursesWeight": 0.75,
+      "shotDistribution": {
+        "under100": 0.114,
+        "from100to150": 0.328,
+        "from150to200": 0.288,
+        "over200": 0.271
+      }
+    },
+    "9": {
+      "sourcePath": null,
+      "eventId": "9",
+      "templateKey": "BALANCED",
+      "courseNum": "9",
+      "courseNums": [
+        "9"
+      ],
+      "courseNameKey": "BAY_HILL_CLUB_AND_LODGE",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [],
+      "puttingCourseIds": [
+      ],
+      "similarCourseCourseNums": {},
+      "puttingCourseCourseNums": {
+        "9": [
+          "9"
+        ]
+      },
+      "similarCoursesWeight": null,
+      "puttingCoursesWeight": null,
+      "shotDistribution": null
+    },
+    "11": {
+      "sourcePath": null,
+      "eventId": "11",
+      "templateKey": "BALANCED",
+      "courseNum": "11",
+      "courseNums": [
+        "11"
+      ],
+      "courseNameKey": "TPC_SAWGRASS",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "21",
+        "475",
+        "12",
+        "13"
+      ],
+      "puttingCourseIds": [
+        "3",
+        "475"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.102,
+        "from100to150": 0.323,
+        "from150to200": 0.3,
+        "over200": 0.275
+      }
+    },
+    "12": {
+      "sourcePath": null,
+      "eventId": "12",
+      "templateKey": "TECHNICAL",
+      "courseNum": "12",
+      "courseNums": [
+        "12"
+      ],
+      "courseNameKey": "HARBOUR_TOWN_GOLF_LINKS",
+      "courseType": "TECHNICAL",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "21",
+        "11",
+        "13",
+        "34"
+      ],
+      "puttingCourseIds": [
+        "41",
+        "20",
+        "475",
+        "11"
+      ],
+      "similarCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "34": [
+          "503"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "12": [
+          "12"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.85,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.1,
+        "from100to150": 0.178,
+        "from150to200": 0.477,
+        "over200": 0.14
+      }
+    },
+    "14": {
+      "sourcePath": null,
+      "eventId": "14",
+      "templateKey": "BALANCED",
+      "courseNum": "14",
+      "courseNums": [
+        "14"
+      ],
+      "courseNameKey": "AUGUSTA_NATIONAL_GOLF_CLUB",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "536",
+        "7",
+        "33",
+        "20",
+        "26"
+      ],
+      "puttingCourseIds": [
+        "4",
+        "7",
+        "5"
+      ],
+      "similarCourseCourseNums": {
+        "7": [
+          "500"
+        ],
+        "20": [
+          "897"
+        ],
+        "26": [
+          "528"
+        ],
+        "33": [
+          "611"
+        ],
+        "536": [
+          "14"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "4": [
+          "4"
+        ],
+        "5": [
+          "5"
+        ],
+        "7": [
+          "500"
+        ]
+      },
+      "similarCoursesWeight": 0.5,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.073,
+        "from100to150": 0.238,
+        "from150to200": 0.37,
+        "over200": 0.319
+      }
+    },
+    "21": {
+      "sourcePath": null,
+      "eventId": "21",
+      "templateKey": "BALANCED",
+      "courseNum": "21",
+      "courseNums": [
+        "21"
+      ],
+      "courseNameKey": "COLONIAL_COUNTRY_CLUB",
+      "courseType": null,
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "493",
+        "549",
+        "12",
+        "41",
+        "20"
+      ],
+      "puttingCourseIds": [
+        "14",
+        "536",
+        "33"
+      ],
+      "similarCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "493": [
+          "889"
+        ],
+        "549": [
+          "889"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "14": [
+          "14"
+        ],
+        "21": [
+          "21"
+        ],
+        "33": [
+          "611"
+        ],
+        "536": [
+          "14"
+        ]
+      },
+      "similarCoursesWeight": 0.65,
+      "puttingCoursesWeight": 0.5,
+      "shotDistribution": {
+        "under100": 0.075,
+        "from100to150": 0.146,
+        "from150to200": 0.354,
+        "over200": 0.425
+      }
+    },
+    "500": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "eventId": "7",
+      "templateKey": "BALANCED",
+      "courseNum": "500",
+      "courseNums": [
+        "500"
+      ],
+      "courseNameKey": "THE_RIVIERA_COUNTRY_CLUB",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "14",
+        "538",
+        "33",
+        "480",
+        "9",
+        "536",
+        "23"
+      ],
+      "puttingCourseIds": [
+        "4",
+        "5",
+        "26"
+      ],
+      "similarCourseCourseNums": {
+        "9": [
+          "9"
+        ],
+        "14": [
+          "14"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "5": [
+          "5"
+        ],
+        "26": [
+          "528"
+        ]
+      },
+      "similarCoursesWeight": 0.55,
+      "puttingCoursesWeight": 0.55,
+      "shotDistribution": {
+        "under100": 0.082,
+        "from100to150": 0.194,
+        "from150to200": 0.388,
+        "over200": 0.331
+      }
+    },
+    "510": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
+      "eventId": "3",
+      "templateKey": "POWER",
+      "courseNum": "510",
+      "courseNums": [
+        "510"
+      ],
+      "courseNameKey": "TPC_SCOTTSDALE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "536",
+        "23",
+        "12",
+        "28",
+        "7"
+      ],
+      "puttingCourseIds": [
+        "11",
+        "3"
+      ],
+      "similarCourseCourseNums": {
+        "7": [
+          "500"
+        ],
+        "12": [
+          "12"
+        ],
+        "23": [
+          "536"
+        ],
+        "28": [
+          "896"
+        ],
+        "536": [
+          "23"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.75,
+      "shotDistribution": {
+        "under100": 0.075,
+        "from100to150": 0.276,
+        "from150to200": 0.405,
+        "over200": 0.244
+      }
+    },
+    "665": {
+      "sourcePath": null,
+      "eventId": "475",
+      "templateKey": "BALANCED",
+      "courseNum": "665",
+      "courseNums": [
+        "665"
+      ],
+      "courseNameKey": "INNISBROOK_COPPERHEAD",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "12",
+        "21",
+        "6",
+        "10"
+      ],
+      "puttingCourseIds": [
+        "475",
+        "11",
+        "3"
+      ],
+      "similarCourseCourseNums": {
+        "6": [
+          "6"
+        ],
+        "10": [
+          "928"
+        ],
+        "12": [
+          "12"
+        ],
+        "21": [
+          "21"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.4,
+      "puttingCoursesWeight": 0.6,
+      "shotDistribution": {
+        "under100": 0.073,
+        "from100to150": 0.238,
+        "from150to200": 0.37,
+        "over200": 0.319
+      }
+    },
+    "714": {
+      "sourcePath": null,
+      "eventId": "18",
+      "templateKey": "TPC_LOUISIANA",
+      "courseNum": "714",
+      "courseNums": [
+        "714"
+      ],
+      "courseNameKey": "TPC_LOUISIANA",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "11",
+        "12",
+        "525",
+        "34"
+      ],
+      "puttingCourseIds": [
+        "88",
+        "12",
+        "27",
+        "25",
+        "476",
+        "34"
+      ],
+      "similarCourseCourseNums": {
+        "11": [
+          "11"
+        ],
+        "12": [
+          "12"
+        ],
+        "34": [
+          "503"
+        ],
+        "525": [
+          "883"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "12": [
+          "12"
+        ],
+        "18": [
+          "714"
+        ],
+        "25": [
+          "513"
+        ],
+        "27": [
+          "513"
+        ],
+        "34": [
+          "503"
+        ],
+        "88": [
+          "927"
+        ],
+        "476": [
+          "513"
+        ]
+      },
+      "similarCoursesWeight": 0.45,
+      "puttingCoursesWeight": 0.3,
+      "shotDistribution": {
+        "under100": 0.047,
+        "from100to150": 0.273,
+        "from150to200": 0.436,
+        "over200": 0.244
+      }
+    },
+    "770": {
+      "sourcePath": null,
+      "eventId": "41",
+      "templateKey": "POWER",
+      "courseNum": "770",
+      "courseNums": [
+        "770"
+      ],
+      "courseNameKey": "TPC_SAN_ANTONIO",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "20",
+        "475",
+        "13",
+        "541"
+      ],
+      "puttingCourseIds": [
+        "20",
+        "475",
+        "11",
+        "3"
+      ],
+      "similarCourseCourseNums": {
+        "13": [
+          "752"
+        ],
+        "20": [
+          "897"
+        ],
+        "475": [
+          "665"
+        ],
+        "541": [
+          "977"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "3": [
+          "510"
+        ],
+        "11": [
+          "11"
+        ],
+        "20": [
+          "897"
+        ],
+        "41": [
+          "770"
+        ],
+        "475": [
+          "665"
+        ]
+      },
+      "similarCoursesWeight": 0.4,
+      "puttingCoursesWeight": 0.3,
+      "shotDistribution": {
+        "under100": 0.114,
+        "from100to150": 0.259,
+        "from150to200": 0.339,
+        "over200": 0.288
+      }
+    },
+    "885": {
+      "sourcePath": null,
+      "eventId": "100",
+      "templateKey": "ROYAL_PORTRUSH",
+      "courseNum": "885",
+      "courseNums": [
+        "885"
+      ],
+      "courseNameKey": "ROYAL_PORTRUSH",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "26"
+      ],
+      "puttingCourseIds": [
+        "33"
+      ],
+      "similarCourseCourseNums": {
+        "26": [
+          "528"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "33": [
+          "697"
+        ],
+        "100": [
+          "724",
+          "709",
+          "778",
+          "668"
+        ]
+      },
+      "similarCoursesWeight": 0.1,
+      "puttingCoursesWeight": 0.1,
+      "shotDistribution": {
+        "under100": 0.088,
+        "from100to150": 0.276,
+        "from150to200": 0.318,
+        "over200": 0.318
+      }
+    },
+    "897": {
+      "sourcePath": null,
+      "eventId": "20",
+      "templateKey": "POWER",
+      "courseNum": "897",
+      "courseNums": [
+        "897"
+      ],
+      "courseNameKey": "MEMORIAL_PARK_GOLF_COURSE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "14",
+        "26",
+        "54"
+      ],
+      "puttingCourseIds": [
+        "3",
+        "2"
+      ],
+      "similarCourseCourseNums": {
+        "14": [
+          "14"
+        ],
+        "26": [
+          "528"
+        ],
+        "54": [
+          "746"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "2": [
+          "202"
+        ],
+        "3": [
+          "510"
+        ],
+        "20": [
+          "897"
+        ]
+      },
+      "similarCoursesWeight": 0.7,
+      "puttingCoursesWeight": 0.8,
+      "shotDistribution": {
+        "under100": 0.053,
+        "from100to150": 0.24,
+        "from150to200": 0.381,
+        "over200": 0.326
+      }
+    },
+    "928": {
+      "sourcePath": null,
+      "eventId": "10",
+      "templateKey": "POWER",
+      "courseNum": "928",
+      "courseNums": [
+        "928"
+      ],
+      "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
+      "courseType": "POWER",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "541",
+        "483"
+      ],
+      "puttingCourseIds": [
+      ],
+      "similarCourseCourseNums": {
+        "483": [
+          "742"
+        ],
+        "541": [
+          "977"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "10": [
+          "928"
+        ]
+      },
+      "similarCoursesWeight": null,
+      "puttingCoursesWeight": null,
+      "shotDistribution": null
+    },
+    "939": {
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "eventId": "7",
+      "templateKey": "BALANCED",
+      "courseNum": "939",
+      "courseNums": [
+        "939"
+      ],
+      "courseNameKey": "TORREY PINES_GOLF_COURSE (NORTH)",
+      "courseType": "BALANCED",
+      "pastPerformance": true,
+      "similarCourseIds": [
+        "14",
+        "538",
+        "33",
+        "480",
+        "9",
+        "536",
+        "23"
+      ],
+      "puttingCourseIds": [
+        "4",
+        "5",
+        "26"
+      ],
+      "similarCourseCourseNums": {
+        "9": [
+          "9"
+        ],
+        "14": [
+          "14"
+        ]
+      },
+      "puttingCourseCourseNums": {
+        "5": [
+          "5"
+        ],
+        "26": [
+          "528"
+        ]
+      },
+      "similarCoursesWeight": 0.55,
+      "puttingCoursesWeight": 0.55,
+      "shotDistribution": {
+        "under100": 0.087,
+        "from100to150": 0.238,
+        "from150to200": 0.338,
+        "over200": 0.336
+      }
+    }
+  }
+}

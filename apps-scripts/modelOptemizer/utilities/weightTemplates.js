@@ -81,8 +81,7 @@ const WEIGHT_TEMPLATES = {
         "Course Management: Approach >200 FW Prox": { weight: 0.05 }
       }
     }
-  },
-  
+  },  
   TECHNICAL: {
     name: "TECHNICAL",
     description: "Validation CSV TECHNICAL template (2026 Validation - Weight Templates.csv)",
@@ -158,8 +157,7 @@ const WEIGHT_TEMPLATES = {
         "Course Management: Approach >200 FW Prox": { weight: 0.05715433007629502 }
       }
     }
-  },
-  
+  }, 
   BALANCED: {
     name: "BALANCED",
     description: "Data-driven weights for balanced courses (Accuracy: 0.35, SG Approach: 0.56)",
@@ -233,6 +231,160 @@ const WEIGHT_TEMPLATES = {
         "Course Management: Approach >150 Rough Prox": { weight: 0.18 },
         "Course Management: Approach <200 FW Prox": { weight: 0.11 },
         "Course Management: Approach >200 FW Prox": { weight: 0.03 }
+      }
+    }
+  },
+  ROYAL_PORTRUSH: {
+    name: "ROYAL_PORTRUSH",
+    eventId: "100",
+    description: "Royal Portrush template based on long-iron emphasis and links setup",
+    groupWeights: {
+      "Driving Performance": 0.10,
+      "Approach - Short (<100)": 0.05,
+      "Approach - Mid (100-150)": 0.16,
+      "Approach - Long (150-200)": 0.25,
+      "Approach - Very Long (>200)": 0.22,
+      "Putting": 0.12,
+      "Around the Green": 0.06,
+      "Scoring": 0.02,
+      "Course Management": 0.02
+    },
+    metricWeights: {
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.2 },
+        "Driving Accuracy": { weight: 0.35 },
+        "SG OTT": { weight: 0.45 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.4 },
+        "Approach <100 SG": { weight: 0.4 },
+        "Approach <100 Prox": { weight: 0.2 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.2 },
+        "Approach <150 FW SG": { weight: 0.2 },
+        "Approach <150 FW Prox": { weight: 0.1 },
+        "Approach <150 Rough GIR": { weight: 0.2 },
+        "Approach <150 Rough SG": { weight: 0.2 },
+        "Approach <150 Rough Prox": { weight: 0.1 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.2 },
+        "Approach <200 FW SG": { weight: 0.2 },
+        "Approach <200 FW Prox": { weight: 0.1 },
+        "Approach >150 Rough GIR": { weight: 0.2 },
+        "Approach >150 Rough SG": { weight: 0.2 },
+        "Approach >150 Rough Prox": { weight: 0.1 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.4 },
+        "Approach >200 FW SG": { weight: 0.4 },
+        "Approach >200 FW Prox": { weight: 0.2 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0 }
+      },
+      "Scoring": {
+        "SG T2G": { weight: 0.0 },
+        "Scoring Average": { weight: 0.25 },
+        "Birdie Chances Created": { weight: 0.2 },
+        "Scoring: Approach <100 SG": { weight: 0.1 },
+        "Scoring: Approach <150 FW SG": { weight: 0.15 },
+        "Scoring: Approach <150 Rough SG": { weight: 0.1 },
+        "Scoring: Approach >150 Rough SG": { weight: 0.1 },
+        "Scoring: Approach <200 FW SG": { weight: 0.05 },
+        "Scoring: Approach >200 FW SG": { weight: 0.05 }
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.15 },
+        "Great Shots": { weight: 0.15 },
+        "Poor Shot Avoidance": { weight: 0.2 },
+        "Course Management: Approach <100 Prox": { weight: 0.1 },
+        "Course Management: Approach <150 FW Prox": { weight: 0.1 },
+        "Course Management: Approach <150 Rough Prox": { weight: 0.1 },
+        "Course Management: Approach >150 Rough Prox": { weight: 0.1 },
+        "Course Management: Approach <200 FW Prox": { weight: 0.05 },
+        "Course Management: Approach >200 FW Prox": { weight: 0.05 }
+      }
+    }
+  },
+  TPC_LOUISIANA: {
+    name: "TPC_LOUISIANA",
+    eventId: "18",
+    description: "Zurich Classic template from provided raw metric weights",
+    groupWeights: {
+      "Driving Performance": 0.090,
+      "Approach - Short (<100)": 0.148,
+      "Approach - Mid (100-150)": 0.190,
+      "Approach - Long (150-200)": 0.160,
+      "Approach - Very Long (>200)": 0.035,
+      "Putting": 0.115,
+      "Around the Green": 0.100,
+      "Scoring": 0.105,
+      "Course Management": 0.057
+    },
+    metricWeights: {
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.35 },
+        "Driving Accuracy": { weight: 0.3 },
+        "SG OTT": { weight: 0.35 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.3 },
+        "Approach <100 SG": { weight: 0.4 },
+        "Approach <100 Prox": { weight: 0.3 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.3 },
+        "Approach <150 FW SG": { weight: 0.45 },
+        "Approach <150 FW Prox": { weight: 0.25 },
+        "Approach <150 Rough GIR": { weight: 0.3 },
+        "Approach <150 Rough SG": { weight: 0.45 },
+        "Approach <150 Rough Prox": { weight: 0.25 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.3 },
+        "Approach <200 FW SG": { weight: 0.45 },
+        "Approach <200 FW Prox": { weight: 0.25 },
+        "Approach >150 Rough GIR": { weight: 0.3 },
+        "Approach >150 Rough SG": { weight: 0.45 },
+        "Approach >150 Rough Prox": { weight: 0.25 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.3 },
+        "Approach >200 FW SG": { weight: 0.45 },
+        "Approach >200 FW Prox": { weight: 0.25 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1.0 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1.0 }
+      },
+      "Scoring": {
+        "SG T2G": { weight: 0.0 },
+        "Scoring Average": { weight: 0.15 },
+        "Birdie Chances Created": { weight: 0.35 },
+        "Scoring: Approach <100 SG": { weight: 0.07 },
+        "Scoring: Approach <150 FW SG": { weight: 0.10 },
+        "Scoring: Approach <150 Rough SG": { weight: 0.08 },
+        "Scoring: Approach >150 Rough SG": { weight: 0.07 },
+        "Scoring: Approach <200 FW SG": { weight: 0.10 },
+        "Scoring: Approach >200 FW SG": { weight: 0.08 }
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.25 },
+        "Great Shots": { weight: 0.15 },
+        "Poor Shot Avoidance": { weight: 0.2 },
+        "Course Management: Approach <100 Prox": { weight: 0.07 },
+        "Course Management: Approach <150 FW Prox": { weight: 0.09 },
+        "Course Management: Approach <150 Rough Prox": { weight: 0.06 },
+        "Course Management: Approach >150 Rough Prox": { weight: 0.05 },
+        "Course Management: Approach <200 FW Prox": { weight: 0.08 },
+        "Course Management: Approach >200 FW Prox": { weight: 0.05 }
       }
     }
   },
@@ -389,8 +541,7 @@ const WEIGHT_TEMPLATES = {
         "Course Management: Approach >200 FW Prox": { weight: -0.044808466610105416 }
       }
     }
-  }
-,
+  },
   THE_RIVIERA_COUNTRY_CLUB: {
     name: "THE_RIVIERA_COUNTRY_CLUB",
     eventId: "7",
