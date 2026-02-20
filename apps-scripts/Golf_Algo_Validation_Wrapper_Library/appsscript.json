@@ -1,7 +1,21 @@
 {
   "timeZone": "America/New_York",
   "dependencies": {
+    "libraries": [
+      {
+        "userSymbol": "GolfAlgoValidation",
+        "version": "0",
+        "libraryId": "1aqDp0T5LK5Ubhv1ON5aOERkQ9XlUeWV62ggWo9oFWbBrvuzL2UPqzT4E",
+        "developmentMode": true
+      }
+    ]
   },
   "exceptionLogging": "STACKDRIVER",
-  "runtimeVersion": "V8"
+  "runtimeVersion": "V8",
+  "oauthScopes": [
+    "https://www.googleapis.com/auth/spreadsheets",
+    "https://www.googleapis.com/auth/drive",
+    "https://www.googleapis.com/auth/script.external_request",
+    "https://www.googleapis.com/auth/script.container.ui"
+  ]
 }
