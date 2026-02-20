@@ -1,0 +1,21 @@
+====================================================================================================
+ADAPTIVE OPTIMIZER SEED SUMMARY
+====================================================================================================
+Base: pebble_beach_pro-am
+Seeds analyzed: 5
+
+Top seed ranking (sorted by correlation, then Top-20, then Top-20 Weighted):
+
+1. seed=c | corr=0.3209 | top20=50.0% | top20W=51.9% | rmse=27.10 | mae=21.76 | players=80 | rec=optimized | baseline=PEBBLE_BEACH_GOLF_LINKS | file=pebble_beach_pro-am_seed-c_results.json
+2. seed=e | corr=0.3134 | top20=50.0% | top20W=52.2% | rmse=27.25 | mae=21.84 | players=80 | rec=optimized | baseline=PEBBLE_BEACH_GOLF_LINKS | file=pebble_beach_pro-am_seed-e_results.json
+3. seed=d | corr=0.3129 | top20=50.0% | top20W=52.0% | rmse=27.26 | mae=21.86 | players=80 | rec=optimized | baseline=PEBBLE_BEACH_GOLF_LINKS | file=pebble_beach_pro-am_seed-d_results.json
+4. seed=a | corr=0.3055 | top20=50.0% | top20W=53.3% | rmse=27.40 | mae=22.14 | players=80 | rec=optimized | baseline=PEBBLE_BEACH_GOLF_LINKS | file=pebble_beach_pro-am_seed-a_results.json
+5. seed=b | corr=0.3047 | top20=50.0% | top20W=53.4% | rmse=27.42 | mae=22.14 | players=80 | rec=optimized | baseline=PEBBLE_BEACH_GOLF_LINKS | file=pebble_beach_pro-am_seed-b_results.json
+
+Best seed:
+seed=c | file=pebble_beach_pro-am_seed-c_results.json
+Recommendation for best seed: Use optimized weights | baseline=PEBBLE_BEACH_GOLF_LINKS
+Note: Optimized weights recommended over baseline template.
+
+Recommendation rollup (from results.json):
+- optimized: Use optimized weights | baseline=PEBBLE_BEACH_GOLF_LINKS | seeds=c, e, d, a, b | count=5

@@ -46,8 +46,8 @@ function runAutoSetupCheck() {
 // ===== DEBUG LOGGING DIALOG =====
 function showDebugLoggingDialog() {
   const html = HtmlService.createHtmlOutputFromFile('DebugLoggingDialog')
-    .setWidth(360)
-    .setHeight(200);
+    .setWidth(420)
+    .setHeight(320);
   SpreadsheetApp.getUi().showModalDialog(html, 'Debug Logging');
 }
 
@@ -57,6 +57,10 @@ function getDebugLoggingSettings() {
 
 function setDebugLoggingSettings(enabled) {
   return GolfAlgorithm.setDebugLoggingSettings(enabled);
+}
+
+function setDebugLoggingPreferences(settings) {
+  return GolfAlgorithm.setDebugLoggingPreferences(settings);
 }
 
 // ===== WRAPPERS =====

@@ -11,6 +11,26 @@
       .row {
         margin: 12px 0;
       }
+      .row label {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+      }
+      .field-label {
+        font-weight: 600;
+        margin-bottom: 4px;
+      }
+      .helper {
+        font-size: 12px;
+        color: #5f6368;
+        margin-top: 4px;
+      }
+      input[type="text"] {
+        width: 100%;
+        padding: 6px 8px;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+      }
       .actions {
         display: flex;
         gap: 8px;
@@ -39,6 +59,20 @@
       </label>
     </div>
 
+    <div class="row">
+      <div class="field-label">Trace player (optional)</div>
+      <input type="text" id="tracePlayer" placeholder="e.g., Scheffler" />
+      <div class="helper">Leave blank to skip trace-specific logs for this run.</div>
+    </div>
+
+    <div class="row">
+      <label>
+        <input type="checkbox" id="debugCalcSheet" />
+        Create Debug - Calculations sheet
+      </label>
+      <div class="helper">Creates a full per-player breakdown sheet (includes group mean/std-dev).</div>
+    </div>
+
     <div class="actions">
       <button class="primary" onclick="saveSettings()">Save</button>
       <button class="secondary" onclick="google.script.host.close()">Cancel</button>
@@ -49,6 +83,9 @@
         google.script.run
           .withSuccessHandler(function(data) {
             document.getElementById('debugEnabled').checked = !!(data && data.enabled);
+            document.getElementById('tracePlayer').value = (data && data.tracePlayer) || '';
+            document.getElementById('debugCalcSheet').checked = !!(data && data.debugCalcSheet);
+            syncFieldState();
           })
           .withFailureHandler(function(err) {
             alert('Load failed: ' + (err && err.message ? err.message : err));
@@ -58,6 +95,8 @@
 
       function saveSettings() {
         const enabled = document.getElementById('debugEnabled').checked;
+        const tracePlayer = document.getElementById('tracePlayer').value.trim();
+        const debugCalcSheet = document.getElementById('debugCalcSheet').checked;
         google.script.run
           .withSuccessHandler(function() {
             google.script.host.close();
@@ -65,8 +104,20 @@
           .withFailureHandler(function(err) {
             alert('Save failed: ' + (err && err.message ? err.message : err));
           })
-          .setDebugLoggingSettings(enabled);
+          .setDebugLoggingPreferences({
+            enabled: enabled,
+            tracePlayer: tracePlayer,
+            debugCalcSheet: debugCalcSheet
+          });
       }
+
+      function syncFieldState() {
+        const enabled = document.getElementById('debugEnabled').checked;
+        document.getElementById('tracePlayer').disabled = !enabled;
+        document.getElementById('debugCalcSheet').disabled = !enabled;
+      }
+
+      document.getElementById('debugEnabled').addEventListener('change', syncFieldState);
 
       loadSettings();
     </script>

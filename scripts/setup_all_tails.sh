@@ -4,10 +4,10 @@ SEEDS=("${@:2}")
 SESSION="all_tails"
 
 # Sample usage:
-# cd /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity && bash ../../setup_all_tails.sh "WM Phoenix Open" a b c d e
+# cd /workspaces/GoogleAppScripts/apps-scripts/modelOptemizer && bash ../../setup_all_tails.sh "WM Phoenix Open" a b c d e
 
 tmux kill-session -t $SESSION 2>/dev/null
-cd /workspaces/GoogleAppScripts/apps-scripts/weightSensitivity
+cd /workspaces/GoogleAppScripts/apps-scripts/modelOptemizer
 
 # Normalize tournament name for file prefix
 PREFIX=$(echo "$TOURNAMENT" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')

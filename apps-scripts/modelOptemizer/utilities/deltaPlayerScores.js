@@ -1246,3 +1246,5 @@ function getDeltaPlayerScoresForEvent(eventId, season) {
 function getDeltaPlayerScores() {
   return DELTA_PLAYER_SCORES;
 }
+
+module.exports = { DELTA_PLAYER_SCORES, getDeltaPlayerScoresForEvent, getDeltaPlayerScores };

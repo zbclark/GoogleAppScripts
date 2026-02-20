@@ -47,19 +47,15 @@ const refreshTraceConfig = () => {
   TRACE_PLAYER_NAME_LOWER = TRACE_PLAYER_NAME.toLowerCase();
   TRACE_ENABLED = TRACE_PLAYER_NAME.length > 0;
 
-  TRACE_GROUP_STATS_RAW = normalizeTraceValue(
-    PropertiesService.getDocumentProperties().getProperty('DOC_TRACE_GROUP_STATS')
-    || PropertiesService.getScriptProperties().getProperty('SCRIPT_TRACE_GROUP_STATS')
-    || DEFAULT_TRACE_GROUP_STATS
-  );
-  TRACE_GROUP_STATS = parseTraceBoolean(TRACE_GROUP_STATS_RAW, false);
-
   DEBUG_CALC_SHEET_RAW = normalizeTraceValue(
     PropertiesService.getDocumentProperties().getProperty('DOC_DEBUG_CALC_SHEET')
     || PropertiesService.getScriptProperties().getProperty('SCRIPT_DEBUG_CALC_SHEET')
     || DEFAULT_DEBUG_CALC_SHEET
   );
   DEBUG_CALC_SHEET_ENABLED = parseTraceBoolean(DEBUG_CALC_SHEET_RAW, false);
+
+  TRACE_GROUP_STATS_RAW = DEBUG_CALC_SHEET_ENABLED ? 'true' : '';
+  TRACE_GROUP_STATS = DEBUG_CALC_SHEET_ENABLED;
 
   DEBUG_LOGGING_RAW = normalizeTraceValue(
     PropertiesService.getDocumentProperties().getProperty('DOC_DEBUG_LOGGING')
@@ -82,14 +78,27 @@ const isDebugLoggingEnabled = () => {
 
 function getDebugLoggingSettings() {
   refreshTraceConfig();
-  return { enabled: DEBUG_LOGGING_ENABLED };
+  return {
+    enabled: DEBUG_LOGGING_ENABLED,
+    tracePlayer: TRACE_PLAYER_NAME,
+    debugCalcSheet: DEBUG_CALC_SHEET_ENABLED
+  };
 }
 
-function setDebugLoggingSettings(enabled) {
-  const value = enabled ? 'true' : 'false';
+function setDebugLoggingPreferences(settings = {}) {
+  const enabled = parseTraceBoolean(settings.enabled, false);
+  const tracePlayer = normalizeTraceValue(settings.tracePlayer);
+  const debugCalcSheet = parseTraceBoolean(settings.debugCalcSheet, parseTraceBoolean(DEFAULT_DEBUG_CALC_SHEET, false));
+
   const docProps = PropertiesService.getDocumentProperties();
-  docProps.setProperty('DOC_DEBUG_LOGGING', value);
-  docProps.setProperty('DOC_DEBUG_CALC_SHEET', value);
+  docProps.setProperty('DOC_DEBUG_LOGGING', enabled ? 'true' : 'false');
+  docProps.setProperty('DOC_DEBUG_CALC_SHEET', debugCalcSheet ? 'true' : 'false');
+
+  if (tracePlayer) {
+    docProps.setProperty('DOC_TRACE_PLAYER', tracePlayer);
+  } else {
+    docProps.deleteProperty('DOC_TRACE_PLAYER');
+  }
 
   if (enabled) {
     const ss = SpreadsheetApp.getActive();
@@ -97,7 +106,16 @@ function setDebugLoggingSettings(enabled) {
   }
 
   refreshTraceConfig();
-  return { enabled: DEBUG_LOGGING_ENABLED };
+  return getDebugLoggingSettings();
+}
+
+function setDebugLoggingSettings(enabled) {
+  refreshTraceConfig();
+  return setDebugLoggingPreferences({
+    enabled,
+    tracePlayer: TRACE_PLAYER_NAME,
+    debugCalcSheet: DEBUG_CALC_SHEET_ENABLED
+  });
 }
 
 function markDebugLogsForReset() {

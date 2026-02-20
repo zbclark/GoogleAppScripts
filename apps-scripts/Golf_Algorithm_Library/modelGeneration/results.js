@@ -93,15 +93,29 @@ function generatePlayerRankings() {
   // 2. Aggregate Player Data - FIXED INITIALIZATION
   const players = aggregatePlayerData(metricGroups); // Properly declared with const
   
-  const deltaScoresById = (typeof getDeltaPlayerScoresForEvent === 'function' && metricConfig?.pastPerformance?.currentEventId)
-    ? getDeltaPlayerScoresForEvent(metricConfig.pastPerformance.currentEventId, CURRENT_SEASON)
-    : {};
+  const resolveDeltaScoresById = () => {
+    const eventId = metricConfig?.pastPerformance?.currentEventId;
+    if (typeof getDeltaPlayerScoresForEvent === 'function' && eventId) {
+      return getDeltaPlayerScoresForEvent(eventId, CURRENT_SEASON) || {};
+    }
+    if (typeof getDeltaPlayerScores === 'function' && eventId) {
+      const allScores = getDeltaPlayerScores() || {};
+      const entry = allScores[String(eventId)];
+      if (!entry) return {};
+      if (CURRENT_SEASON && entry.season && Number(entry.season) !== Number(CURRENT_SEASON)) return {};
+      return entry.players || {};
+    }
+    return {};
+  };
+
+  const deltaScoresById = resolveDeltaScoresById();
 
   // 3. Calculate Metrics and Apply Weights
   const rankedPlayers = calculatePlayerMetrics(players, {
     groups: metricGroups,
     pastPerformance: pastPerformance,
-    deltaScoresById: deltaScoresById
+    deltaScoresById: deltaScoresById,
+    currentSeason: CURRENT_SEASON
   });
 
   const processedData = rankedPlayers.players;
@@ -591,6 +605,14 @@ function generatePlayerRankings() {
     throw error;
   } finally {
     flushLogs();
+    try {
+      const docProps = PropertiesService.getDocumentProperties();
+      const scriptProps = PropertiesService.getScriptProperties();
+      docProps.deleteProperty('DOC_TRACE_PLAYER');
+      scriptProps.deleteProperty('SCRIPT_TRACE_PLAYER');
+    } catch (err) {
+      // Ignore property cleanup errors to avoid masking real failures
+    }
     restore();
   }
 }
@@ -1375,7 +1397,7 @@ function calculateHistoricalImpact(playerEvents, playerName, pastPerformance) {
 }
 
 // Ported to test
-function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresById = {} }) {
+function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresById = {}, currentSeason = null }) {
   const DELTA_BLEND_PRED = 0.7;
   const DELTA_BLEND_TREND = 0.3;
   const DELTA_BUCKET_CAP = 0.10;
@@ -1415,6 +1437,9 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
   };
   const courseType = detectCourseType();
   const courseNum = String(configSheet.getRange("G10").getValue() || '').trim() || null;
+  const resolvedCurrentSeason = Number.isFinite(currentSeason)
+    ? currentSeason
+    : new Date().getFullYear();
   const traceMetricNames = [
     'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
     'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
@@ -2173,13 +2198,12 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, deltaScoresB
       return Number.isFinite(keyYear) ? keyYear : null;
     };
 
-    const currentYear = new Date().getFullYear();
     const courseHistoryCount = CURRENT_EVENT_ID
       ? Object.entries(pastPerformances).filter(([eventKey, event]) => {
           const eventId = event?.eventId ? String(event.eventId) : null;
           if (!eventId || eventId !== CURRENT_EVENT_ID) return false;
           const eventYear = getEventYear(eventKey, event);
-          return eventYear !== null ? eventYear < currentYear : true;
+          return eventYear !== null ? eventYear < resolvedCurrentSeason : true;
         }).length
       : 0;
 
@@ -2565,6 +2589,7 @@ function aggregatePlayerData(metricGroups) {
     const regularSimilarCourses = getSimilarCourseIds(configSheet, "G33:G37");
     const puttingSpecificCourses = getSimilarCourseIds(configSheet, "G40:G44");
     const currentEventId = String(configSheet.getRange("G9").getValue() || "");
+    const currentSeason = new Date().getFullYear();
 
     console.log(`Regular similar courses: ${regularSimilarCourses.join(", ")}`);
     console.log(`Putting-specific courses: ${puttingSpecificCourses.join(", ")}`);
@@ -2671,8 +2696,8 @@ function aggregatePlayerData(metricGroups) {
       const roundDate = new Date(safeRow[7]);
       const roundYear = roundDate.getFullYear();
 
-      // Exclude only current event rounds from the current year
-      if (roundYear === 2026 && String(eventId) === currentEventId) {
+      // Exclude only current event rounds from the current season
+      if (roundYear === currentSeason && String(eventId) === currentEventId) {
         return;
       }
       
