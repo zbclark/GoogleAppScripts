@@ -18,14 +18,29 @@ const PERIOD_MAPPING= {
   'last 3 months': 'l12',
   'last 6 months': 'l12',
   'last 12 months': 'l12',
-  'last 24 months': 'l24'
+  'last 24 months': 'l24',
+  'l12': 'l12',
+  'l24': 'l24',
+  'ytd': 'ytd'
 };
 
 const DATE_RANGES= {
   'last 3 months': 3,
   'last 6 months': 6,
   'last 12 months': 12,
-  'last 24 months': 24
+  'last 24 months': 24,
+  'l12': 12,
+  'l24': 24
+};
+
+const PERIOD_ALIASES = {
+  'l12': 'l12',
+  'l24': 'l24',
+  'ytd': 'ytd',
+  'last 3 months': 'last 3 months',
+  'last 6 months': 'last 6 months',
+  'last 12 months': 'last 12 months',
+  'last 24 months': 'last 24 months'
 };
 
 // Use MAIN_HEADERS in all functions instead of redefining
@@ -368,9 +383,23 @@ function calculateDateRange(period) {
   const today = new Date();
   const endDate = new Date(today);
   endDate.setHours(23, 59, 59, 999); // End of day
+
+  const normalized = String(period || '').trim().toLowerCase();
+  const periodKey = PERIOD_ALIASES[normalized] || period;
+
+  if (normalized === 'ytd') {
+    const startDate = new Date(today.getFullYear(), 0, 1);
+    startDate.setHours(0, 0, 0, 0);
+    logDebug(`Period: ytd => Start: ${Utilities.formatDate(startDate, Session.getScriptTimeZone(), "yyyy-MM-dd")} | End: ${Utilities.formatDate(endDate, Session.getScriptTimeZone(), "yyyy-MM-dd")}`);
+    return {
+      startDate,
+      endDate,
+      periodCode: 'ytd'
+    };
+  }
   
   // Get month offset from lookup table
-  const monthsBack = DATE_RANGES[period];
+  const monthsBack = DATE_RANGES[periodKey];
   if (!monthsBack) {
     Logger.log('Invalid period selected');
     return null;
@@ -388,12 +417,12 @@ function calculateDateRange(period) {
     startDate.setDate(1);
   }
 
-  logDebug(`Period: ${period} => Start: ${Utilities.formatDate(startDate, Session.getScriptTimeZone(), "yyyy-MM-dd")} | End: ${Utilities.formatDate(endDate, Session.getScriptTimeZone(), "yyyy-MM-dd")}`);
+  logDebug(`Period: ${periodKey} => Start: ${Utilities.formatDate(startDate, Session.getScriptTimeZone(), "yyyy-MM-dd")} | End: ${Utilities.formatDate(endDate, Session.getScriptTimeZone(), "yyyy-MM-dd")}`);
   
   return { 
     startDate, 
     endDate,
-    periodCode: PERIOD_MAPPING[period] // Add the API period code
+    periodCode: PERIOD_MAPPING[periodKey] // Add the API period code
   };
 }
 
@@ -1742,13 +1771,18 @@ async function updateApproachSkillDataFromButton() {
   var sheetName = "Approach Skill";
 
   try {
-    const sheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
+    const configSheet = SpreadsheetApp.getActive().getSheetByName("Configuration Sheet");
     updateCentralStatus(sheetName, 'start');
     SpreadsheetApp.flush();
-    const period = sheet.getRange("F13").getValue();
-    const periodLabel = period;
+    const approachPeriodRaw = configSheet.getRange("F12").getValue();
+    const approachPeriodLabel = approachPeriodRaw
+      ? approachPeriodRaw.toString().trim()
+      : 'YTD';
+    const approachPeriodKey = approachPeriodLabel
+      ? approachPeriodLabel.toString().trim().toLowerCase()
+      : 'ytd';
 
-    const dateRange = calculateDateRange(period);
+    const dateRange = calculateDateRange(approachPeriodKey);
     if (!dateRange) throw new Error("Invalid period selected");
 
     const endpoint = `https://feeds.datagolf.com/preds/approach-skill?` + 
@@ -1760,7 +1794,7 @@ async function updateApproachSkillDataFromButton() {
     });
 
     if (!playersData?.length) {
-      const errorMessage = `Received empty dataset for period ${periodLabel} (${dateRange.periodCode})`;
+      const errorMessage = `Received empty dataset for period ${approachPeriodLabel} (${dateRange.periodCode})`;
       Logger.log(errorMessage);
       throw new Error(errorMessage);
     }
@@ -1858,7 +1892,7 @@ async function updateApproachSkillDataFromButton() {
     updateCentralStatus(sheetName, true);
     SpreadsheetApp.flush();
 
-    return `Approach Skill Data updated for ${periodLabel} (${validPlayers.length} valid players)`;
+    return `Approach Skill Data updated for ${approachPeriodLabel} (${validPlayers.length} valid players)`;
 
   } catch (error) {
     updateCentralStatus(sheetName, false);

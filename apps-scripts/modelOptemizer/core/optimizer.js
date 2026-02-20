@@ -1065,14 +1065,7 @@ function buildApproachDeltaMetricSpecs() {
 }
 
 function computeApproachDeltaCorrelations(deltaRows, results, metricSpecs) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   return metricSpecs.map(spec => {
     const xValues = [];
@@ -1081,7 +1074,7 @@ function computeApproachDeltaCorrelations(deltaRows, results, metricSpecs) {
       const dgId = String(row.dg_id || row.dgId || '').trim();
       if (!dgId) return;
       const finishPosition = resultsById.get(dgId);
-      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
       const rawValue = row[spec.key];
       if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return;
       const adjustedValue = spec.lowerBetter ? -rawValue : rawValue;
@@ -1096,7 +1089,7 @@ function computeApproachDeltaCorrelations(deltaRows, results, metricSpecs) {
     return {
       label: spec.label,
       key: spec.key,
-      correlation: calculatePearsonCorrelation(xValues, yValues),
+      correlation: calculateSpearmanCorrelation(xValues, yValues),
       samples: xValues.length,
       alignmentLabel: spec.alignmentLabel,
       lowerBetter: spec.lowerBetter
@@ -1303,7 +1296,7 @@ function computeHistoricalMetricCorrelations(samples) {
         return;
       }
 
-      const correlation = calculatePearsonCorrelation(xValues, yValues);
+      const correlation = calculateSpearmanCorrelation(xValues, yValues);
       metricsForYear[metric.key] = { correlation, samples: xValues.length };
     });
 
@@ -1331,14 +1324,7 @@ function computeHistoricalMetricCorrelations(samples) {
 }
 
 function computeGeneratedMetricCorrelations(players, results) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   return GENERATED_METRIC_LABELS.map((label, index) => {
     const xValues = [];
@@ -1348,7 +1334,7 @@ function computeGeneratedMetricCorrelations(players, results) {
       const dgId = String(player.dgId || '').trim();
       if (!dgId) return;
       const finishPosition = resultsById.get(dgId);
-      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
       if (!Array.isArray(player.metrics) || typeof player.metrics[index] !== 'number') return;
       const rawValue = player.metrics[index];
       if (Number.isNaN(rawValue)) return;
@@ -1364,21 +1350,14 @@ function computeGeneratedMetricCorrelations(players, results) {
     return {
       index,
       label,
-      correlation: calculatePearsonCorrelation(xValues, yValues),
+      correlation: calculateSpearmanCorrelation(xValues, yValues),
       samples: xValues.length
     };
   });
 }
 
 function computeGeneratedMetricTopNCorrelations(players, results, topN = 20) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   return GENERATED_METRIC_LABELS.map((label, index) => {
     const xValues = [];
@@ -1388,7 +1367,7 @@ function computeGeneratedMetricTopNCorrelations(players, results, topN = 20) {
       const dgId = String(player.dgId || '').trim();
       if (!dgId) return;
       const finishPosition = resultsById.get(dgId);
-      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
       if (!Array.isArray(player.metrics) || typeof player.metrics[index] !== 'number') return;
       const rawValue = player.metrics[index];
       if (Number.isNaN(rawValue)) return;
@@ -1405,7 +1384,7 @@ function computeGeneratedMetricTopNCorrelations(players, results, topN = 20) {
     return {
       index,
       label,
-      correlation: calculatePearsonCorrelation(xValues, yValues),
+      correlation: calculateSpearmanCorrelation(xValues, yValues),
       samples: xValues.length
     };
   });
@@ -1744,14 +1723,7 @@ function normalizeMetricSpecs(metricSpecs) {
 }
 
 function computeGeneratedMetricCorrelationsForLabels(players, results, metricSpecs) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   const specs = normalizeMetricSpecs(metricSpecs);
   return specs.map(spec => {
@@ -1763,7 +1735,7 @@ function computeGeneratedMetricCorrelationsForLabels(players, results, metricSpe
       const dgId = String(player.dgId || '').trim();
       if (!dgId) return;
       const finishPosition = resultsById.get(dgId);
-      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
       if (!Array.isArray(player.metrics) || typeof player.metrics[index] !== 'number') return;
       const rawValue = player.metrics[index];
       if (Number.isNaN(rawValue)) return;
@@ -1779,21 +1751,14 @@ function computeGeneratedMetricCorrelationsForLabels(players, results, metricSpe
     return {
       index,
       label,
-      correlation: calculatePearsonCorrelation(xValues, yValues),
+      correlation: calculateSpearmanCorrelation(xValues, yValues),
       samples: xValues.length
     };
   });
 }
 
 function computeGeneratedMetricTopNCorrelationsForLabels(players, results, metricSpecs, topN = 20) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   const specs = normalizeMetricSpecs(metricSpecs);
   return specs.map(spec => {
@@ -1805,7 +1770,7 @@ function computeGeneratedMetricTopNCorrelationsForLabels(players, results, metri
       const dgId = String(player.dgId || '').trim();
       if (!dgId) return;
       const finishPosition = resultsById.get(dgId);
-      if (!finishPosition || Number.isNaN(finishPosition)) return;
+      if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
       if (!Array.isArray(player.metrics) || typeof player.metrics[index] !== 'number') return;
       const rawValue = player.metrics[index];
       if (Number.isNaN(rawValue)) return;
@@ -1822,27 +1787,20 @@ function computeGeneratedMetricTopNCorrelationsForLabels(players, results, metri
     return {
       index,
       label,
-      correlation: calculatePearsonCorrelation(xValues, yValues),
+      correlation: calculateSpearmanCorrelation(xValues, yValues),
       samples: xValues.length
     };
   });
 }
 
 function buildTopNSamplesFromPlayers(players, results, metricSpecs, topN = 20) {
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   return players.reduce((acc, player) => {
     const dgId = String(player.dgId || '').trim();
     if (!dgId) return acc;
     const finishPosition = resultsById.get(dgId);
-    if (!finishPosition || Number.isNaN(finishPosition)) return acc;
+    if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return acc;
     const featurePack = buildFeatureVector(player, metricSpecs);
     if (!featurePack) return acc;
     acc.push({ features: featurePack.features, label: finishPosition <= 20 ? 1 : 0 });
@@ -1972,14 +1930,7 @@ function summarizeLogisticModel(model, samples, metricLabels) {
 
 function computeSingleMetricCorrelation(players, results, options = {}) {
   const { label = 'Metric', valueGetter = null } = options;
-  const resultsById = new Map();
-  results.forEach(result => {
-    const dgId = String(result.dgId || '').trim();
-    if (!dgId) return;
-    if (result.finishPosition && !Number.isNaN(result.finishPosition)) {
-      resultsById.set(dgId, result.finishPosition);
-    }
-  });
+  const { map: resultsById } = buildFinishPositionMap(results);
 
   const xValues = [];
   const yValues = [];
@@ -1988,7 +1939,7 @@ function computeSingleMetricCorrelation(players, results, options = {}) {
     const dgId = String(player.dgId || '').trim();
     if (!dgId) return;
     const finishPosition = resultsById.get(dgId);
-    if (!finishPosition || Number.isNaN(finishPosition)) return;
+    if (typeof finishPosition !== 'number' || Number.isNaN(finishPosition)) return;
     const rawValue = valueGetter ? valueGetter(player) : null;
     if (typeof rawValue !== 'number' || Number.isNaN(rawValue)) return;
     xValues.push(rawValue);
@@ -2001,7 +1952,7 @@ function computeSingleMetricCorrelation(players, results, options = {}) {
 
   return {
     label,
-    correlation: calculatePearsonCorrelation(xValues, yValues),
+    correlation: calculateSpearmanCorrelation(xValues, yValues),
     samples: xValues.length
   };
 }
@@ -2436,6 +2387,34 @@ function calculatePearsonCorrelation(xValues, yValues) {
   return denom === 0 ? 0 : numerator / denom;
 }
 
+function rankValues(values) {
+  const entries = values.map((value, index) => ({ value, index }));
+  entries.sort((a, b) => a.value - b.value);
+
+  const ranks = Array(values.length);
+  let i = 0;
+  while (i < entries.length) {
+    let j = i;
+    while (j + 1 < entries.length && entries[j + 1].value === entries[i].value) {
+      j += 1;
+    }
+    const avgRank = (i + j + 2) / 2; // 1-based rank average for ties
+    for (let k = i; k <= j; k += 1) {
+      ranks[entries[k].index] = avgRank;
+    }
+    i = j + 1;
+  }
+  return ranks;
+}
+
+function calculateSpearmanCorrelation(xValues, yValues) {
+  if (!Array.isArray(xValues) || !Array.isArray(yValues)) return 0;
+  if (xValues.length === 0 || xValues.length !== yValues.length) return 0;
+  const rankedX = rankValues(xValues);
+  const rankedY = rankValues(yValues);
+  return calculatePearsonCorrelation(rankedX, rankedY);
+}
+
 function calculateTopNAccuracy(predictions, actualResults, n) {
   if (predictions.length === 0) return 0;
 
@@ -2553,21 +2532,44 @@ function parseFinishPosition(posValue) {
   return parseInt(posStr);
 }
 
+function buildFinishPositionMap(results) {
+  const positions = (results || [])
+    .map(result => result?.finishPosition)
+    .filter(value => typeof value === 'number' && !Number.isNaN(value));
+  const fallback = positions.length ? Math.max(...positions) + 1 : null;
+  const map = new Map();
+
+  (results || []).forEach(result => {
+    const dgId = String(result?.dgId || '').trim();
+    if (!dgId) return;
+    const rawValue = result?.finishPosition;
+    const finishPosition = typeof rawValue === 'number' && !Number.isNaN(rawValue)
+      ? rawValue
+      : fallback;
+    if (typeof finishPosition === 'number' && !Number.isNaN(finishPosition)) {
+      map.set(dgId, finishPosition);
+    }
+  });
+
+  return { map, fallback };
+}
+
 function evaluateRankings(predictions, actualResults, options = {}) {
   const { includeTopN = true, includeTopNDetails = false, includeAdjusted = true } = options;
+  const { map: resultsById } = buildFinishPositionMap(actualResults);
   const scores = [];
   const positions = [];
   const errors = [];
   const matched = [];
   
   predictions.forEach((pred, idx) => {
-    const actual = actualResults.find(a => String(a.dgId) === String(pred.dgId));
-    if (actual) {
+    const actualFinish = resultsById.get(String(pred.dgId));
+    if (typeof actualFinish === 'number' && !Number.isNaN(actualFinish)) {
       const rankValue = typeof pred.rank === 'number' ? pred.rank : (idx + 1);
       scores.push(rankValue);
-      positions.push(actual.finishPosition);
-      errors.push(rankValue - actual.finishPosition);
-      matched.push({ dgId: String(pred.dgId), predRank: rankValue, actualFinish: actual.finishPosition });
+      positions.push(actualFinish);
+      errors.push(rankValue - actualFinish);
+      matched.push({ dgId: String(pred.dgId), predRank: rankValue, actualFinish: actualFinish });
     }
   });
   
@@ -2586,7 +2588,7 @@ function evaluateRankings(predictions, actualResults, options = {}) {
     };
   }
   
-  const correlation = calculatePearsonCorrelation(scores, positions);
+  const correlation = calculateSpearmanCorrelation(scores, positions);
   const rmse = Math.sqrt(
     scores.reduce((sum, s, i) => sum + Math.pow(s - positions[i], 2), 0) / scores.length
   );
@@ -2628,7 +2630,7 @@ function evaluateRankings(predictions, actualResults, options = {}) {
       subsetErrors.push(entry.predRank - actualRank);
     });
 
-    const subsetCorrelation = calculatePearsonCorrelation(subsetScores, subsetPositions);
+    const subsetCorrelation = calculateSpearmanCorrelation(subsetScores, subsetPositions);
     const subsetRmse = Math.sqrt(
       subsetScores.reduce((sum, s, i) => sum + Math.pow(s - subsetPositions[i], 2), 0) / subsetScores.length
     );
@@ -2645,7 +2647,7 @@ function evaluateRankings(predictions, actualResults, options = {}) {
     const predPercentiles = subsetScores.map(rank => (rank - 1) / denom);
     const actualPercentiles = subsetPositions.map(rank => (rank - 1) / denom);
     const pctErrors = predPercentiles.map((value, idx) => value - actualPercentiles[idx]);
-    const pctCorrelation = calculatePearsonCorrelation(predPercentiles, actualPercentiles);
+    const pctCorrelation = calculateSpearmanCorrelation(predPercentiles, actualPercentiles);
     const pctRmse = Math.sqrt(
       predPercentiles.reduce((sum, value, idx) => sum + Math.pow(value - actualPercentiles[idx], 2), 0) / predPercentiles.length
     );
