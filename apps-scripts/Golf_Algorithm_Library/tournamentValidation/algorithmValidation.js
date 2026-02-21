@@ -57,7 +57,7 @@ function validatePredictions(eventId, year) {
   const predictedRanks = matches.map(m => m.modelRank);
   const actualPositions = matches.map(m => m.finishPos);
 
-  const correlation = calculatePearsonCorrelation(predictedRanks, actualPositions);
+  const correlation = calculateSpearmanCorrelation(predictedRanks, actualPositions);
   const rmse = calculateRMSE(predictedRanks, actualPositions);
   const mae = calculateMAE(predictedRanks, actualPositions);
   const rSquared = calculateRSquared(predictedRanks, actualPositions);
@@ -155,6 +155,39 @@ function calculatePearsonCorrelation(xArray, yArray) {
   const denominator = Math.sqrt((n * sumX2 - sumX * sumX) * (n * sumY2 - sumY * sumY));
   
   return denominator === 0 ? 0 : numerator / denominator;
+}
+
+function rankValues(values) {
+  const entries = values.map((value, index) => ({ value, index }));
+  entries.sort((a, b) => a.value - b.value);
+
+  const ranks = Array(values.length);
+  let i = 0;
+  while (i < entries.length) {
+    let j = i;
+    while (j + 1 < entries.length && entries[j + 1].value === entries[i].value) {
+      j += 1;
+    }
+    const avgRank = (i + j + 2) / 2; // 1-based average rank for ties
+    for (let k = i; k <= j; k += 1) {
+      ranks[entries[k].index] = avgRank;
+    }
+    i = j + 1;
+  }
+  return ranks;
+}
+
+/**
+ * Spearman rank correlation coefficient (tie-aware)
+ */
+function calculateSpearmanCorrelation(xArray, yArray) {
+  if (xArray.length !== yArray.length) {
+    throw new Error("Arrays must be same length");
+  }
+  if (xArray.length < 2) return 0;
+  const rankedX = rankValues(xArray);
+  const rankedY = rankValues(yArray);
+  return calculatePearsonCorrelation(rankedX, rankedY);
 }
 
 /**

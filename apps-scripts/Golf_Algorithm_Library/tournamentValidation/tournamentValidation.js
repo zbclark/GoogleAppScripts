@@ -220,7 +220,7 @@ function analyzeSingleTournamentMetrics(ss, options = {}) {
                 data.countField = allValues.length;
                 const positions = data.values.map(v => v.position);
                 const values = data.values.map(v => v.value);
-                data.correlation = (positions.length > 2) ? calculatePearsonCorrelation(positions, values) : 0;
+                data.correlation = (positions.length > 2) ? calculateSpearmanCorrelation(positions, values) : 0;
             }
         });
 

@@ -18,7 +18,7 @@ const { loadCsv } = require('../utilities/csvLoader');
 const { buildPlayerData } = require('../utilities/dataPrep');
 const { generatePlayerRankings, cleanMetricValue } = require('./modelCore');
 const { getSharedConfig } = require('../utilities/configParser');
-const { buildMetricGroupsFromConfig } = require('./metricConfigBuilder');
+const { buildMetricGroupsFromConfig } = require('../utilities/metricConfigBuilder');
 const { WEIGHT_TEMPLATES } = require('../utilities/weightTemplates');
 const { getDeltaPlayerScoresForEvent } = require('../utilities/deltaPlayerScores');
 const {
@@ -3875,19 +3875,6 @@ async function runAdaptiveOptimizer() {
   requiredFiles[2].path = HISTORY_PATH;
   requiredFiles[3].path = APPROACH_PATH;
 
-  if (WRITE_TEMPLATES) {
-    const fallbackDirName = CONFIG_PATH ? path.basename(path.dirname(CONFIG_PATH)) : null;
-    const outputDir = OUTPUT_DIR
-      || (fallbackDirName ? path.resolve(ROOT_DIR, 'output', fallbackDirName) : null);
-    if (outputDir) {
-      process.env.PRE_TOURNAMENT_OUTPUT_DIR = outputDir;
-    }
-    process.env.WRITE_TEMPLATES = 'true';
-    console.log('🔄 Generating course history regression utilities (writeTemplates enabled)...');
-    require('../scripts/analyze_course_history_impact');
-    console.log('✓ Course history regression utilities generated.');
-  }
-
   const missingFiles = requiredFiles.filter(file => !fs.existsSync(file.path));
   if (missingFiles.length > 0) {
     console.error('\n❌ Missing required input files:');
@@ -3899,6 +3886,23 @@ async function runAdaptiveOptimizer() {
     console.error(`   - ${DEFAULT_DATA_DIR}`);
     console.error('\nFix: place the missing CSVs in one of those folders or update the filenames in optimizer.js.');
     process.exit(1);
+  }
+
+  const fallbackDirName = CONFIG_PATH ? path.basename(path.dirname(CONFIG_PATH)) : null;
+  const outputDir = OUTPUT_DIR
+    || (fallbackDirName ? path.resolve(ROOT_DIR, 'output', fallbackDirName) : null);
+  if (outputDir) {
+    process.env.PRE_TOURNAMENT_OUTPUT_DIR = outputDir;
+  }
+  if (WRITE_TEMPLATES) {
+    process.env.WRITE_TEMPLATES = 'true';
+  }
+  console.log('🔄 Generating course history regression inputs...');
+  try {
+    require('../scripts/analyze_course_history_impact');
+    console.log('✓ Course history regression inputs generated.');
+  } catch (error) {
+    console.warn(`ℹ️  Course history regression generation skipped: ${error.message}`);
   }
 
   console.log('\n🔄 Loading configuration...');
@@ -6136,6 +6140,11 @@ async function runAdaptiveOptimizer() {
     console.log(`\n🔄 ${label}: event-based K-fold validation...`);
     const results = {};
 
+    const rawK = parseInt(String(process.env.EVENT_KFOLD_K || '').trim(), 10);
+    const kOverride = Number.isNaN(rawK) ? null : rawK;
+    const defaultSeed = OPT_SEED_RAW || `${CURRENT_EVENT_ID}-${CURRENT_SEASON}`;
+    const seedOverride = String(process.env.EVENT_KFOLD_SEED || defaultSeed).trim();
+
     validationYears.forEach(year => {
       const yearRows = historyData.filter(row => {
         const rowYear = parseInt(String(row?.year || row?.season || '').trim(), 10);
@@ -6160,6 +6169,28 @@ async function runAdaptiveOptimizer() {
         return;
       }
 
+      const useLeaveOneOut = !kOverride || kOverride <= 1 || kOverride >= eventEntries.length;
+      const foldMode = useLeaveOneOut ? 'leave_one_event_out' : 'k_fold';
+      const foldCount = useLeaveOneOut ? eventEntries.length : kOverride;
+      const rng = createSeededRng(seedOverride || `${CURRENT_EVENT_ID}-${year}`) || Math.random;
+      const shuffleEntries = (entries, rngFn) => {
+        const output = [...entries];
+        for (let i = output.length - 1; i > 0; i -= 1) {
+          const j = Math.floor(rngFn() * (i + 1));
+          [output[i], output[j]] = [output[j], output[i]];
+        }
+        return output;
+      };
+
+      const shuffledEntries = useLeaveOneOut
+        ? eventEntries
+        : shuffleEntries(eventEntries, rng);
+
+      const folds = Array.from({ length: foldCount }, () => []);
+      shuffledEntries.forEach((entry, idx) => {
+        folds[idx % foldCount].push(entry);
+      });
+
       const fieldDataOverride = buildFieldDataFromHistory(yearRows, null);
       const approachRows = resolveApproachRowsForYear(year);
       const useApproach = approachRows.length > 0;
@@ -6168,9 +6199,13 @@ async function runAdaptiveOptimizer() {
         : removeApproachGroupWeights(groupWeights);
 
       const foldEvaluations = [];
-      eventEntries.forEach(([eventId, eventRows]) => {
-        const trainingRows = yearRows.filter(row => String(row?.event_id || '').trim() !== eventId);
-        if (trainingRows.length < 30 || eventRows.length < 10) return;
+      const foldSummaries = [];
+      folds.forEach((fold, foldIndex) => {
+        if (!fold.length) return;
+        const foldEventIds = new Set(fold.map(([eventId]) => String(eventId).trim()));
+        const testRows = yearRows.filter(row => foldEventIds.has(String(row?.event_id || '').trim()));
+        const trainingRows = yearRows.filter(row => !foldEventIds.has(String(row?.event_id || '').trim()));
+        if (trainingRows.length < 30 || testRows.length < 10) return;
 
         const ranking = runRanking({
           roundsRawData: trainingRows,
@@ -6181,7 +6216,7 @@ async function runAdaptiveOptimizer() {
           fieldDataOverride
         });
 
-        const testResults = buildResultsFromRows(eventRows);
+        const testResults = buildResultsFromRows(testRows);
         if (!testResults.length) return;
         const evaluation = evaluateRankings(ranking.players, testResults, {
           includeTopN: true,
@@ -6189,11 +6224,31 @@ async function runAdaptiveOptimizer() {
           includeAdjusted: true
         });
         foldEvaluations.push(evaluation);
+        foldSummaries.push({
+          fold: foldIndex + 1,
+          eventCount: fold.length,
+          testRows: testRows.length,
+          trainingRows: trainingRows.length,
+          matchedPlayers: evaluation.matchedPlayers,
+          correlation: evaluation.correlation,
+          rmse: evaluation.rmse,
+          top10: evaluation.top10,
+          top20: evaluation.top20,
+          top20WeightedScore: evaluation.top20WeightedScore
+        });
       });
 
       const aggregate = aggregateFoldEvaluations(foldEvaluations);
       results[year] = aggregate
-        ? { status: 'ok', eventCount: eventEntries.length, foldsUsed: foldEvaluations.length, evaluation: aggregate }
+        ? {
+            status: 'ok',
+            mode: foldMode,
+            foldCount,
+            eventCount: eventEntries.length,
+            foldsUsed: foldEvaluations.length,
+            evaluation: aggregate,
+            folds: foldSummaries
+          }
         : { status: 'unavailable', reason: 'no_valid_folds', eventCount: eventEntries.length };
     });
 
@@ -6279,6 +6334,32 @@ async function runAdaptiveOptimizer() {
       console.log(`  ${year}: Correlation=${evalResult.correlation.toFixed(4)} | Top-10=${top10Text} | Top-20=${top20Text} | Top-20 Weighted=${top20WeightedText} | Subset RMSE=${subsetRmseText} | Subset Top-20=${subsetTop20Text} | Pct RMSE=${pctRmseText} | Pct Top-20=${pctTop20Text} | Top-10 Overlap=${top10OverlapText} | Top-20 Overlap=${top20OverlapText}`);
     });
 
+    console.log('\nEvent K-Fold Validation (Baseline):');
+    Object.entries(baselineEventKFold).forEach(([year, result]) => {
+      if (!result || result.status !== 'ok') {
+        console.log(`  ${year}: unavailable (${result?.reason || 'n/a'})`);
+        return;
+      }
+      const evaluation = result.evaluation || {};
+      const top10Text = typeof evaluation.top10 === 'number' ? `${evaluation.top10.toFixed(1)}%` : 'n/a';
+      const top20Text = typeof evaluation.top20 === 'number' ? `${evaluation.top20.toFixed(1)}%` : 'n/a';
+      const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
+      console.log(`  ${year}: mode=${result.mode || 'n/a'}, folds=${result.foldsUsed}/${result.foldCount || 'n/a'}, Corr=${evaluation.correlation?.toFixed(4) || 'n/a'}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}`);
+    });
+
+    console.log('\nEvent K-Fold Validation (Optimized):');
+    Object.entries(optimizedEventKFold).forEach(([year, result]) => {
+      if (!result || result.status !== 'ok') {
+        console.log(`  ${year}: unavailable (${result?.reason || 'n/a'})`);
+        return;
+      }
+      const evaluation = result.evaluation || {};
+      const top10Text = typeof evaluation.top10 === 'number' ? `${evaluation.top10.toFixed(1)}%` : 'n/a';
+      const top20Text = typeof evaluation.top20 === 'number' ? `${evaluation.top20.toFixed(1)}%` : 'n/a';
+      const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `${evaluation.top20WeightedScore.toFixed(1)}%` : 'n/a';
+      console.log(`  ${year}: mode=${result.mode || 'n/a'}, folds=${result.foldsUsed}/${result.foldCount || 'n/a'}, Corr=${evaluation.correlation?.toFixed(4) || 'n/a'}, Top-10=${top10Text}, Top-20=${top20Text}, Top-20 Weighted=${top20WeightedText}`);
+    });
+
   // Summary output
   console.log('---');
   console.log('📊 FINAL SUMMARY');
@@ -6357,6 +6438,182 @@ async function runAdaptiveOptimizer() {
   let eventTemplateAction = null;
   let eventTemplateTargets = [];
   const validationTemplateActions = [];
+
+  const aggregateEventKFoldSummary = kfoldResults => {
+    const totals = {
+      correlation: 0,
+      rmse: 0,
+      top10: 0,
+      top20: 0,
+      top20WeightedScore: 0,
+      matchedPlayers: 0,
+      years: 0
+    };
+    const foldMetrics = {
+      correlation: [],
+      rmse: [],
+      top10: [],
+      top20: [],
+      top20WeightedScore: []
+    };
+
+    Object.values(kfoldResults || {}).forEach(result => {
+      if (!result || result.status !== 'ok' || !result.evaluation) return;
+      const evalResult = result.evaluation;
+      const weight = typeof evalResult.matchedPlayers === 'number' ? evalResult.matchedPlayers : 0;
+      if (!weight) return;
+      totals.matchedPlayers += weight;
+      totals.correlation += (evalResult.correlation || 0) * weight;
+      totals.rmse += (evalResult.rmse || 0) * weight;
+      if (typeof evalResult.top10 === 'number') totals.top10 += evalResult.top10 * weight;
+      if (typeof evalResult.top20 === 'number') totals.top20 += evalResult.top20 * weight;
+      if (typeof evalResult.top20WeightedScore === 'number') {
+        totals.top20WeightedScore += evalResult.top20WeightedScore * weight;
+      }
+      totals.years += 1;
+
+      if (Array.isArray(result.folds)) {
+        result.folds.forEach(fold => {
+          if (typeof fold.correlation === 'number') foldMetrics.correlation.push(fold.correlation);
+          if (typeof fold.rmse === 'number') foldMetrics.rmse.push(fold.rmse);
+          if (typeof fold.top10 === 'number') foldMetrics.top10.push(fold.top10);
+          if (typeof fold.top20 === 'number') foldMetrics.top20.push(fold.top20);
+          if (typeof fold.top20WeightedScore === 'number') {
+            foldMetrics.top20WeightedScore.push(fold.top20WeightedScore);
+          }
+        });
+      }
+    });
+
+    const computeStats = values => {
+      if (!values.length) {
+        return { count: 0, mean: 0, stdDev: 0, min: 0, max: 0, median: 0, p25: 0, p75: 0, iqr: 0 };
+      }
+      const count = values.length;
+      const mean = values.reduce((sum, value) => sum + value, 0) / count;
+      const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count;
+      const sorted = [...values].sort((a, b) => a - b);
+      const quantile = q => {
+        const position = (sorted.length - 1) * q;
+        const base = Math.floor(position);
+        const rest = position - base;
+        if (sorted[base + 1] !== undefined) {
+          return sorted[base] + rest * (sorted[base + 1] - sorted[base]);
+        }
+        return sorted[base];
+      };
+      const p25 = quantile(0.25);
+      const p75 = quantile(0.75);
+      const median = quantile(0.5);
+      return {
+        count,
+        mean,
+        stdDev: Math.sqrt(variance),
+        min: Math.min(...values),
+        max: Math.max(...values),
+        median,
+        p25,
+        p75,
+        iqr: p75 - p25
+      };
+    };
+
+    const buildConfidence = stats => {
+      const countScore = clamp01((stats?.count || 0) / 8);
+      const variabilityScore = clamp01(1 - ((stats?.stdDev || 0) / 0.15));
+      const score = clamp01((countScore * 0.6) + (variabilityScore * 0.4));
+      const note = score >= 0.75
+        ? 'High confidence: many folds with stable correlation distribution.'
+        : (score >= 0.5
+          ? 'Moderate confidence: some fold variability or limited fold count.'
+          : 'Low confidence: high variability or few folds—treat results cautiously.');
+      return { score, note, components: { countScore, variabilityScore } };
+    };
+
+    const foldStats = {
+      correlation: computeStats(foldMetrics.correlation),
+      rmse: computeStats(foldMetrics.rmse),
+      top10: computeStats(foldMetrics.top10),
+      top20: computeStats(foldMetrics.top20),
+      top20WeightedScore: computeStats(foldMetrics.top20WeightedScore)
+    };
+
+    if (totals.matchedPlayers === 0) {
+      const confidence = buildConfidence(foldStats.correlation);
+      return {
+        correlation: 0,
+        rmse: 0,
+        top10: 0,
+        top20: 0,
+        top20WeightedScore: 0,
+        matchedPlayers: 0,
+        years: totals.years,
+        foldStats,
+        confidence
+      };
+    }
+
+    const confidence = buildConfidence(foldStats.correlation);
+    return {
+      correlation: totals.correlation / totals.matchedPlayers,
+      rmse: totals.rmse / totals.matchedPlayers,
+      top10: totals.top10 / totals.matchedPlayers,
+      top20: totals.top20 / totals.matchedPlayers,
+      top20WeightedScore: totals.top20WeightedScore / totals.matchedPlayers,
+      matchedPlayers: totals.matchedPlayers,
+      years: totals.years,
+      foldStats,
+      confidence
+    };
+  };
+
+  const baselineEventKFoldSummary = aggregateEventKFoldSummary(baselineEventKFold);
+  const optimizedEventKFoldSummary = aggregateEventKFoldSummary(optimizedEventKFold);
+  const eventKFoldInterpretation = (() => {
+    if (!baselineEventKFoldSummary || !optimizedEventKFoldSummary) {
+      return { verdict: 'unavailable', note: 'Missing event K-fold summaries.' };
+    }
+    if (!baselineEventKFoldSummary.matchedPlayers || !optimizedEventKFoldSummary.matchedPlayers) {
+      return { verdict: 'unavailable', note: 'Insufficient matched players across folds.' };
+    }
+    const corrDelta = optimizedEventKFoldSummary.correlation - baselineEventKFoldSummary.correlation;
+    const rmseDelta = optimizedEventKFoldSummary.rmse - baselineEventKFoldSummary.rmse;
+    const top20WDelta = optimizedEventKFoldSummary.top20WeightedScore - baselineEventKFoldSummary.top20WeightedScore;
+    let verdict = 'no_material_change';
+    let interpretation = 'No material change vs baseline across event folds.';
+    if (corrDelta > 0.02 && rmseDelta < 0 && top20WDelta > 0) {
+      verdict = 'strong_improvement';
+      interpretation = 'Strong improvement: higher rank agreement, lower error, better Top-20 weighted score.';
+    } else if (corrDelta > 0.01 && rmseDelta <= 0) {
+      verdict = 'improvement';
+      interpretation = 'Improvement: better correlation with equal or lower error.';
+    } else if (corrDelta > 0.01 && rmseDelta > 0) {
+      verdict = 'mixed';
+      interpretation = 'Mixed: correlation improved but errors increased.';
+    } else if (corrDelta < -0.01) {
+      verdict = 'regression';
+      interpretation = 'Regression: optimized weights underperform baseline across folds.';
+    }
+    const baselineConfidence = baselineEventKFoldSummary.confidence?.score ?? 0;
+    const optimizedConfidence = optimizedEventKFoldSummary.confidence?.score ?? 0;
+    const confidenceNote = optimizedConfidence >= baselineConfidence
+      ? 'Optimized fold distribution is at least as stable as baseline.'
+      : 'Optimized fold distribution is less stable than baseline.';
+    return {
+      verdict,
+      interpretation,
+      confidence: {
+        baselineScore: baselineConfidence,
+        optimizedScore: optimizedConfidence,
+        note: confidenceNote
+      },
+      deltas: {
+        correlation: corrDelta,
+        rmse: rmseDelta,
+        top20WeightedScore: top20WDelta
+      }
+    };
+  })();
 
   const optimizedTemplateName = courseTemplateKey || String(CURRENT_EVENT_ID);
 
@@ -6548,6 +6805,11 @@ async function runAdaptiveOptimizer() {
     step4b_multiYearOptimized: optimizedMultiYearResults,
     step4a_eventKFold: baselineEventKFold,
     step4b_eventKFold: optimizedEventKFold,
+    eventKFoldSummary: {
+      baseline: baselineEventKFoldSummary,
+      optimized: optimizedEventKFoldSummary,
+      interpretation: eventKFoldInterpretation
+    },
     recommendation: {
       approach: improvement > 0.01 ? 'Use optimized weights' : (improvement > 0 ? 'Marginal improvement' : 'Use template baseline'),
       baselineTemplate: bestTemplate.name,
@@ -6995,6 +7257,107 @@ async function runAdaptiveOptimizer() {
       `  ${year}: Corr=${result.correlation.toFixed(4)}, R²=${result.rSquared.toFixed(4)}, RMSE=${result.rmse.toFixed(2)}, MAE=${result.mae.toFixed(2)}, Mean Err=${result.meanError.toFixed(2)}, Std Err=${result.stdDevError.toFixed(2)}${top10Text}${top20Text}${top20WeightedText}${subsetRmseText}${subsetTop20Text}${pctRmseText}${pctTop20Text}${stressText}${top10OverlapText}${top20OverlapText}, Players=${result.matchedPlayers}`
     );
   });
+  textLines.push('');
+    textLines.push('EVENT K-FOLD SETTINGS');
+    textLines.push(`  EVENT_KFOLD_K: ${process.env.EVENT_KFOLD_K || 'LOEO (default)'}`);
+    textLines.push(`  EVENT_KFOLD_SEED: ${process.env.EVENT_KFOLD_SEED || (OPT_SEED_RAW || `${CURRENT_EVENT_ID}-${CURRENT_SEASON}`)}`);
+    textLines.push(`  OPT_SEED: ${OPT_SEED_RAW || 'n/a'}`);
+    textLines.push('');
+  textLines.push('STEP 4a: EVENT K-FOLD VALIDATION (Baseline)');
+  Object.entries(baselineEventKFold).sort().forEach(([year, result]) => {
+    if (!result || result.status !== 'ok') {
+      textLines.push(`  ${year}: unavailable (${result?.reason || 'n/a'})`);
+      return;
+    }
+    const evaluation = result.evaluation || {};
+    const top10Text = typeof evaluation.top10 === 'number' ? `, Top-10=${evaluation.top10.toFixed(1)}%` : '';
+    const top20Text = typeof evaluation.top20 === 'number' ? `, Top-20=${evaluation.top20.toFixed(1)}%` : '';
+    const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `, Top-20 Weighted=${evaluation.top20WeightedScore.toFixed(1)}%` : '';
+    textLines.push(
+      `  ${year}: mode=${result.mode || 'n/a'}, folds=${result.foldsUsed}/${result.foldCount || 'n/a'}, Corr=${evaluation.correlation?.toFixed(4) || 'n/a'}, RMSE=${evaluation.rmse?.toFixed(2) || 'n/a'}${top10Text}${top20Text}${top20WeightedText}, Players=${evaluation.matchedPlayers || 'n/a'}`
+    );
+    if (Array.isArray(result.folds) && result.folds.length > 0) {
+      result.folds.forEach(fold => {
+        const foldCorr = typeof fold.correlation === 'number' ? fold.correlation.toFixed(4) : 'n/a';
+        const foldRmse = typeof fold.rmse === 'number' ? fold.rmse.toFixed(2) : 'n/a';
+        const foldTop10 = typeof fold.top10 === 'number' ? `${fold.top10.toFixed(1)}%` : 'n/a';
+        const foldTop20 = typeof fold.top20 === 'number' ? `${fold.top20.toFixed(1)}%` : 'n/a';
+        const foldTop20W = typeof fold.top20WeightedScore === 'number' ? `${fold.top20WeightedScore.toFixed(1)}%` : 'n/a';
+        textLines.push(
+          `    Fold ${fold.fold}: events=${fold.eventCount}, trainRows=${fold.trainingRows}, testRows=${fold.testRows}, players=${fold.matchedPlayers}, Corr=${foldCorr}, RMSE=${foldRmse}, Top-10=${foldTop10}, Top-20=${foldTop20}, Top-20W=${foldTop20W}`
+        );
+      });
+    }
+  });
+  textLines.push('');
+  textLines.push('STEP 4b: EVENT K-FOLD VALIDATION (Optimized)');
+  Object.entries(optimizedEventKFold).sort().forEach(([year, result]) => {
+    if (!result || result.status !== 'ok') {
+      textLines.push(`  ${year}: unavailable (${result?.reason || 'n/a'})`);
+      return;
+    }
+    const evaluation = result.evaluation || {};
+    const top10Text = typeof evaluation.top10 === 'number' ? `, Top-10=${evaluation.top10.toFixed(1)}%` : '';
+    const top20Text = typeof evaluation.top20 === 'number' ? `, Top-20=${evaluation.top20.toFixed(1)}%` : '';
+    const top20WeightedText = typeof evaluation.top20WeightedScore === 'number' ? `, Top-20 Weighted=${evaluation.top20WeightedScore.toFixed(1)}%` : '';
+    textLines.push(
+      `  ${year}: mode=${result.mode || 'n/a'}, folds=${result.foldsUsed}/${result.foldCount || 'n/a'}, Corr=${evaluation.correlation?.toFixed(4) || 'n/a'}, RMSE=${evaluation.rmse?.toFixed(2) || 'n/a'}${top10Text}${top20Text}${top20WeightedText}, Players=${evaluation.matchedPlayers || 'n/a'}`
+    );
+    if (Array.isArray(result.folds) && result.folds.length > 0) {
+      result.folds.forEach(fold => {
+        const foldCorr = typeof fold.correlation === 'number' ? fold.correlation.toFixed(4) : 'n/a';
+        const foldRmse = typeof fold.rmse === 'number' ? fold.rmse.toFixed(2) : 'n/a';
+        const foldTop10 = typeof fold.top10 === 'number' ? `${fold.top10.toFixed(1)}%` : 'n/a';
+        const foldTop20 = typeof fold.top20 === 'number' ? `${fold.top20.toFixed(1)}%` : 'n/a';
+        const foldTop20W = typeof fold.top20WeightedScore === 'number' ? `${fold.top20WeightedScore.toFixed(1)}%` : 'n/a';
+        textLines.push(
+          `    Fold ${fold.fold}: events=${fold.eventCount}, trainRows=${fold.trainingRows}, testRows=${fold.testRows}, players=${fold.matchedPlayers}, Corr=${foldCorr}, RMSE=${foldRmse}, Top-10=${foldTop10}, Top-20=${foldTop20}, Top-20W=${foldTop20W}`
+        );
+      });
+    }
+  });
+  textLines.push('');
+  textLines.push('EVENT K-FOLD INTERPRETATION');
+  if (!baselineEventKFoldSummary || !optimizedEventKFoldSummary || baselineEventKFoldSummary.matchedPlayers === 0 || optimizedEventKFoldSummary.matchedPlayers === 0) {
+    textLines.push('  Insufficient event K-fold data to interpret (check folds used / matched players).');
+  } else {
+    const formatDist = (stats, decimals = 4) => {
+      if (!stats || !stats.count) return 'n/a';
+      const median = stats.median?.toFixed(decimals) ?? 'n/a';
+      const p25 = stats.p25?.toFixed(decimals) ?? 'n/a';
+      const p75 = stats.p75?.toFixed(decimals) ?? 'n/a';
+      const iqr = stats.iqr?.toFixed(decimals) ?? 'n/a';
+      return `median=${median}, IQR=${iqr} (p25=${p25}, p75=${p75})`;
+    };
+    const corrDelta = optimizedEventKFoldSummary.correlation - baselineEventKFoldSummary.correlation;
+    const rmseDelta = optimizedEventKFoldSummary.rmse - baselineEventKFoldSummary.rmse;
+    const top20WDelta = optimizedEventKFoldSummary.top20WeightedScore - baselineEventKFoldSummary.top20WeightedScore;
+    let verdict = 'No material change vs baseline.';
+    if (corrDelta > 0.02 && rmseDelta < 0 && top20WDelta > 0) {
+      verdict = 'Strong improvement: higher rank agreement, lower error, better Top-20 weighted score.';
+    } else if (corrDelta > 0.01 && rmseDelta <= 0) {
+      verdict = 'Improvement: better correlation with equal or lower error.';
+    } else if (corrDelta > 0.01 && rmseDelta > 0) {
+      verdict = 'Mixed: correlation improved but errors increased.';
+    } else if (corrDelta < -0.01) {
+      verdict = 'Regression: optimized weights underperform baseline across folds.';
+    }
+    textLines.push(`  ${verdict}`);
+    textLines.push(`  Δ Corr: ${corrDelta.toFixed(4)} | Δ RMSE: ${rmseDelta.toFixed(2)} | Δ Top-20W: ${top20WDelta.toFixed(1)}%`);
+    textLines.push(`  Baseline: Corr=${baselineEventKFoldSummary.correlation.toFixed(4)}, RMSE=${baselineEventKFoldSummary.rmse.toFixed(2)}, Top-20W=${baselineEventKFoldSummary.top20WeightedScore.toFixed(1)}%`);
+    textLines.push(`  Optimized: Corr=${optimizedEventKFoldSummary.correlation.toFixed(4)}, RMSE=${optimizedEventKFoldSummary.rmse.toFixed(2)}, Top-20W=${optimizedEventKFoldSummary.top20WeightedScore.toFixed(1)}%`);
+    textLines.push(`  Baseline fold dist (Corr): ${formatDist(baselineEventKFoldSummary.foldStats?.correlation, 4)}`);
+    textLines.push(`  Optimized fold dist (Corr): ${formatDist(optimizedEventKFoldSummary.foldStats?.correlation, 4)}`);
+    textLines.push(`  Baseline fold dist (RMSE): ${formatDist(baselineEventKFoldSummary.foldStats?.rmse, 2)}`);
+    textLines.push(`  Optimized fold dist (RMSE): ${formatDist(optimizedEventKFoldSummary.foldStats?.rmse, 2)}`);
+    if (baselineEventKFoldSummary.confidence) {
+      textLines.push(`  Baseline confidence: ${(baselineEventKFoldSummary.confidence.score * 100).toFixed(0)}% - ${baselineEventKFoldSummary.confidence.note}`);
+    }
+    if (optimizedEventKFoldSummary.confidence) {
+      textLines.push(`  Optimized confidence: ${(optimizedEventKFoldSummary.confidence.score * 100).toFixed(0)}% - ${optimizedEventKFoldSummary.confidence.note}`);
+    }
+    textLines.push('  Interpretation: Higher confidence means fold results are more stable and reliable.');
+  }
   textLines.push('');
   textLines.push('RECOMMENDATION:');
   if (improvement > 0.01) {

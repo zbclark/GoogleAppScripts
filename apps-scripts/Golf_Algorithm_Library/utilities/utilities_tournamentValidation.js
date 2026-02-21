@@ -255,37 +255,66 @@ function getTournamentConfigurationWeights(ss) {
     
 /**
  * Calculate Pearson correlation coefficient
+ */
+function calculatePearsonCorrelation(xValues, yValues) {
+  const n = xValues.length;
+  if (n < 2) return 0;
+
+  const meanX = xValues.reduce((a, b) => a + b, 0) / n;
+  const meanY = yValues.reduce((a, b) => a + b, 0) / n;
+
+  let numerator = 0;
+  let sumSquaredX = 0;
+  let sumSquaredY = 0;
+
+  for (let i = 0; i < n; i++) {
+    const xDiff = xValues[i] - meanX;
+    const yDiff = yValues[i] - meanY;
+
+    numerator += xDiff * yDiff;
+    sumSquaredX += xDiff * xDiff;
+    sumSquaredY += yDiff * yDiff;
+  }
+
+  const denominator = Math.sqrt(sumSquaredX * sumSquaredY);
+  if (denominator === 0) return 0;
+
+  return numerator / denominator;
+}
+
+function rankValues(values) {
+  const entries = values.map((value, index) => ({ value, index }));
+  entries.sort((a, b) => a.value - b.value);
+
+  const ranks = Array(values.length);
+  let i = 0;
+  while (i < entries.length) {
+    let j = i;
+    while (j + 1 < entries.length && entries[j + 1].value === entries[i].value) {
+      j += 1;
+    }
+    const avgRank = (i + j + 2) / 2; // 1-based average rank for ties
+    for (let k = i; k <= j; k += 1) {
+      ranks[entries[k].index] = avgRank;
+    }
+    i = j + 1;
+  }
+  return ranks;
+}
+
+/**
+ * Calculate Spearman rank correlation (tie-aware)
  * Negative correlation with position = better metric (lower position = better rank)
  */
-function calculatePearsonCorrelation(positions, values) {
+function calculateSpearmanCorrelation(positions, values) {
   const n = positions.length;
   if (n < 2) return 0;
-  
-  // In golf, lower position number = better (1 is winner, 150 is worst)
-  // To get proper correlation, negate positions so higher value = better
+
   const invertedPositions = positions.map(p => -p);
-  
-  const meanPos = invertedPositions.reduce((a, b) => a + b, 0) / n;
-  const meanVal = values.reduce((a, b) => a + b, 0) / n;
-  
-  let numerator = 0;
-  let sumSquaredPos = 0;
-  let sumSquaredVal = 0;
-  
-  for (let i = 0; i < n; i++) {
-    const posDiff = invertedPositions[i] - meanPos;
-    const valDiff = values[i] - meanVal;
-    
-    numerator += posDiff * valDiff;
-    sumSquaredPos += posDiff * posDiff;
-    sumSquaredVal += valDiff * valDiff;
-  }
-  
-  const denominator = Math.sqrt(sumSquaredPos * sumSquaredVal);
-  
-  if (denominator === 0) return 0;
-  
-  return numerator / denominator;
+  const rankedPositions = rankValues(invertedPositions);
+  const rankedValues = rankValues(values);
+
+  return calculatePearsonCorrelation(rankedPositions, rankedValues);
 }
 
 // Add RMSE calculation helper

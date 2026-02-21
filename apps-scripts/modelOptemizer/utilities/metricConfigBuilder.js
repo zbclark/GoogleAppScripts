@@ -1,4 +1,4 @@
-const { getMetricGroups, cleanMetricValue } = require('./modelCore');
+const { getMetricGroups, cleanMetricValue } = require('../core/modelCore');
 
 const buildMetricGroupsFromConfig = ({ getCell, pastPerformanceEnabled, pastPerformanceWeight, currentEventId }) => {
   const groupWeights = {
