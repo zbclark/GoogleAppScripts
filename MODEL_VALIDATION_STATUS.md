@@ -1,4 +1,4 @@
-# Model Validation Status (as of 2026-02-20)
+# Model Validation Status (as of 2026-02-22)
 
 This document summarizes the current state of model validation and optimization, the metrics in use, recent changes, and open items that still need to be resolved. It is intended for cross‑device reference and continuity.
 
@@ -99,6 +99,9 @@ Primary evaluation target: **predicted rank vs actual finish**.
 - Pre‑tournament readiness checklist added (Section 8).
 - Course‑history regression now runs at optimizer start when templates are enabled.
 - Delta player scores writebacks documented for pre‑tournament runs.
+- Pre‑event optimizer now outputs **sheet‑like rankings** (full metrics/trends/notes) alongside results.
+- Rankings exports now include **CSV + TXT + JSON** with consistent ordering and full columns.
+- Delta course‑setup notes now include **bucket signal** summary (BucketSig + ΔPred/ΔTrend) in Node output.
 
 ### Remaining
 
@@ -110,6 +113,7 @@ Primary evaluation target: **predicted rank vs actual finish**.
 - **K‑fold policy:** Run both **event‑based** and **season‑based** splits (season‑based may be limited early season).
 - **Baseline comparison:** Add a **no‑approach baseline** to isolate approach data timing effects.
 - **Post‑tournament review:** Review and validate the **post‑tournament mode** workflow in `MODEL_VALIDATION_AND OPTIMIZATION.md`.
+- **Approach delta naming conventions:** Confirm and document the finalized file naming pattern for approach delta JSONs.
 
 ### Open Questions
 
@@ -125,9 +129,11 @@ Primary evaluation target: **predicted rank vs actual finish**.
 ## 6. Files Touched Recently
 
 - `apps-scripts/modelOptemizer/core/optimizer.js`
-  - Course‑history regression generation moved to the start of the optimizer run.
+  - Pre‑event rankings now exported in sheet‑like CSV/TXT/JSON format.
 - `apps-scripts/modelOptemizer/MODEL_VALIDATION_AND OPTIMIZATION.md`
   - Pre‑tournament workflow, delta inputs/outputs, and writebacks expanded.
+- `apps-scripts/modelOptemizer/core/modelCore.js`
+  - Added course‑setup bucket signal notes to delta summaries.
 - `MODEL_VALIDATION_STATUS.md`
   - Added the pre‑tournament readiness checklist and updated status items.
 
@@ -135,10 +141,8 @@ Primary evaluation target: **predicted rank vs actual finish**.
 
 ## 7. Recommended Next Steps
 
-1) Implement **approach leakage flagging** in validation outputs (L24/L12/YTD approximations).
-2) Begin **Node migration plan** for validation outputs (define scope + milestones).
-3) Wire **API ingestion as primary** and keep CSV as temporary fallback.
-4) Review **post‑tournament mode** in `MODEL_VALIDATION_AND OPTIMIZATION.md` and confirm parity with the current optimizer logic.
+1) Begin **Node migration plan** for validation outputs (define scope + milestones).
+2) Review **post‑tournament mode** in `MODEL_VALIDATION_AND OPTIMIZATION.md` and confirm parity with the current optimizer logic.
 
 ---
 
