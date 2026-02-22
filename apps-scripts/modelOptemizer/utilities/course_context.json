@@ -1,6 +1,9 @@
 {
-  "updatedAt": "2026-02-20T23:28:00.000Z",
+  "updatedAt": "2026-02-22T05:26:51.839Z",
   "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data",
+  "defaultTours": [
+    "pga"
+  ],
   "byEventId": {
     "3": {
       "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
@@ -56,7 +59,8 @@
         "from100to150": 0.276,
         "from150to200": 0.405,
         "over200": 0.244
-      }
+      },
+      "pastPerformanceWeight": 0.1
     },
     "5": {
       "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/pebble_beach/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
@@ -99,7 +103,8 @@
         "from100to150": 0.328,
         "from150to200": 0.288,
         "over200": 0.271
-      }
+      },
+      "pastPerformanceWeight": 0.1
     },
     "7": {
       "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
@@ -173,7 +178,8 @@
         "from100to150": 0.194,
         "from150to200": 0.388,
         "over200": 0.331
-      }
+      },
+      "pastPerformanceWeight": 0.4
     },
     "9": {
       "sourcePath": null,
@@ -187,8 +193,7 @@
       "courseType": "BALANCED",
       "pastPerformance": true,
       "similarCourseIds": [],
-      "puttingCourseIds": [
-      ],
+      "puttingCourseIds": [],
       "similarCourseCourseNums": {},
       "puttingCourseCourseNums": {
         "9": [
@@ -214,8 +219,7 @@
         "541",
         "483"
       ],
-      "puttingCourseIds": [
-      ],
+      "puttingCourseIds": [],
       "similarCourseCourseNums": {
         "483": [
           "742"
@@ -224,11 +228,7 @@
           "977"
         ]
       },
-      "puttingCourseCourseNums": {
-        "10": [
-          "928"
-        ]
-      },
+      "puttingCourseCourseNums": {},
       "similarCoursesWeight": null,
       "puttingCoursesWeight": null,
       "shotDistribution": null
@@ -271,9 +271,6 @@
       "puttingCourseCourseNums": {
         "3": [
           "510"
-        ],
-        "11": [
-          "11"
         ],
         "475": [
           "665"
@@ -361,6 +358,10 @@
       ],
       "courseNameKey": "AUGUSTA_NATIONAL_GOLF_CLUB",
       "courseType": "BALANCED",
+      "tours": [
+        "pga",
+        "liv"
+      ],
       "pastPerformance": true,
       "similarCourseIds": [
         "536",
@@ -799,7 +800,8 @@
         "from100to150": 0.328,
         "from150to200": 0.288,
         "over200": 0.271
-      }
+      },
+      "pastPerformanceWeight": 0.1
     },
     "9": {
       "sourcePath": null,
@@ -813,8 +815,7 @@
       "courseType": "BALANCED",
       "pastPerformance": true,
       "similarCourseIds": [],
-      "puttingCourseIds": [
-      ],
+      "puttingCourseIds": [],
       "similarCourseCourseNums": {},
       "puttingCourseCourseNums": {
         "9": [
@@ -953,6 +954,10 @@
       ],
       "courseNameKey": "AUGUSTA_NATIONAL_GOLF_CLUB",
       "courseType": "BALANCED",
+      "tours": [
+        "pga",
+        "liv"
+      ],
       "pastPerformance": true,
       "similarCourseIds": [
         "536",
@@ -1114,7 +1119,8 @@
         "from100to150": 0.194,
         "from150to200": 0.388,
         "over200": 0.331
-      }
+      },
+      "pastPerformanceWeight": 0.4
     },
     "510": {
       "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
@@ -1170,7 +1176,8 @@
         "from100to150": 0.276,
         "from150to200": 0.405,
         "over200": 0.244
-      }
+      },
+      "pastPerformanceWeight": 0.1
     },
     "665": {
       "sourcePath": null,
@@ -1470,8 +1477,7 @@
         "541",
         "483"
       ],
-      "puttingCourseIds": [
-      ],
+      "puttingCourseIds": [],
       "similarCourseCourseNums": {
         "483": [
           "742"
@@ -1537,7 +1543,8 @@
         "from100to150": 0.238,
         "from150to200": 0.338,
         "over200": 0.336
-      }
+      },
+      "pastPerformanceWeight": 0.1
     }
   }
 }

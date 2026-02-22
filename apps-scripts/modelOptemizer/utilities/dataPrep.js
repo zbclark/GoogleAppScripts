@@ -159,5 +159,6 @@ const buildPlayerData = ({ fieldData, roundsRawData, approachRawData, currentEve
 
 module.exports = {
   buildPlayerData,
-  parsePosition
+  parsePosition,
+  parseEventDate
 };

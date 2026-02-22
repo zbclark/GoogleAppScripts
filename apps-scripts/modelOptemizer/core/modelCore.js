@@ -814,6 +814,12 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   const PAST_PERF_ENABLED = pastPerformance?.enabled || false;
   const PAST_PERF_WEIGHT = Math.min(Math.max(pastPerformance?.weight || 0, 0), 1);
   const CURRENT_EVENT_ID = pastPerformance?.currentEventId ? String(pastPerformance.currentEventId) : null;
+  const currentSeason = typeof config.currentSeason === 'number' && Number.isFinite(config.currentSeason)
+    ? config.currentSeason
+    : null;
+  const courseNum = (typeof config.courseNum === 'number' || typeof config.courseNum === 'string')
+    ? config.courseNum
+    : (Array.isArray(config.courseNums) && config.courseNums.length > 0 ? config.courseNums[0] : null);
   const GLOBAL_PAST_WEIGHT_FALLBACK = 0.30;
   const COURSE_TYPE_PAST_WEIGHT_DEFAULTS = {
     POWER: 0.30,
@@ -830,9 +836,22 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
   const DELTA_BUCKET_CAP = 0.10;
   const DELTA_BOTH_UP_BOOST = 0.05;
   const courseTypeRaw = config.courseType ? String(config.courseType).trim().toUpperCase() : '';
-  const courseType = ['POWER', 'TECHNICAL', 'BALANCED'].includes(courseTypeRaw) ? courseTypeRaw : null;
-  const courseNum = config.courseNum ? String(config.courseNum).trim() : null;
-  const currentSeason = Number.isFinite(config.currentSeason) ? config.currentSeason : new Date().getFullYear();
+  const courseType = COURSE_TYPE_PAST_WEIGHT_DEFAULTS[courseTypeRaw] ? courseTypeRaw : null;
+  const rampById = config.playerRampById || null;
+  const rampWeight = typeof config.playerRampWeight === 'number'
+    ? Math.max(0, Math.min(1, config.playerRampWeight))
+    : 0;
+  const rampMaxEvents = typeof config.playerRampMaxEvents === 'number' && Number.isFinite(config.playerRampMaxEvents)
+    ? Math.max(1, config.playerRampMaxEvents)
+    : 6;
+  const computeRampReadiness = (entry) => {
+    if (!entry || typeof entry !== 'object') return null;
+    const index = Number(entry.avgReturnToFormIndex);
+    if (!Number.isFinite(index)) return null;
+    if (index <= 0) return 1;
+    if (index >= rampMaxEvents) return 0;
+    return Math.max(0, Math.min(1, 1 - (index / rampMaxEvents)));
+  };
   const traceMetricNames = [
     'strokesGainedTotal', 'drivingDistance', 'drivingAccuracy', 'strokesGainedT2G',
     'strokesGainedApp', 'strokesGainedArg', 'strokesGainedOTT', 'strokesGainedPutt',
@@ -1624,6 +1643,15 @@ function calculatePlayerMetrics(players, { groups, pastPerformance, config = {} 
 
     if (PAST_PERF_ENABLED && courseHistoryWeight !== null) {
       effectivePastPerfWeight = Math.min(effectivePastPerfWeight, courseHistoryWeight);
+    }
+
+    if (PAST_PERF_ENABLED && rampWeight > 0 && rampById) {
+      const rampEntry = rampById[String(dgId)] || null;
+      const rampReadiness = computeRampReadiness(rampEntry);
+      if (typeof rampReadiness === 'number') {
+        const adjusted = effectivePastPerfWeight * (1 - (rampWeight * rampReadiness));
+        effectivePastPerfWeight = Math.max(0, adjusted);
+      }
     }
 
     let pastPerformanceMultiplier = 1.0;
@@ -2900,6 +2928,23 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
     };
 
     const deltaScoresById = resolveDeltaScoresById();
+    const courseSetupWeights = config?.courseSetupWeights ? { ...config.courseSetupWeights } : null;
+    if (courseSetupWeights) {
+      const courseTotalWeight = Object.values(courseSetupWeights)
+        .reduce((sum, w) => sum + (typeof w === 'number' && !isNaN(w) ? w : 0), 0);
+      if (courseTotalWeight && Math.abs(courseTotalWeight - 1.0) > 0.01) {
+        Object.keys(courseSetupWeights).forEach(key => {
+          const value = courseSetupWeights[key];
+          courseSetupWeights[key] = (typeof value === 'number' && !isNaN(value))
+            ? value / courseTotalWeight
+            : 0;
+        });
+      }
+    }
+
+    const DELTA_BLEND_PRED = 0.7;
+    const DELTA_BLEND_TREND = 0.3;
+
     const deltaTrendScores = Object.values(deltaScoresById)
       .map(entry => entry?.deltaTrendScore)
       .filter(value => typeof value === 'number' && !isNaN(value))
@@ -2920,7 +2965,93 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
     const deltaPredLow = getPercentileThreshold(deltaPredictiveScores, DELTA_PERCENTILE);
     const deltaPredHigh = getPercentileThreshold(deltaPredictiveScores, 1 - DELTA_PERCENTILE);
 
-    const buildDeltaNote = (trendScore, predScore) => {
+    const computeBucketSignalMap = (scoresById, courseSetup) => {
+      if (!courseSetup) return new Map();
+      const bucketWeights = {
+        short: courseSetup?.under100,
+        mid: courseSetup?.from100to150,
+        long: courseSetup?.from150to200,
+        veryLong: courseSetup?.over200
+      };
+      const bucketKeys = ['short', 'mid', 'long', 'veryLong'];
+      const totalWeight = bucketKeys.reduce((sum, key) => {
+        const value = bucketWeights[key];
+        return sum + (typeof value === 'number' && !isNaN(value) ? value : 0);
+      }, 0);
+      if (!totalWeight) return new Map();
+
+      const entries = [];
+      Object.entries(scoresById || {}).forEach(([dgId, entry]) => {
+        if (!entry || (!entry.deltaTrendBuckets && !entry.deltaPredictiveBuckets)) return;
+        let weightedSignal = 0;
+        bucketKeys.forEach(key => {
+          const weight = bucketWeights[key];
+          if (typeof weight !== 'number' || isNaN(weight) || weight === 0) return;
+          const trendVal = typeof entry.deltaTrendBuckets?.[key] === 'number' ? entry.deltaTrendBuckets[key] : 0;
+          const predVal = typeof entry.deltaPredictiveBuckets?.[key] === 'number' ? entry.deltaPredictiveBuckets[key] : 0;
+          const blended = (DELTA_BLEND_PRED * predVal) + (DELTA_BLEND_TREND * trendVal);
+          weightedSignal += blended * (weight / totalWeight);
+        });
+        entries.push({ dgId, signal: weightedSignal });
+      });
+
+      if (!entries.length) return new Map();
+      const mean = entries.reduce((sum, entry) => sum + entry.signal, 0) / entries.length;
+      const variance = entries.reduce((sum, entry) => sum + Math.pow(entry.signal - mean, 2), 0) / entries.length;
+      const stdDev = Math.sqrt(variance) || 0;
+      const map = new Map();
+      entries.forEach(entry => {
+        const zScore = stdDev > 0 ? (entry.signal - mean) / stdDev : 0;
+        map.set(entry.dgId, { signal: entry.signal, zScore });
+      });
+      return map;
+    };
+
+    const buildBucketSignalNote = (entry, courseSetup, signalEntry) => {
+      if (!entry || (!entry.deltaTrendBuckets && !entry.deltaPredictiveBuckets)) return null;
+      if (!courseSetup) return null;
+      const bucketWeights = {
+        short: courseSetup?.under100,
+        mid: courseSetup?.from100to150,
+        long: courseSetup?.from150to200,
+        veryLong: courseSetup?.over200
+      };
+      const bucketMeta = [
+        { key: 'short', label: 'S' },
+        { key: 'mid', label: 'M' },
+        { key: 'long', label: 'L' },
+        { key: 'veryLong', label: 'VL' }
+      ];
+      const totalWeight = bucketMeta.reduce((sum, { key }) => {
+        const value = bucketWeights[key];
+        return sum + (typeof value === 'number' && !isNaN(value) ? value : 0);
+      }, 0);
+      if (!totalWeight) return null;
+
+      const bucketThreshold = 0.005;
+      let weightedSignal = 0;
+      const bucketFlags = bucketMeta.map(({ key, label }) => {
+        const weight = bucketWeights[key];
+        if (typeof weight !== 'number' || isNaN(weight) || weight === 0) {
+          return `${label}∅`;
+        }
+        const trendVal = typeof entry.deltaTrendBuckets?.[key] === 'number' ? entry.deltaTrendBuckets[key] : 0;
+        const predVal = typeof entry.deltaPredictiveBuckets?.[key] === 'number' ? entry.deltaPredictiveBuckets[key] : 0;
+        const blended = (DELTA_BLEND_PRED * predVal) + (DELTA_BLEND_TREND * trendVal);
+        weightedSignal += blended * (weight / totalWeight);
+        const arrow = blended >= bucketThreshold ? '↑' : (blended <= -bucketThreshold ? '↓' : '→');
+        return `${label}${arrow}`;
+      });
+
+      const signalValue = signalEntry?.signal ?? weightedSignal;
+      const zScore = signalEntry?.zScore ?? 0;
+      const weightedArrow = zScore >= 0 ? '↑' : '↓';
+      return `BucketSig ${weightedArrow} z=${zScore.toFixed(2)} (${signalValue.toFixed(3)}) [${bucketFlags.join(' ')}]`;
+    };
+
+    const bucketSignalById = computeBucketSignalMap(deltaScoresById, courseSetupWeights);
+
+    const buildDeltaNote = (trendScore, predScore, entry, courseSetup, signalEntry) => {
       const parts = [];
       const hasPred = typeof predScore === 'number';
       if (hasPred) {
@@ -2948,7 +3079,8 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
         parts.push('ΔTrend∅');
       }
 
-      return parts.join(' ');
+      const bucketNote = buildBucketSignalNote(entry, courseSetup, signalEntry);
+      return `For Course Setup - ${parts.join(' ')}${bucketNote ? ` | ${bucketNote}` : ''}`;
     };
 
     processedData.forEach(player => {
@@ -2958,7 +3090,14 @@ function generatePlayerRankings(players, metricGroups, historicalData, approachD
       const predScore = entry?.deltaPredictiveScore;
       player.deltaTrendScore = typeof trendScore === 'number' ? trendScore : null;
       player.deltaPredictiveScore = typeof predScore === 'number' ? predScore : null;
-      player.deltaNote = buildDeltaNote(player.deltaTrendScore, player.deltaPredictiveScore);
+      const bucketSignalEntry = bucketSignalById.get(String(player.dgId)) || null;
+      player.deltaNote = buildDeltaNote(
+        player.deltaTrendScore,
+        player.deltaPredictiveScore,
+        entry,
+        courseSetupWeights,
+        bucketSignalEntry
+      );
 
       if (typeof player.deltaPredictiveScore === 'number') {
         const cappedDelta = Math.max(-1, Math.min(1, player.deltaPredictiveScore));

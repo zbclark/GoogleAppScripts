@@ -148,6 +148,8 @@ Use this before running the optimizer sanity check. This is the **single source 
 
 ### 8.1 API Sources (Primary)
 
+- What naming conventions are expected for the data being writtin or called based?  I have some data (csvs/json) in the repo that will need to be renamed.
+
 - **DataGolf API key**
   - Env: `DATAGOLF_API_KEY`
 - **Historical rounds snapshots** (5‑year event history, similar/putting scope)

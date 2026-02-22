@@ -1,13 +1,26 @@
 const fs = require('fs');
 const path = require('path');
 const { loadCsv } = require('../utilities/csvLoader');
-const { loadConfigCells, getCell, collectEventIds } = require('../utilities/configParser');
+const { getDataGolfHistoricalRounds } = require('../utilities/dataGolfClient');
 
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const OUTPUT_DIR = process.env.PRE_TOURNAMENT_OUTPUT_DIR
   ? path.resolve(process.env.PRE_TOURNAMENT_OUTPUT_DIR)
   : path.resolve(__dirname, '..', 'output');
 const SHOULD_WRITE_TEMPLATES = String(process.env.WRITE_TEMPLATES || '').trim().toLowerCase() === 'true';
+const DATAGOLF_API_KEY = String(process.env.DATAGOLF_API_KEY || '').trim();
+const DATAGOLF_CACHE_DIR = path.resolve(__dirname, '..', 'data', 'cache');
+const DATAGOLF_HISTORICAL_TTL_HOURS = (() => {
+  const raw = parseFloat(String(process.env.DATAGOLF_HISTORICAL_TTL_HOURS || '').trim());
+  return Number.isNaN(raw) ? 72 : Math.max(1, raw);
+})();
+const DATAGOLF_HISTORICAL_TTL_MS = DATAGOLF_HISTORICAL_TTL_HOURS * 60 * 60 * 1000;
+const COURSE_CONTEXT_PATH = path.resolve(__dirname, '..', 'utilities', 'course_context.json');
+const PRE_TOURNAMENT_EVENT_ID = String(process.env.PRE_TOURNAMENT_EVENT_ID || '').trim();
+const PRE_TOURNAMENT_SEASON = (() => {
+  const raw = parseInt(String(process.env.PRE_TOURNAMENT_SEASON || '').trim(), 10);
+  return Number.isNaN(raw) ? null : raw;
+})();
 
 const WALK_IGNORE = new Set(['output', 'node_modules', '.git']);
 
@@ -62,6 +75,71 @@ const parseDate = (value) => {
   if (!value) return null;
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? null : date;
+};
+
+const loadCourseContext = (filePath) => {
+  if (!filePath || !fs.existsSync(filePath)) return null;
+  try {
+    return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  } catch (error) {
+    return null;
+  }
+};
+
+const resolveCourseContextEntry = (context, eventId) => {
+  if (!context || typeof context !== 'object') return null;
+  const key = String(eventId || '').trim();
+  if (!key) return null;
+  if (context.byEventId && context.byEventId[key]) return context.byEventId[key];
+  return null;
+};
+
+const normalizeIdList = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(item => String(item || '').trim()).filter(Boolean);
+  }
+  return String(value)
+    .split(/[,|]/)
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+};
+
+const normalizeCourseNums = (value) => {
+  if (!value) return [];
+  if (Array.isArray(value)) {
+    return value.map(item => String(item || '').trim()).filter(Boolean);
+  }
+  return String(value)
+    .split(/[,|]/)
+    .map(item => String(item || '').trim())
+    .filter(Boolean);
+};
+
+const buildEventCourseMap = (context, eventIds, explicitMap = {}) => {
+  const map = new Map();
+  eventIds.forEach(eventId => {
+    const key = String(eventId || '').trim();
+    if (!key) return;
+    const direct = explicitMap?.[key];
+    if (Array.isArray(direct) && direct.length > 0) {
+      map.set(key, normalizeCourseNums(direct));
+      return;
+    }
+    const entry = context?.byEventId?.[key];
+    if (entry?.courseNums && Array.isArray(entry.courseNums) && entry.courseNums.length > 0) {
+      map.set(key, normalizeCourseNums(entry.courseNums));
+    }
+  });
+  return map;
+};
+
+const buildTourList = (context, entry) => {
+  const entryTours = normalizeIdList(entry?.tours || entry?.tour || entry?.tourIds);
+  if (entryTours.length > 0) return entryTours.map(tour => tour.toLowerCase());
+  const defaultTours = normalizeIdList(context?.defaultTours);
+  if (defaultTours.length > 0) return defaultTours.map(tour => tour.toLowerCase());
+  return ['pga'];
 };
 
 const logGamma = (z) => {
@@ -199,8 +277,7 @@ const computeRegression = (pairs) => {
 const collectRecords = () => {
   const files = walkDir(DATA_DIR).filter(isHistoricalFile);
   if (!files.length) {
-    console.error('No historical data files found.');
-    process.exit(1);
+    return [];
   }
 
   const rawRows = [];
@@ -210,6 +287,87 @@ const collectRecords = () => {
   });
 
   return rawRows;
+};
+
+const extractHistoricalRowsFromPayload = (payload) => {
+  if (!payload) return [];
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload.rows)) return payload.rows;
+  if (Array.isArray(payload.data)) return payload.data;
+  if (Array.isArray(payload.rounds)) return payload.rounds;
+  if (typeof payload === 'object') {
+    const nested = Object.values(payload).flatMap(value => Array.isArray(value) ? value : []);
+    if (nested.length > 0) return nested;
+  }
+  return [];
+};
+
+const normalizeHistoricalRow = (row) => {
+  if (!row || typeof row !== 'object') return null;
+  const dgId = row.dg_id || row.dgId || row.player_id || row.playerId || row.id;
+  const eventId = row.event_id || row.eventId || row.tournament_id || row.tournamentId;
+  if (!dgId || !eventId) return null;
+  return {
+    ...row,
+    dg_id: String(dgId).trim(),
+    player_name: row.player_name || row.playerName || row.name || null,
+    event_id: String(eventId).trim(),
+    course_num: row.course_num || row.courseNum || row.course || row.course_id || row.courseId || null,
+    fin_text: row.fin_text ?? row.finish ?? row.finishPosition ?? row.fin ?? row.position ?? null,
+    event_completed: row.event_completed ?? row.eventCompleted ?? row.end_date ?? row.completed ?? row.date ?? null,
+    year: row.year ?? row.season ?? row.season_year ?? row.seasonYear ?? null,
+    season: row.season ?? row.year ?? null,
+    round_num: row.round_num ?? row.roundNum ?? row.round ?? null
+  };
+};
+
+const buildMonthSet = (monthsBack = 3) => {
+  const now = new Date();
+  const months = new Set();
+  for (let i = 0; i <= monthsBack; i += 1) {
+    const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    months.add(`${date.getFullYear()}-${date.getMonth() + 1}`);
+  }
+  return months;
+};
+
+const isRowInRecentMonths = (row, monthSet) => {
+  const date = parseDate(row.event_completed || row.date || row.start_date || row.eventCompleted);
+  if (!date) return false;
+  const key = `${date.getFullYear()}-${date.getMonth() + 1}`;
+  return monthSet.has(key);
+};
+
+const buildRecentYears = (season, yearCount = 5) => {
+  const baseYear = season || new Date().getFullYear();
+  return Array.from({ length: yearCount }, (_, idx) => baseYear - idx);
+};
+
+const fetchHistoricalRounds = async ({ tours, years }) => {
+  const rows = [];
+  for (const tour of tours) {
+    for (const year of years) {
+      try {
+        const snapshot = await getDataGolfHistoricalRounds({
+          apiKey: DATAGOLF_API_KEY,
+          cacheDir: DATAGOLF_CACHE_DIR,
+          ttlMs: DATAGOLF_HISTORICAL_TTL_MS,
+          allowStale: true,
+          tour,
+          eventId: 'all',
+          year,
+          fileFormat: 'json'
+        });
+        const payloadRows = extractHistoricalRowsFromPayload(snapshot?.payload)
+          .map(normalizeHistoricalRow)
+          .filter(Boolean);
+        rows.push(...payloadRows);
+      } catch (error) {
+        console.warn(`⚠️  Historical rounds fetch failed (${tour} ${year}): ${error.message}`);
+      }
+    }
+  }
+  return rows;
 };
 
 const normalizeEventKey = (row) => {
@@ -262,29 +420,25 @@ const buildEventIdCourseMap = (rows) => {
   return eventIdToCourse;
 };
 
-const buildCourseSimilarMap = (configFiles, eventIdToCourse) => {
+const buildCourseSimilarMapFromContext = (context) => {
   const courseSimilarMap = new Map();
+  if (!context || !context.byEventId) return courseSimilarMap;
 
-  configFiles.forEach(configPath => {
-    const cells = loadConfigCells(configPath);
-    const currentEventId = String(getCell(cells, 9, 7) || '').trim();
-    if (!currentEventId) return;
-    const targetCourseNum = eventIdToCourse.get(currentEventId);
+  Object.values(context.byEventId).forEach(entry => {
+    if (!entry || typeof entry !== 'object') return;
+    const targetCourseNum = entry.courseNum || (Array.isArray(entry.courseNums) ? entry.courseNums[0] : null);
     if (!targetCourseNum) return;
-
-    const similarEventIds = collectEventIds(cells, 33, 37, 7);
     const similarCourseNums = new Set([
-      targetCourseNum
+      String(targetCourseNum).trim()
     ]);
-
-    similarEventIds.forEach(eventId => {
-      const courseNum = eventIdToCourse.get(String(eventId));
-      if (courseNum) similarCourseNums.add(courseNum);
-    });
-
-    const existing = courseSimilarMap.get(targetCourseNum) || new Set();
+    if (entry.similarCourseCourseNums && typeof entry.similarCourseCourseNums === 'object') {
+      Object.values(entry.similarCourseCourseNums).forEach(list => {
+        normalizeCourseNums(list).forEach(courseNum => similarCourseNums.add(courseNum));
+      });
+    }
+    const existing = courseSimilarMap.get(String(targetCourseNum).trim()) || new Set();
     similarCourseNums.forEach(courseNum => existing.add(courseNum));
-    courseSimilarMap.set(targetCourseNum, existing);
+    courseSimilarMap.set(String(targetCourseNum).trim(), existing);
   });
 
   return courseSimilarMap;
@@ -437,17 +591,82 @@ const assignPriorStarts = (courseEntries) => {
   return results;
 };
 
-const run = () => {
+const run = async () => {
   if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
 
-  const rawRows = collectRecords();
-  const eventMaxFinish = buildEventStats(rawRows);
-  const eventIdToCourse = buildEventIdCourseMap(rawRows);
-  const playerEventRecords = buildPlayerEventRecords(rawRows);
+  const context = loadCourseContext(COURSE_CONTEXT_PATH);
+  const contextEntry = resolveCourseContextEntry(context, PRE_TOURNAMENT_EVENT_ID);
+  const tours = buildTourList(context, contextEntry);
+  const eventId = String(contextEntry?.eventId || PRE_TOURNAMENT_EVENT_ID || '').trim();
+  const courseNumList = normalizeCourseNums(contextEntry?.courseNums || contextEntry?.courseNum);
+  const similarEventIds = normalizeIdList(contextEntry?.similarCourseIds);
+  const puttingEventIds = normalizeIdList(contextEntry?.puttingCourseIds);
+  const similarCourseMap = contextEntry?.similarCourseCourseNums || {};
+  const puttingCourseMap = contextEntry?.puttingCourseCourseNums || {};
+
+  const eventCourseMap = buildEventCourseMap(context, [eventId].filter(Boolean), { [eventId]: courseNumList });
+  const similarEventCourseMap = buildEventCourseMap(context, similarEventIds, similarCourseMap);
+  const puttingEventCourseMap = buildEventCourseMap(context, puttingEventIds, puttingCourseMap);
+
+  const lastFiveYears = buildRecentYears(PRE_TOURNAMENT_SEASON, 5);
+  const recentMonthSet = buildMonthSet(3);
+  const recentMonthYears = new Set(Array.from(recentMonthSet).map(key => parseInt(key.split('-')[0], 10)));
+  const recentYears = Array.from(recentMonthYears).filter(year => Number.isFinite(year));
+  const yearsToFetch = Array.from(new Set([...lastFiveYears, ...recentYears])).filter(year => Number.isFinite(year));
+
+  let rawRows = collectRecords();
+  if (rawRows.length === 0) {
+    if (!DATAGOLF_API_KEY) {
+      console.error('No historical data CSVs found and DATAGOLF_API_KEY is not set.');
+      process.exit(1);
+    }
+    rawRows = await fetchHistoricalRounds({ tours, years: yearsToFetch });
+  }
+
+  const scopedEventIds = new Set([
+    eventId,
+    ...similarEventIds,
+    ...puttingEventIds
+  ].filter(Boolean).map(String));
+  const similarPuttingEventIds = new Set(
+    [...similarEventIds, ...puttingEventIds].filter(Boolean).map(String)
+  );
+
+  const filteredRows = rawRows
+    .map(normalizeHistoricalRow)
+    .filter(Boolean)
+    .filter(row => {
+      const rowEventId = String(row.event_id || '').trim();
+      if (!rowEventId) return false;
+      const rowYear = parseInt(String(row.year || row.season || '').trim(), 10);
+      const inRecentMonths = isRowInRecentMonths(row, recentMonthSet);
+      if (inRecentMonths) return true;
+      if (rowEventId === eventId && lastFiveYears.includes(rowYear)) {
+        const courseNum = row.course_num ? String(row.course_num).trim() : null;
+        const allowedCourses = eventCourseMap.get(rowEventId)
+          || similarEventCourseMap.get(rowEventId)
+          || puttingEventCourseMap.get(rowEventId)
+          || null;
+        if (!allowedCourses || allowedCourses.length === 0) return true;
+        return courseNum ? allowedCourses.includes(courseNum) : false;
+      }
+      if (similarPuttingEventIds.has(rowEventId)) {
+        return false;
+      }
+      return false;
+    });
+
+  if (!filteredRows.length) {
+    console.error('No historical rows matched the scoped event/tour filters.');
+    process.exit(1);
+  }
+
+  const eventMaxFinish = buildEventStats(filteredRows);
+  const eventIdToCourse = buildEventIdCourseMap(filteredRows);
+  const playerEventRecords = buildPlayerEventRecords(filteredRows);
   const courseMap = buildCourseHistory(playerEventRecords, eventMaxFinish);
 
-  const configFiles = walkDir(DATA_DIR).filter(isConfigFile);
-  const courseSimilarMap = buildCourseSimilarMap(configFiles, eventIdToCourse);
+  const courseSimilarMap = buildCourseSimilarMapFromContext(context);
   const courseMapWithSimilar = buildCourseHistoryWithSimilar(playerEventRecords, eventMaxFinish, courseSimilarMap);
 
   const summary = [];
@@ -580,10 +799,10 @@ const run = () => {
     return acc;
   }, {});
 
-  if (SHOULD_WRITE_TEMPLATES) {
-    const regressionJson = JSON.stringify(regressionMap, null, 2);
-    fs.writeFileSync(regressionJsonPath, regressionJson);
+  const regressionJson = JSON.stringify(regressionMap, null, 2);
+  fs.writeFileSync(regressionJsonPath, regressionJson);
 
+  if (SHOULD_WRITE_TEMPLATES) {
     const regressionHeader = `const COURSE_HISTORY_REGRESSION = ${regressionJson};\n\n`;
     const regressionFn =
       `function getCourseHistoryRegression(courseNum) {\n` +
@@ -601,8 +820,11 @@ const run = () => {
   console.log(`✅ Wrote ${detailedRows.length} detail rows to ${detailPath}`);
   console.log(`✅ Wrote ${summarySimilar.length} similar-course summaries to ${summarySimilarPath}`);
   console.log(`✅ Wrote ${detailedRowsSimilar.length} similar-course detail rows to ${detailSimilarPath}`);
+  console.log(`✅ Wrote course history regression JSON to ${regressionJsonPath}`);
+  console.log(`ℹ️  Tours used: ${tours.join(', ')}`);
+  console.log(`ℹ️  Event scope: ${eventId || 'n/a'} + similar (${similarEventIds.length}) + putting (${puttingEventIds.length})`);
+  console.log(`ℹ️  Year scope: last5=[${lastFiveYears.join(', ')}], recentMonths=[${Array.from(recentMonthSet).join(', ')}]`);
   if (SHOULD_WRITE_TEMPLATES) {
-    console.log(`✅ Wrote course history regression JSON to ${regressionJsonPath}`);
     console.log(`✅ Wrote Node utility to ${regressionNodePath}`);
     console.log(`✅ Wrote GAS utility to ${regressionGasPath}`);
   } else {
@@ -610,4 +832,7 @@ const run = () => {
   }
 };
 
-run();
+run().catch(error => {
+  console.error(`❌ Course history regression failed: ${error.message}`);
+  process.exit(1);
+});

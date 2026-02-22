@@ -547,21 +547,21 @@ const WEIGHT_TEMPLATES = {
     eventId: "7",
     description: "Genesis Invitational 2026 Pre-Event Blended",
     groupWeights: {
-      "Driving Performance": 0.08104575052551265,
+      "Driving Performance": 0.08103458149256776,
       "Approach - Short (<100)": 0.05424956620818028,
       "Approach - Mid (100-150)": 0.13502453251139157,
       "Approach - Long (150-200)": 0.1456729835825981,
       "Approach - Very Long (>200)": 0.07574856124820695,
-      "Putting": 0.07128573783424545,
-      "Around the Green": 0.038320573850609364,
-      "Scoring": 0.1762004537494561,
-      "Course Management": 0.22245184048979955
+      "Putting": 0.07061800977996895,
+      "Around the Green": 0.03795494026527886,
+      "Scoring": 0.17659872476846195,
+      "Course Management": 0.22309810014334563
     },
     metricWeights: {
       "Driving Performance": {
-        "Driving Distance": { weight: 0.03257530289518567 },
-        "Driving Accuracy": { weight: 0.34346852110690623 },
-        "SG OTT": { weight: 0.6239561759979081 }
+        "Driving Distance": { weight: 0.03341695839374732 },
+        "Driving Accuracy": { weight: 0.347769366974599 },
+        "SG OTT": { weight: 0.6188136746316537 }
       },
       "Approach - Short (<100)": {
         "Approach <100 GIR": { weight: 0.12426292425471001 },
@@ -596,20 +596,20 @@ const WEIGHT_TEMPLATES = {
         "SG Around Green": { weight: 1 }
       },
       "Scoring": {
-        "SG T2G": { weight: 0.5142530413661663 },
-        "Scoring Average": { weight: 0.238711827732066 },
-        "Birdie Chances Created": { weight: 0.11022600134258223 },
-        "Scoring: Approach <100 SG": { weight: 0.01127472223502835 },
-        "Scoring: Approach <150 FW SG": { weight: 0.013337171424362805 },
-        "Scoring: Approach <150 Rough SG": { weight: 0.013337171424362805 },
-        "Scoring: Approach <200 FW SG": { weight: 0.05334868569745122 },
-        "Scoring: Approach >200 FW SG": { weight: 0.022755689388990145 },
-        "Scoring: Approach >150 Rough SG": { weight: 0.022755689388990145 }
+        "SG T2G": { weight: 0.5113681269174518 },
+        "Scoring Average": { weight: 0.24159674218078056 },
+        "Birdie Chances Created": { weight: 0.11022600134258224 },
+        "Scoring: Approach <100 SG": { weight: 0.011274722235028354 },
+        "Scoring: Approach <150 FW SG": { weight: 0.013337171424362807 },
+        "Scoring: Approach <150 Rough SG": { weight: 0.013337171424362807 },
+        "Scoring: Approach <200 FW SG": { weight: 0.05334868569745123 },
+        "Scoring: Approach >200 FW SG": { weight: 0.022755689388990148 },
+        "Scoring: Approach >150 Rough SG": { weight: 0.022755689388990148 }
       },
       "Course Management": {
-        "Scrambling": { weight: 0.24261687365465864 },
-        "Great Shots": { weight: 0.22825132641289356 },
-        "Poor Shot Avoidance": { weight: 0.09426755189336757 },
+        "Scrambling": { weight: 0.24343132803828743 },
+        "Great Shots": { weight: 0.22753437274978944 },
+        "Poor Shot Avoidance": { weight: 0.09417005117284287 },
         "Course Management: Approach <100 Prox": { weight: 0.03583805863236641 },
         "Course Management: Approach <150 FW Prox": { weight: 0.04239380106511636 },
         "Course Management: Approach <150 Rough Prox": { weight: 0.04239380106511636 },
