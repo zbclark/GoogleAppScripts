@@ -342,7 +342,13 @@ if (OPT_SEED_RAW) {
   console.log(`OPT_SEED: ${OPT_SEED_RAW}`);
 }
 
-if (!OVERRIDE_EVENT_ID) {
+const normalizedTournamentName = String(TOURNAMENT_NAME || '').trim().toLowerCase();
+const RUN_SEASON_VALIDATION = RUN_VALIDATION_ONLY && (
+  !normalizedTournamentName
+  || ['all', 'season', 'all-tournaments', '*'].includes(normalizedTournamentName)
+);
+
+if (!OVERRIDE_EVENT_ID && !RUN_SEASON_VALIDATION) {
   console.error('\n❌ Missing required argument: --event <eventId>');
   console.error('   Example: node optimizer.js --event 6 --season 2026 --tournament "Sony Open"');
   process.exit(1);
@@ -4673,29 +4679,49 @@ async function runAdaptiveOptimizer() {
   const CURRENT_SEASON = OVERRIDE_SEASON ?? 2026;
   const tournamentNameFallback = TOURNAMENT_NAME || 'Sony Open';
   const seasonDir = path.resolve(DATA_ROOT_DIR, String(CURRENT_SEASON));
-  const tournamentDir = resolveTournamentDir(CURRENT_SEASON, TOURNAMENT_NAME, tournamentNameFallback);
-  const tournamentInputsDir = path.resolve(tournamentDir, 'inputs');
-  const preEventOutputDir = OVERRIDE_OUTPUT_DIR
-    ? path.resolve(OVERRIDE_OUTPUT_DIR)
-    : path.resolve(tournamentDir, 'pre_event');
-  const postEventOutputDir = OVERRIDE_OUTPUT_DIR
-    ? path.resolve(OVERRIDE_OUTPUT_DIR)
-    : path.resolve(tournamentDir, 'post_event');
+  const tournamentDir = RUN_SEASON_VALIDATION
+    ? null
+    : resolveTournamentDir(CURRENT_SEASON, TOURNAMENT_NAME, tournamentNameFallback);
+  const tournamentInputsDir = tournamentDir ? path.resolve(tournamentDir, 'inputs') : null;
+  const preEventOutputDir = RUN_SEASON_VALIDATION
+    ? null
+    : (OVERRIDE_OUTPUT_DIR
+      ? path.resolve(OVERRIDE_OUTPUT_DIR)
+      : path.resolve(tournamentDir, 'pre_event'));
+  const postEventOutputDir = RUN_SEASON_VALIDATION
+    ? null
+    : (OVERRIDE_OUTPUT_DIR
+      ? path.resolve(OVERRIDE_OUTPUT_DIR)
+      : path.resolve(tournamentDir, 'post_event'));
   const validationOutputsDir = path.resolve(seasonDir, 'validation_outputs');
 
-  TOURNAMENT_INPUT_DIRS = [tournamentInputsDir];
+  TOURNAMENT_INPUT_DIRS = tournamentInputsDir ? [tournamentInputsDir] : [];
   VALIDATION_OUTPUT_DIRS = [validationOutputsDir];
-  DATA_DIR = tournamentInputsDir;
-  DEFAULT_DATA_DIR = tournamentInputsDir;
-  OUTPUT_DIR = preEventOutputDir;
+  if (tournamentInputsDir) {
+    DATA_DIR = tournamentInputsDir;
+    DEFAULT_DATA_DIR = tournamentInputsDir;
+  }
+  if (preEventOutputDir) {
+    OUTPUT_DIR = preEventOutputDir;
+  }
 
-  ensureDirectory(preEventOutputDir);
-  ensureDirectory(postEventOutputDir);
+  if (preEventOutputDir) ensureDirectory(preEventOutputDir);
+  if (postEventOutputDir) ensureDirectory(postEventOutputDir);
   ensureDirectory(validationOutputsDir);
 
   if (RUN_VALIDATION_ONLY) {
     try {
-      const { runValidation } = require('./validationRunner');
+      const { runValidation, runSeasonValidation } = require('./validationRunner');
+      if (RUN_SEASON_VALIDATION && typeof runSeasonValidation === 'function') {
+        console.log('🧪 Running validation runner for all season tournaments...');
+        const validationResult = await runSeasonValidation({
+          season: CURRENT_SEASON,
+          dataRootDir: DATA_ROOT_DIR,
+          logger: console
+        });
+        console.log(`✅ Validation outputs written to: ${validationResult.outputDir}`);
+        return;
+      }
       if (typeof runValidation !== 'function') {
         throw new Error('validationRunner is unavailable');
       }

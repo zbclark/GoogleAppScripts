@@ -109,6 +109,17 @@ Triggered when **current‑year results exist** for the event.
 - [ ] Event K‑fold validation complete
 - [ ] Outputs written & reviewed
 
+#### Post‑Tournament Run Readiness (Seeded + K‑fold)
+
+- [ ] Results JSON present (`post_event/<tournament-slug>_results.json`)
+- [ ] Pre‑event rankings present (`pre_event/rankings.csv` or `rankings.json`)
+- [ ] Historical rounds available (CSV or API cache)
+- [ ] Approach snapshots available (L24/L12/YTD, or CSV fallback)
+- [ ] Course context is wired (eventId entry with similar/putting lists)
+- [ ] `OPT_SEED` / `OPT_TESTS` set for seeded runs (when used)
+- [ ] `EVENT_KFOLD_K` / `EVENT_KFOLD_SEED` configured for K‑fold (when used)
+- [ ] Outputs directory resolved and writable
+
 ---
 
 ## Example Run Setup (End‑to‑End)

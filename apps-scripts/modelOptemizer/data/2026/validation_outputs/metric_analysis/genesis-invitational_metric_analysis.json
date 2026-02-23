@@ -1,0 +1,399 @@
+{
+  "version": 3,
+  "tournament": "genesis-invitational",
+  "courseType": "BALANCED",
+  "top10Finishers": 11,
+  "totalFinishers": 51,
+  "generatedAt": "2026-02-23T18:20:21.797Z",
+  "metrics": [
+    {
+      "metric": "Driving Distance",
+      "top10Avg": 295.83163636363633,
+      "fieldAvg": 290.14449019607844,
+      "delta": 5.6871461675578985,
+      "correlation": 0.540723745806748,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Driving Accuracy",
+      "top10Avg": 0.5860909090909091,
+      "fieldAvg": 0.5784509803921569,
+      "delta": 0.007639928698752185,
+      "correlation": -0.08261594855152733,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "SG OTT",
+      "top10Avg": 0.5009090909090909,
+      "fieldAvg": 0.07752941176470587,
+      "delta": 0.423379679144385,
+      "correlation": 0.5006089742366531,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <100 GIR",
+      "top10Avg": 0.8604545454545455,
+      "fieldAvg": 0.8499607843137253,
+      "delta": 0.010493761140820124,
+      "correlation": 0.2312523524527743,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <100 SG",
+      "top10Avg": 0.09818181818181819,
+      "fieldAvg": -0.017999999999999995,
+      "delta": 0.11618181818181819,
+      "correlation": 0.059417848639667904,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <100 Prox",
+      "top10Avg": 16.775909090909092,
+      "fieldAvg": 17.120274509803917,
+      "delta": -0.3443654188948244,
+      "correlation": -0.11320565423914282,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 FW GIR",
+      "top10Avg": 0.8074545454545454,
+      "fieldAvg": 0.8078431372549018,
+      "delta": -0.00038859180035633045,
+      "correlation": -0.14930442399755756,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 FW SG",
+      "top10Avg": 0.3109090909090909,
+      "fieldAvg": 0.09282352941176474,
+      "delta": 0.21808556149732616,
+      "correlation": 0.07595378454523974,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 FW Prox",
+      "top10Avg": 20.318727272727273,
+      "fieldAvg": 21.118254901960775,
+      "delta": -0.7995276292335021,
+      "correlation": -0.11693670875988625,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 Rough GIR",
+      "top10Avg": 0.5762727272727273,
+      "fieldAvg": 0.5582156862745097,
+      "delta": 0.01805704099821759,
+      "correlation": 0.08512154773868107,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 Rough SG",
+      "top10Avg": 0.5072727272727273,
+      "fieldAvg": 0.13905882352941176,
+      "delta": 0.36821390374331553,
+      "correlation": 0.1559071188711178,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <150 Rough Prox",
+      "top10Avg": 37.88463636363637,
+      "fieldAvg": 38.50470588235293,
+      "delta": -0.6200695187165621,
+      "correlation": -0.041678609036597584,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <200 FW GIR",
+      "top10Avg": 0.6839090909090908,
+      "fieldAvg": 0.6988235294117647,
+      "delta": -0.014914438502673932,
+      "correlation": -0.20790089055286748,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <200 FW SG",
+      "top10Avg": 0.16690909090909098,
+      "fieldAvg": 0.37305882352941167,
+      "delta": -0.20614973262032069,
+      "correlation": -0.1998900067954128,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach <200 FW Prox",
+      "top10Avg": 29.453818181818182,
+      "fieldAvg": 29.24550980392156,
+      "delta": 0.20830837789662127,
+      "correlation": 0.10447903052858534,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >150 Rough GIR",
+      "top10Avg": 0.34600000000000003,
+      "fieldAvg": 0.3459411764705881,
+      "delta": 0.00005882352941194435,
+      "correlation": 0.03130635698196972,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >150 Rough SG",
+      "top10Avg": 0.3698181818181819,
+      "fieldAvg": 0.25941176470588234,
+      "delta": 0.11040641711229954,
+      "correlation": 0.06255380195311012,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >150 Rough Prox",
+      "top10Avg": 62.662818181818174,
+      "fieldAvg": 62.82523529411764,
+      "delta": -0.16241711229946532,
+      "correlation": -0.18172965555913842,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >200 FW GIR",
+      "top10Avg": 0.4833636363636364,
+      "fieldAvg": 0.4916666666666668,
+      "delta": -0.008303030303030423,
+      "correlation": -0.13301310215843448,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >200 FW SG",
+      "top10Avg": 0.42054545454545456,
+      "fieldAvg": 0.4295294117647059,
+      "delta": -0.008983957219251326,
+      "correlation": 0.03396876380348421,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Approach >200 FW Prox",
+      "top10Avg": 42.38845454545455,
+      "fieldAvg": 42.61354901960785,
+      "delta": -0.22509447415330186,
+      "correlation": -0.0734380731278041,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "SG Putting",
+      "top10Avg": 0.7736363636363638,
+      "fieldAvg": 0.19713725490196082,
+      "delta": 0.5764991087344029,
+      "correlation": 0.6675449395942121,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "SG Around Green",
+      "top10Avg": 0.1717272727272727,
+      "fieldAvg": 0.05501960784313725,
+      "delta": 0.11670766488413545,
+      "correlation": 0.35477003171887395,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "SG T2G",
+      "top10Avg": 1.4245454545454546,
+      "fieldAvg": 0.269843137254902,
+      "delta": 1.1547023172905526,
+      "correlation": 0.7269186222365538,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring Average",
+      "top10Avg": 71.03763636363635,
+      "fieldAvg": 71.10954901960784,
+      "delta": -0.071912655971488,
+      "correlation": 0.14033603319846466,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Birdie Chances Created",
+      "top10Avg": 1.8221818181818186,
+      "fieldAvg": 1.4717254901960777,
+      "delta": 0.3504563279857409,
+      "correlation": 0.002434901562016119,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Birdies or Better",
+      "top10Avg": 4.093909090909091,
+      "fieldAvg": 4.053039215686275,
+      "delta": 0.04086987522281582,
+      "correlation": 0.07758880767962792,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Greens in Regulation",
+      "top10Avg": 0.7260909090909092,
+      "fieldAvg": 0.6754313725490196,
+      "delta": 0.050659536541889594,
+      "correlation": 0.48429905732765205,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach <100 SG",
+      "top10Avg": 0.09818181818181819,
+      "fieldAvg": -0.017999999999999995,
+      "delta": 0.11618181818181819,
+      "correlation": 0.059417848639667904,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach <150 FW SG",
+      "top10Avg": 0.3109090909090909,
+      "fieldAvg": 0.09282352941176474,
+      "delta": 0.21808556149732616,
+      "correlation": 0.07595378454523974,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach <150 Rough SG",
+      "top10Avg": 0.5072727272727273,
+      "fieldAvg": 0.13905882352941176,
+      "delta": 0.36821390374331553,
+      "correlation": 0.1559071188711178,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach >150 Rough SG",
+      "top10Avg": 0.3698181818181819,
+      "fieldAvg": 0.25941176470588234,
+      "delta": 0.11040641711229954,
+      "correlation": 0.06255380195311012,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach <200 FW SG",
+      "top10Avg": 0.16690909090909098,
+      "fieldAvg": 0.37305882352941167,
+      "delta": -0.20614973262032069,
+      "correlation": -0.1998900067954128,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scoring: Approach >200 FW SG",
+      "top10Avg": 0.42054545454545456,
+      "fieldAvg": 0.4295294117647059,
+      "delta": -0.008983957219251326,
+      "correlation": 0.03396876380348421,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Scrambling",
+      "top10Avg": 0.6118181818181818,
+      "fieldAvg": 0.5968627450980393,
+      "delta": 0.014955436720142545,
+      "correlation": 0.2194422249983779,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Great Shots",
+      "top10Avg": 3.7203636363636363,
+      "fieldAvg": 3.401705882352941,
+      "delta": 0.3186577540106952,
+      "correlation": 0.35454118080040226,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Poor Shot Avoidance",
+      "top10Avg": 3.940363636363637,
+      "fieldAvg": 3.9890000000000008,
+      "delta": -0.04863636363636381,
+      "correlation": 0.09555139626294207,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach <100 Prox",
+      "top10Avg": 16.775909090909092,
+      "fieldAvg": 17.120274509803917,
+      "delta": -0.3443654188948244,
+      "correlation": -0.11320565423914282,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach <150 FW Prox",
+      "top10Avg": 20.318727272727273,
+      "fieldAvg": 21.118254901960775,
+      "delta": -0.7995276292335021,
+      "correlation": -0.11693670875988625,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach <150 Rough Prox",
+      "top10Avg": 37.88463636363637,
+      "fieldAvg": 38.50470588235293,
+      "delta": -0.6200695187165621,
+      "correlation": -0.041678609036597584,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach >150 Rough Prox",
+      "top10Avg": 62.662818181818174,
+      "fieldAvg": 62.82523529411764,
+      "delta": -0.16241711229946532,
+      "correlation": -0.18172965555913842,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach <200 FW Prox",
+      "top10Avg": 29.453818181818182,
+      "fieldAvg": 29.24550980392156,
+      "delta": 0.20830837789662127,
+      "correlation": 0.10447903052858534,
+      "top10Count": 11,
+      "fieldCount": 51
+    },
+    {
+      "metric": "Course Management: Approach >200 FW Prox",
+      "top10Avg": 42.38845454545455,
+      "fieldAvg": 42.61354901960785,
+      "delta": -0.22509447415330186,
+      "correlation": -0.0734380731278041,
+      "top10Count": 11,
+      "fieldCount": 51
+    }
+  ],
+  "eventId": "7",
+  "courseTypeSource": "config_csv"
+}

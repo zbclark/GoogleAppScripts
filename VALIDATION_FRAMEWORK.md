@@ -10,7 +10,7 @@ This framework validates tournament prediction accuracy, identifies which metric
 
 ---
 
-## Phase 1: Current Analysis ✅ (COMPLETED)
+## Phase 1: Current Analysis ✅ (COMPLETED + GAS parity aligned)
 
 ### Objective
 Generate foundational correlation data showing which metrics correlate with tournament success
@@ -358,7 +358,15 @@ METRIC_TEMPLATES (template weights)
 - Overfitting risk (weights optimized to past, not future tournaments)
   - Solution: Cross-validation (test on holdout tournament)
 
+### Recent Validation Updates (Node parity)
+
+- Metric analysis rounding/correlation now matches GAS (Spearman + ranking behavior).
+- Metric analysis sources now prefer post‑tournament results/historical data (rankings fallback).
+- Model delta trends aggregate across season tournaments.
+- Processing log now captures inputs, sources, and overwritten outputs.
+
 ### Future Enhancements
+
 - Machine learning approach (gradient descent for weights)
 - Ensemble models (combine multiple approaches)
 - Player-specific adjustments (account for skill level variance)
@@ -367,4 +375,4 @@ METRIC_TEMPLATES (template weights)
 ---
 
 **Status:** Framework documented, ready for Phase 2 implementation
-**Last Updated:** January 15, 2026
+**Last Updated:** February 23, 2026

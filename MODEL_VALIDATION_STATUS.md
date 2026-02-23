@@ -1,4 +1,4 @@
-# Model Validation Status (as of 2026-02-22)
+# Model Validation Status (as of 2026-02-23)
 
 This document summarizes the current state of model validation and optimization, the metrics in use, recent changes, and open items that still need to be resolved. It is intended for cross‑device reference and continuity.
 
@@ -102,6 +102,11 @@ Primary evaluation target: **predicted rank vs actual finish**.
 - Pre‑event optimizer now outputs **sheet‑like rankings** (full metrics/trends/notes) alongside results.
 - Rankings exports now include **CSV + TXT + JSON** with consistent ordering and full columns.
 - Delta course‑setup notes now include **bucket signal** summary (BucketSig + ΔPred/ΔTrend) in Node output.
+- Metric analysis now matches GAS rounding + Spearman ranking behavior, with lower‑is‑better inversion parity.
+- Metric analysis sources now prefer post‑tournament results/historical metrics (rankings only as fallback).
+- Results JSON rebuilds include full historical metrics + derived scoring fields when missing.
+- Model delta trends now aggregate across all season tournaments (not just the last run).
+- Processing log now records inputs, sources, data counts, and which outputs were overwritten.
 
 ### Remaining
 
@@ -114,6 +119,7 @@ Primary evaluation target: **predicted rank vs actual finish**.
 - **Baseline comparison:** Add a **no‑approach baseline** to isolate approach data timing effects.
 - **Post‑tournament review:** Review and validate the **post‑tournament mode** workflow in `MODEL_VALIDATION_AND OPTIMIZATION.md`.
 - **Approach delta naming conventions:** Confirm and document the finalized file naming pattern for approach delta JSONs.
+- **Historical rounds cache:** Revisit DataGolf historical rounds fetch to avoid duplicative/additive cache files.
 
 ### Open Questions
 
@@ -141,8 +147,15 @@ Primary evaluation target: **predicted rank vs actual finish**.
 
 ## 7. Recommended Next Steps
 
-1) Begin **Node migration plan** for validation outputs (define scope + milestones).
-2) Review **post‑tournament mode** in `MODEL_VALIDATION_AND OPTIMIZATION.md` and confirm parity with the current optimizer logic.
+1) Run the **full post‑tournament optimizer** (seeded runs + tests + event K‑fold).
+2) Re‑check that **all required inputs** for post‑tournament runs are present and wired correctly before running.
+
+### Recent Validation Parity Checklist
+
+- ✅ Metric analysis rounding/correlation aligned with GAS
+- ✅ Metric analysis averages sourced from results/historical data
+- ✅ Model delta trends aggregate across season
+- ✅ Processing log includes outputs + overwrite flags
 
 ---
 

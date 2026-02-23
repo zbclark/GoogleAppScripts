@@ -1,0 +1,38 @@
+[
+  {
+    "eventId": "2",
+    "season": 2026,
+    "tournamentSlug": "american-express",
+    "tournamentName": "The American Express"
+  },
+  {
+    "eventId": "4",
+    "season": 2026,
+    "tournamentSlug": "farmers",
+    "tournamentName": "Farmers Insurance Open"
+  },
+  {
+    "eventId": "7",
+    "season": 2026,
+    "tournamentSlug": "genesis-invitational",
+    "tournamentName": "The Genesis Invitational"
+  },
+  {
+    "eventId": "5",
+    "season": 2026,
+    "tournamentSlug": "pebble-beach",
+    "tournamentName": "AT&T Pebble Beach Pro-Am"
+  },
+  {
+    "eventId": "6",
+    "season": 2026,
+    "tournamentSlug": "sony-open",
+    "tournamentName": "Sony Open in Hawaii"
+  },
+  {
+    "eventId": "3",
+    "season": 2026,
+    "tournamentSlug": "wm-phoenix-open",
+    "tournamentName": "WM Phoenix Open"
+  }
+]

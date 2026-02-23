@@ -1,0 +1,131 @@
+{
+  "generatedAt": "2026-02-23T18:20:23.121Z",
+  "metrics": [
+    {
+      "metric": "Fairway Proximity",
+      "count": 581,
+      "meanDelta": -4.492908200973142,
+      "meanAbsDelta": 11.056504013522895,
+      "stdDev": 13.846538256083887,
+      "biasZ": 0.3244788060293012,
+      "overPct": 36.316695352839936,
+      "underPct": 63.51118760757315,
+      "status": "WATCH"
+    },
+    {
+      "metric": "Rough Proximity",
+      "count": 581,
+      "meanDelta": -6.281927369772761,
+      "meanAbsDelta": 23.070966883195233,
+      "stdDev": 29.23744911337354,
+      "biasZ": 0.21485894153807478,
+      "overPct": 43.88984509466437,
+      "underPct": 55.93803786574871,
+      "status": "WATCH"
+    },
+    {
+      "metric": "Driving Distance",
+      "count": 581,
+      "meanDelta": -14.392077694235569,
+      "meanAbsDelta": 81.8158634840113,
+      "stdDev": 116.71579604443342,
+      "biasZ": 0.12330873953647663,
+      "overPct": 31.32530120481928,
+      "underPct": 68.50258175559381,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG Total",
+      "count": 581,
+      "meanDelta": 0.2166517498565692,
+      "meanAbsDelta": 1.4345315547905901,
+      "stdDev": 1.9176980405513422,
+      "biasZ": 0.11297490286545914,
+      "overPct": 50.602409638554214,
+      "underPct": 49.39759036144578,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG OTT",
+      "count": 581,
+      "meanDelta": 0.05587162937464144,
+      "meanAbsDelta": 0.49212578886976444,
+      "stdDev": 0.6337069265893868,
+      "biasZ": 0.0881663542409782,
+      "overPct": 50.25817555938038,
+      "underPct": 49.5697074010327,
+      "status": "STABLE"
+    },
+    {
+      "metric": "Greens in Regulation",
+      "count": 581,
+      "meanDelta": -0.02058400458978771,
+      "meanAbsDelta": 0.20466095238095228,
+      "stdDev": 0.2764810103554861,
+      "biasZ": 0.07444997601579138,
+      "overPct": 37.52151462994836,
+      "underPct": 62.306368330464714,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG T2G",
+      "count": 581,
+      "meanDelta": 0.09383175559380377,
+      "meanAbsDelta": 0.9676613597246124,
+      "stdDev": 1.3087254325771527,
+      "biasZ": 0.07169705215327674,
+      "overPct": 49.225473321858864,
+      "underPct": 50.602409638554214,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG Approach",
+      "count": 581,
+      "meanDelta": 0.04293000573723465,
+      "meanAbsDelta": 0.7122653471026972,
+      "stdDev": 0.9022273686458534,
+      "biasZ": 0.04758224725732715,
+      "overPct": 48.364888123924274,
+      "underPct": 51.46299483648882,
+      "status": "STABLE"
+    },
+    {
+      "metric": "Driving Accuracy",
+      "count": 581,
+      "meanDelta": 0.010481026965002844,
+      "meanAbsDelta": 0.19310658634538155,
+      "stdDev": 0.2597801708572051,
+      "biasZ": 0.040345754375394616,
+      "overPct": 48.88123924268503,
+      "underPct": 50.94664371772806,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG Putting",
+      "count": 581,
+      "meanDelta": 0.019267068273092353,
+      "meanAbsDelta": 0.7467489959839366,
+      "stdDev": 0.9620520805980161,
+      "biasZ": 0.020027053276695638,
+      "overPct": 50.08605851979346,
+      "underPct": 49.74182444061962,
+      "status": "STABLE"
+    },
+    {
+      "metric": "SG Around Green",
+      "count": 581,
+      "meanDelta": -0.005052495697074023,
+      "meanAbsDelta": 0.4701672403901322,
+      "stdDev": 0.6179266152574683,
+      "biasZ": 0.008176530306869573,
+      "overPct": 49.39759036144578,
+      "underPct": 50.4302925989673,
+      "status": "STABLE"
+    }
+  ],
+  "meta": {
+    "source": "season_aggregate",
+    "tournamentCount": 6,
+    "totalSamples": 6391
+  }
+}

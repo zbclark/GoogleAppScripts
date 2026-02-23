@@ -1,0 +1,47 @@
+{
+  "generatedAt": "2026-02-23T18:20:23.086Z",
+  "entries": [
+    {
+      "tournament": "american-express",
+      "displayName": "American Express (2026)",
+      "eventId": "2",
+      "courseType": "BALANCED",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "farmers",
+      "displayName": "Farmers (2026)",
+      "eventId": "4",
+      "courseType": "POWER",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "genesis-invitational",
+      "displayName": "Genesis Invitational (2026)",
+      "eventId": "7",
+      "courseType": "BALANCED",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "pebble-beach",
+      "displayName": "Pebble Beach (2026)",
+      "eventId": "5",
+      "courseType": "TECHNICAL",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "sony-open",
+      "displayName": "Sony Open (2026)",
+      "eventId": "6",
+      "courseType": "POWER",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "wm-phoenix-open",
+      "displayName": "Wm Phoenix Open (2026)",
+      "eventId": "3",
+      "courseType": "POWER",
+      "source": "config_csv"
+    }
+  ]
+}

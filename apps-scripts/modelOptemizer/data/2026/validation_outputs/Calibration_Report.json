@@ -1,0 +1,633 @@
+{
+  "tournaments": [
+    {
+      "name": "American Express (2026)",
+      "topFinishers": [
+        {
+          "name": "Scheffler, Scottie",
+          "dgId": "18417",
+          "actualFinish": 1,
+          "predictedRank": 1,
+          "missScore": 0,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Day, Jason",
+          "dgId": "9771",
+          "actualFinish": 2,
+          "predictedRank": 66,
+          "missScore": 64,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Putnam, Andrew",
+          "dgId": "14704",
+          "actualFinish": 2,
+          "predictedRank": 91,
+          "missScore": 89,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Gerard, Ryan",
+          "dgId": "29767",
+          "actualFinish": 2,
+          "predictedRank": 8,
+          "missScore": 6,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "McCarty, Matt",
+          "dgId": "28635",
+          "actualFinish": 2,
+          "predictedRank": 125,
+          "missScore": 123,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Stevens, Sam",
+          "dgId": "25569",
+          "actualFinish": 6,
+          "predictedRank": 119,
+          "missScore": 113,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Kim, Si Woo",
+          "dgId": "14609",
+          "actualFinish": 6,
+          "predictedRank": 21,
+          "missScore": 15,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Theegala, Sahith",
+          "dgId": "23014",
+          "actualFinish": 8,
+          "predictedRank": 74,
+          "missScore": 66,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Hoge, Tom",
+          "dgId": "15575",
+          "actualFinish": 8,
+          "predictedRank": 38,
+          "missScore": 30,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Smotherman, Austin",
+          "dgId": "22985",
+          "actualFinish": 8,
+          "predictedRank": 41,
+          "missScore": 33,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Henley, Russell",
+          "dgId": "14578",
+          "actualFinish": 8,
+          "predictedRank": 4,
+          "missScore": 4,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Li, Haotong",
+          "dgId": "15310",
+          "actualFinish": 8,
+          "predictedRank": 44,
+          "missScore": 36,
+          "inTopXPredicted": "Top 50"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 3,
+        "top10Predicted": 4,
+        "top20Predicted": 7,
+        "avgMissTop5": 56.4,
+        "avgMissTop10": 48.25
+      }
+    },
+    {
+      "name": "Farmers (2026)",
+      "topFinishers": [
+        {
+          "name": "Bridgeman, Jacob",
+          "dgId": "29433",
+          "actualFinish": 1,
+          "predictedRank": 999,
+          "missScore": 998,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Kitayama, Kurt",
+          "dgId": "21891",
+          "actualFinish": 2,
+          "predictedRank": 999,
+          "missScore": 997,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "McIlroy, Rory",
+          "dgId": "10091",
+          "actualFinish": 2,
+          "predictedRank": 999,
+          "missScore": 997,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Scott, Adam",
+          "dgId": "6430",
+          "actualFinish": 4,
+          "predictedRank": 46,
+          "missScore": 42,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Potgieter, Aldrich",
+          "dgId": "27900",
+          "actualFinish": 5,
+          "predictedRank": 124,
+          "missScore": 119,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Knapp, Jake",
+          "dgId": "19396",
+          "actualFinish": 6,
+          "predictedRank": 63,
+          "missScore": 57,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Morikawa, Collin",
+          "dgId": "22085",
+          "actualFinish": 7,
+          "predictedRank": 999,
+          "missScore": 992,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Young, Cameron",
+          "dgId": "26651",
+          "actualFinish": 7,
+          "predictedRank": 67,
+          "missScore": 60,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Fleetwood, Tommy",
+          "dgId": "12294",
+          "actualFinish": 7,
+          "predictedRank": 999,
+          "missScore": 992,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Fox, Ryan",
+          "dgId": "11889",
+          "actualFinish": 7,
+          "predictedRank": 999,
+          "missScore": 992,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Schauffele, Xander",
+          "dgId": "19895",
+          "actualFinish": 7,
+          "predictedRank": 6,
+          "missScore": 1,
+          "inTopXPredicted": "Top 20"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 1,
+        "top10Predicted": 1,
+        "top20Predicted": 2,
+        "avgMissTop5": 630.6,
+        "avgMissTop10": 567.9090909090909
+      }
+    },
+    {
+      "name": "Genesis Invitational (2026)",
+      "topFinishers": [
+        {
+          "name": "Bridgeman, Jacob",
+          "dgId": "29433",
+          "actualFinish": 1,
+          "predictedRank": 31,
+          "missScore": 30,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Kitayama, Kurt",
+          "dgId": "21891",
+          "actualFinish": 2,
+          "predictedRank": 40,
+          "missScore": 38,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "McIlroy, Rory",
+          "dgId": "10091",
+          "actualFinish": 2,
+          "predictedRank": 5,
+          "missScore": 3,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Scott, Adam",
+          "dgId": "6430",
+          "actualFinish": 4,
+          "predictedRank": 38,
+          "missScore": 34,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Potgieter, Aldrich",
+          "dgId": "27900",
+          "actualFinish": 5,
+          "predictedRank": 71,
+          "missScore": 66,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Knapp, Jake",
+          "dgId": "19396",
+          "actualFinish": 6,
+          "predictedRank": 44,
+          "missScore": 38,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Morikawa, Collin",
+          "dgId": "22085",
+          "actualFinish": 7,
+          "predictedRank": 3,
+          "missScore": 4,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Young, Cameron",
+          "dgId": "26651",
+          "actualFinish": 7,
+          "predictedRank": 46,
+          "missScore": 39,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Fleetwood, Tommy",
+          "dgId": "12294",
+          "actualFinish": 7,
+          "predictedRank": 9,
+          "missScore": 2,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Fox, Ryan",
+          "dgId": "11889",
+          "actualFinish": 7,
+          "predictedRank": 13,
+          "missScore": 6,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Schauffele, Xander",
+          "dgId": "19895",
+          "actualFinish": 7,
+          "predictedRank": 8,
+          "missScore": 1,
+          "inTopXPredicted": "Top 20"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 5,
+        "top10Predicted": 5,
+        "top20Predicted": 10,
+        "avgMissTop5": 34.2,
+        "avgMissTop10": 23.727272727272727
+      }
+    },
+    {
+      "name": "AT&T - Pebble Beach (2026)",
+      "topFinishers": [
+        {
+          "name": "Morikawa, Collin",
+          "dgId": "22085",
+          "actualFinish": 1,
+          "predictedRank": 10,
+          "missScore": 9,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Lee, Min Woo",
+          "dgId": "16841",
+          "actualFinish": 2,
+          "predictedRank": 67,
+          "missScore": 65,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Straka, Sepp",
+          "dgId": "17511",
+          "actualFinish": 2,
+          "predictedRank": 17,
+          "missScore": 15,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Fleetwood, Tommy",
+          "dgId": "12294",
+          "actualFinish": 4,
+          "predictedRank": 13,
+          "missScore": 9,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Scheffler, Scottie",
+          "dgId": "18417",
+          "actualFinish": 4,
+          "predictedRank": 1,
+          "missScore": 3,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Burns, Sam",
+          "dgId": "19483",
+          "actualFinish": 6,
+          "predictedRank": 60,
+          "missScore": 54,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Bhatia, Akshay",
+          "dgId": "26096",
+          "actualFinish": 6,
+          "predictedRank": 37,
+          "missScore": 31,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Knapp, Jake",
+          "dgId": "19396",
+          "actualFinish": 8,
+          "predictedRank": 31,
+          "missScore": 23,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Lowry, Shane",
+          "dgId": "13900",
+          "actualFinish": 8,
+          "predictedRank": 5,
+          "missScore": 3,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Hisatsune, Ryo",
+          "dgId": "22760",
+          "actualFinish": 8,
+          "predictedRank": 48,
+          "missScore": 40,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Echavarria, Nico",
+          "dgId": "22833",
+          "actualFinish": 8,
+          "predictedRank": 57,
+          "missScore": 49,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Matsuyama, Hideki",
+          "dgId": "13562",
+          "actualFinish": 8,
+          "predictedRank": 2,
+          "missScore": 6,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Bridgeman, Jacob",
+          "dgId": "29433",
+          "actualFinish": 8,
+          "predictedRank": 42,
+          "missScore": 34,
+          "inTopXPredicted": "Top 50"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 6,
+        "top10Predicted": 6,
+        "top20Predicted": 10,
+        "avgMissTop5": 20.2,
+        "avgMissTop10": 26.23076923076923
+      }
+    },
+    {
+      "name": "Sony Open (2026)",
+      "topFinishers": [
+        {
+          "name": "Gotterup, Chris",
+          "dgId": "27774",
+          "actualFinish": 1,
+          "predictedRank": 64,
+          "missScore": 63,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Gerard, Ryan",
+          "dgId": "29767",
+          "actualFinish": 2,
+          "predictedRank": 36,
+          "missScore": 34,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Rodgers, Patrick",
+          "dgId": "16283",
+          "actualFinish": 3,
+          "predictedRank": 44,
+          "missScore": 41,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Bridgeman, Jacob",
+          "dgId": "29433",
+          "actualFinish": 4,
+          "predictedRank": 48,
+          "missScore": 44,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "MacIntyre, Robert",
+          "dgId": "23323",
+          "actualFinish": 4,
+          "predictedRank": 22,
+          "missScore": 18,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Hodges, Lee",
+          "dgId": "25157",
+          "actualFinish": 6,
+          "predictedRank": 20,
+          "missScore": 14,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Riley, Davis",
+          "dgId": "19872",
+          "actualFinish": 6,
+          "predictedRank": 69,
+          "missScore": 63,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Berger, Daniel",
+          "dgId": "17606",
+          "actualFinish": 6,
+          "predictedRank": 6,
+          "missScore": 0,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Hall, Harry",
+          "dgId": "27194",
+          "actualFinish": 6,
+          "predictedRank": 3,
+          "missScore": 3,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Pendrith, Taylor",
+          "dgId": "17780",
+          "actualFinish": 6,
+          "predictedRank": 16,
+          "missScore": 10,
+          "inTopXPredicted": "Top 20"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 4,
+        "top10Predicted": 5,
+        "top20Predicted": 8,
+        "avgMissTop5": 40,
+        "avgMissTop10": 29
+      }
+    },
+    {
+      "name": "WM Phoenix Open (2026)",
+      "topFinishers": [
+        {
+          "name": "Gotterup, Chris",
+          "dgId": "27774",
+          "actualFinish": 1,
+          "predictedRank": 103,
+          "missScore": 102,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Matsuyama, Hideki",
+          "dgId": "13562",
+          "actualFinish": 2,
+          "predictedRank": 3,
+          "missScore": 1,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Thorbjornsen, Michael",
+          "dgId": "26649",
+          "actualFinish": 3,
+          "predictedRank": 122,
+          "missScore": 119,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Bhatia, Akshay",
+          "dgId": "26096",
+          "actualFinish": 3,
+          "predictedRank": 68,
+          "missScore": 65,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Kim, Si Woo",
+          "dgId": "14609",
+          "actualFinish": 3,
+          "predictedRank": 11,
+          "missScore": 8,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Scheffler, Scottie",
+          "dgId": "18417",
+          "actualFinish": 3,
+          "predictedRank": 1,
+          "missScore": 2,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Hojgaard, Nicolai",
+          "dgId": "23602",
+          "actualFinish": 3,
+          "predictedRank": 73,
+          "missScore": 70,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Knapp, Jake",
+          "dgId": "19396",
+          "actualFinish": 8,
+          "predictedRank": 113,
+          "missScore": 105,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Fitzpatrick, Matt",
+          "dgId": "17646",
+          "actualFinish": 9,
+          "predictedRank": 66,
+          "missScore": 57,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Coody, Pierceson",
+          "dgId": "28309",
+          "actualFinish": 10,
+          "predictedRank": 34,
+          "missScore": 24,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Hovland, Viktor",
+          "dgId": "18841",
+          "actualFinish": 10,
+          "predictedRank": 2,
+          "missScore": 8,
+          "inTopXPredicted": "Top 20"
+        },
+        {
+          "name": "Hisatsune, Ryo",
+          "dgId": "22760",
+          "actualFinish": 10,
+          "predictedRank": 31,
+          "missScore": 21,
+          "inTopXPredicted": "Top 50"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 4,
+        "top10Predicted": 4,
+        "top20Predicted": 6,
+        "avgMissTop5": 52.42857142857143,
+        "avgMissTop10": 48.5
+      }
+    }
+  ],
+  "totalTop5": 32,
+  "predictedTop5InTop20": 10,
+  "totalTop10": 69,
+  "predictedTop10InTop30": 25,
+  "generatedAt": "2026-02-23T18:20:22.730Z"
+}
