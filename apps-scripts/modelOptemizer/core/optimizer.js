@@ -4346,6 +4346,44 @@ function resolveTournamentFile(suffix, tournamentName, season, fallbackName) {
   return resolveDataFile(`${suffix}.csv`);
 }
 
+function listApproachCsvCandidates(season, excludePath = null) {
+  const seasonInputDirs = listSeasonInputDirs(season);
+  const dirs = [
+    ...(TOURNAMENT_INPUT_DIRS || []),
+    ...seasonInputDirs,
+    DATA_DIR,
+    DEFAULT_DATA_DIR
+  ].filter(Boolean);
+  const normalizedExclude = excludePath ? path.resolve(excludePath) : null;
+  const candidates = [];
+
+  dirs.forEach(dir => {
+    if (!dir || !fs.existsSync(dir)) return;
+    fs.readdirSync(dir).forEach(file => {
+      if (!file.toLowerCase().endsWith('.csv')) return;
+      if (!file.toLowerCase().includes('approach skill')) return;
+      const filePath = path.resolve(dir, file);
+      if (normalizedExclude && path.resolve(filePath) === normalizedExclude) return;
+      let mtimeMs = 0;
+      try {
+        mtimeMs = fs.statSync(filePath).mtimeMs || 0;
+      } catch (error) {
+        mtimeMs = 0;
+      }
+      candidates.push({ file: file, path: filePath, mtimeMs });
+    });
+  });
+
+  return candidates;
+}
+
+function resolvePreviousApproachCsv(season, currentPath) {
+  const candidates = listApproachCsvCandidates(season, currentPath);
+  if (candidates.length === 0) return null;
+  candidates.sort((a, b) => (b.mtimeMs || 0) - (a.mtimeMs || 0));
+  return candidates[0].path;
+}
+
 function detectPostTournamentFromHistory(historyPath, eventId, season) {
   if (!historyPath || !fs.existsSync(historyPath)) return false;
   try {
@@ -5508,10 +5546,29 @@ async function runAdaptiveOptimizer() {
       }
     }
 
-    const previousRows = loadApproachCsv('snapshot:previous');
-    const currentRows = loadApproachCsv('snapshot:current');
+    let previousRows = loadApproachCsv('snapshot:previous');
+    let currentRows = loadApproachCsv('snapshot:current');
+    let previousSource = 'snapshot:previous';
+    let currentSource = 'snapshot:current';
+
     if (previousRows.length === 0 || currentRows.length === 0) {
-      console.warn('ℹ️  Approach delta auto-generation skipped (missing current/previous snapshots).');
+      const currentApproachPath = APPROACH_PATH && fs.existsSync(APPROACH_PATH)
+        ? APPROACH_PATH
+        : null;
+      const previousApproachPath = resolvePreviousApproachCsv(CURRENT_SEASON, currentApproachPath);
+      const csvCurrentRows = currentApproachPath ? loadApproachCsv(currentApproachPath) : [];
+      const csvPreviousRows = previousApproachPath ? loadApproachCsv(previousApproachPath) : [];
+      if (csvCurrentRows.length > 0 && csvPreviousRows.length > 0) {
+        currentRows = csvCurrentRows;
+        previousRows = csvPreviousRows;
+        currentSource = currentApproachPath;
+        previousSource = previousApproachPath;
+        console.log('✓ Approach delta auto-generation using approach CSVs (current + previous tournaments).');
+      }
+    }
+
+    if (previousRows.length === 0 || currentRows.length === 0) {
+      console.warn('ℹ️  Approach delta auto-generation skipped (missing current/previous snapshots or approach CSVs).');
     } else {
       const deltaRows = computeApproachDeltas({ previousRows, currentRows });
       const fieldIdSet = new Set(
@@ -5528,16 +5585,18 @@ async function runAdaptiveOptimizer() {
       if (filteredRows.length === 0) {
         console.warn('ℹ️  Approach delta auto-generation skipped (no overlapping players).');
       } else {
-        const outputName = `approach_deltas_${new Date().toISOString().slice(0, 10)}.json`;
+        const deltaSlug = normalizeTournamentSlug(TOURNAMENT_NAME || tournamentNameFallback) || `event-${CURRENT_EVENT_ID || 'unknown'}`;
+        const dateStamp = new Date().toISOString().slice(0, 10).replace(/-/g, '_');
+        const outputName = `approach_deltas_${deltaSlug}_${dateStamp}.json`;
         const outputPath = path.resolve(APPROACH_DELTA_DIR, outputName);
         const meta = {
           generatedAt: new Date().toISOString(),
-          previousPath: 'snapshot:previous',
-          currentPath: 'snapshot:current',
+          previousPath: previousSource,
+          currentPath: currentSource,
           fieldCount: fieldIdSet.size,
           beforeCount: deltaRows.length,
           afterCount: filteredRows.length,
-          note: 'Auto-generated in pre-tournament mode from YTD snapshots.'
+          note: 'Auto-generated in pre-tournament mode from snapshots or approach CSVs.'
         };
         writeJsonFile(outputPath, { meta, rows: filteredRows });
         APPROACH_DELTA_PATH = outputPath;
@@ -6830,8 +6889,7 @@ async function runAdaptiveOptimizer() {
       };
 
       const preEventTemplateTargets = [
-        path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js'),
-        path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
+        path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js')
       ];
 
       preEventTemplateTargets.forEach(filePath => {
@@ -6857,8 +6915,7 @@ async function runAdaptiveOptimizer() {
 
       if (deltaScoresByEvent) {
         const deltaScoreTargets = [
-          path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js'),
-          path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'deltaPlayerScores.js')
+          path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js')
         ];
         const outputs = writeDeltaPlayerScoresFiles(deltaScoreTargets, deltaScoresByEvent, {
           dryRun: DRY_RUN,
@@ -8865,8 +8922,7 @@ async function runAdaptiveOptimizer() {
     : [];
 
   const writeBackTargets = [
-    path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js'),
-    path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'templateLoader.js')
+    path.resolve(ROOT_DIR, 'utilities', 'weightTemplates.js')
   ];
 
   writeBackTargets.forEach(filePath => {

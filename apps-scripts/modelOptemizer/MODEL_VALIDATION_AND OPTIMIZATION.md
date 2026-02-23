@@ -16,7 +16,8 @@ This document provides a **detailed, review-friendly** guide to how `apps-script
 - **Tournament slug:** lowercase, hyphen‑separated, no year, no punctuation (e.g., `genesis-invitational`, `wm-phoenix-open`).
 - **Manifest:** `data/<season>/manifest.json` contains `{ eventId, season, tournamentSlug, tournamentName }` entries.
 - **Mode folders:** `pre_event` and `post_event` only (no other variations).
-- **Artifacts:** use stable filenames (`optimizer_results.json`, `rankings.csv`, `tournament_results.json`) and never include dates in filenames (dates belong in file content).
+- **Artifacts:** use stable filenames (`optimizer_results.json`, `rankings.csv`, `<tournament-slug>_results.json`) and never include dates in filenames (dates belong in file content).
+  - **Exception:** approach delta JSONs are date‑stamped: `approach_deltas_<tournament-slug>_YYYY_MM_DD.json`.
 
 ### Example directory tree
 
@@ -44,14 +45,12 @@ data/
           course_history_regression.json
         dryrun/
           dryrun_weightTemplates.js
-          dryrun_templateLoader.js
           dryrun_deltaPlayerScores.node.js
-          dryrun_deltaPlayerScores.gas.js
       post_event/
         optimizer_results.json
         optimizer_results.txt
-        tournament_results.json
-        tournament_results.csv
+        genesis-invitational_results.json
+        genesis-invitational_results.csv
     validation_outputs/
       validation_summary.csv
       validation_summary.json
@@ -389,8 +388,9 @@ Below is a step‑by‑step view of **exact data used**, **time windows**, and *
   - **Current:** API approach snapshot (current week)
   - **Previous:** API approach snapshot from the **prior week’s YTD** snapshot
   - Optional API field snapshot to filter deltas to the tournament field
+- **CSV fallback (pre‑tournament):** current + previous tournament `* - Approach Skill.csv` files when snapshots are missing.
 - **What it produces:**
-  - JSON: `data/approach_deltas/approach_deltas_<YYYY-MM-DD>.json` (default)
+  - JSON: `data/approach_deltas/approach_deltas_<tournament-slug>_YYYY_MM_DD.json`
   - JSON includes `meta` (timestamps, field filter) and `rows` (per‑player delta metrics)
 - **Where the files go:**
   - JSON → `apps-scripts/modelOptemizer/data/approach_deltas/`
@@ -495,17 +495,13 @@ If `--writeTemplates` is used:
 
 - Writes the blended pre‑event template into:
   - `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
-  - `apps-scripts/Golf_Algorithm_Library/utilities/templateLoader.js`
-  - Writes **delta player scores** into:
-    - `apps-scripts/modelOptemizer/utilities/deltaPlayerScores.js`
-    - `apps-scripts/Golf_Algorithm_Library/utilities/deltaPlayerScores.js`
+- Writes **delta player scores** into:
+  - `apps-scripts/modelOptemizer/utilities/deltaPlayerScores.js`
 
 Dry‑run mode writes to:
 
 - `data/<season>/<tournament>/pre_event/dryrun/dryrun_weightTemplates.js`
-- `data/<season>/<tournament>/pre_event/dryrun/dryrun_templateLoader.js`
 - `data/<season>/<tournament>/pre_event/dryrun/dryrun_deltaPlayerScores.node.js`
-- `data/<season>/<tournament>/pre_event/dryrun/dryrun_deltaPlayerScores.gas.js`
 
 Templates are only written when:
 
@@ -661,12 +657,12 @@ Post‑tournament validation is being **ported to Node** so the optimizer can ru
     - `SG BS`
   - **Row 6+ (data):** notes in column 1 + per‑player metrics.
 
-**Parsing note:** the Node parser must **skip metadata rows** until the header row is found, then treat column 1 as the notes/analysis field (non‑numeric) and parse the rest by header label.
+**Parsing note:** the Node parser must **skip metadata rows** until the header row is found, then treat column 1 as the notes/analysis field (non‑numeric) and parse the rest by header label. Validation runs will also fall back to `post_event/<tournament-slug>_results.csv` if the JSON snapshot is missing.
 
 **Output location (Node):**
 
-- **Authoritative results JSON:** `data/<season>/<tournament>/post_event/tournament_results.json`
-- **Optional human‑readable CSV:** `data/<season>/<tournament>/post_event/tournament_results.csv`
+- **Authoritative results JSON:** `data/<season>/<tournament>/post_event/<tournament-slug>_results.json`
+- **Optional human‑readable CSV:** `data/<season>/<tournament>/post_event/<tournament-slug>_results.csv`
 
 **CSV parsing rules (GAS results export → Node ingestion, if needed for QA/export parity):**
 
@@ -715,7 +711,7 @@ Post‑tournament validation is being **ported to Node** so the optimizer can ru
 - [ ] Use cached groupStats (or recompute) to score trend significance for result‑sheet notes.
 - [ ] Export z‑scores + mean/stdDev for conditional formatting.
 - [ ] Emit **Tournament Results JSON** (authoritative for validation).
-- [ ] Emit optional CSV for human review (same header contract as GAS export).
+- [ ] Emit CSV for human review (same header contract as GAS export).
 
 **Function‑by‑function port map (Post‑Event Results / `tournamentResults_historical.js`):**
 
@@ -745,7 +741,7 @@ Post‑tournament validation is being **ported to Node** so the optimizer can ru
   Parsing rules: rank 1..N; limit to top 150 (consistent with GAS).
 
 3. **Load results**
-  Source priority (post‑tournament): Historical Data CSV → Historical Rounds API → Live Tournament Results API.
+  Source priority (post‑tournament): Tournament Results JSON → Tournament Results CSV → Historical Data CSV → Historical Rounds API → Live Tournament Results API.
   Required fields: **DG ID**, **Player Name**, **Finish Position**.
   Parsing rules: accept ties (`T#` / `#T`), ignore blanks; **CUT/WD/DQ** → fallback to **worst finish + 1** when mapping.
 
@@ -995,8 +991,8 @@ If dry‑run, outputs are written under `data/<season>/<tournament>/<mode>/dryru
   - CSV → local repo or cache.
   - API → `utilities/dataGolfClient.js`.
 - **Outputs (Node):**
-  - `data/<season>/<tournament>/post_event/tournament_results.json`
-  - `data/<season>/<tournament>/post_event/tournament_results.csv` (optional human‑readable export)
+  - `data/<season>/<tournament>/post_event/<tournament-slug>_results.json`
+  - `data/<season>/<tournament>/post_event/<tournament-slug>_results.csv` (optional human‑readable export)
 
 #### Step 4.2 — Algorithm Validation (Node Port)
 

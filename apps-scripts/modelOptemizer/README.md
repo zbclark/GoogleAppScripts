@@ -249,16 +249,12 @@ All outputs are written to:
 **Dry‑run template previews (only when `--writeTemplates` is used in dry‑run mode):**
 
 - `output/dryrun_weightTemplates.js`
-- `output/dryrun_templateLoader.js`
 
 **Dry‑run validation template previews (only when `--writeValidationTemplates` is used in dry‑run mode):**
 
 - `output/dryrun_POWER_weightTemplates.js`
 - `output/dryrun_BALANCED_weightTemplates.js`
 - `output/dryrun_TECHNICAL_weightTemplates.js`
-- `output/dryrun_POWER_templateLoader.js`
-- `output/dryrun_BALANCED_templateLoader.js`
-- `output/dryrun_TECHNICAL_templateLoader.js`
 
 ## Weekly approach delta pipeline
 
@@ -330,7 +326,6 @@ node core/optimizer.js --event [event id] --season [season] --tournament "[tourn
 ### Template write‑back paths (only when `--writeTemplates` is used)
 
 - `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
-- `apps-scripts/Golf_Algorithm_Library/utilities/templateLoader.js`
 
 These are updated with the optimized weights for the target event.
 

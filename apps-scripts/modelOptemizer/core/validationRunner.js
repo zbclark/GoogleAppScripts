@@ -103,6 +103,127 @@ const METRIC_ALIASES = {
   'Course Management - Approach >200 FW Prox': 'Course Management: Approach >200 FW Prox'
 };
 
+const RESULTS_HEADERS = [
+  'Performance Analysis',
+  'DG ID',
+  'Player Name',
+  'Model Rank',
+  'Finish Position',
+  'Score',
+  'SG Total',
+  'SG Total - Model',
+  'Driving Distance',
+  'Driving Distance - Model',
+  'Driving Accuracy',
+  'Driving Accuracy - Model',
+  'SG T2G',
+  'SG T2G - Model',
+  'SG Approach',
+  'SG Approach - Model',
+  'SG Around Green',
+  'SG Around Green - Model',
+  'SG OTT',
+  'SG OTT - Model',
+  'SG Putting',
+  'SG Putting - Model',
+  'Greens in Regulation',
+  'Greens in Regulation - Model',
+  'Fairway Proximity',
+  'Fairway Proximity - Model',
+  'Rough Proximity',
+  'Rough Proximity - Model',
+  'SG BS'
+];
+
+const RESULTS_METRIC_TYPES = {
+  LOWER_BETTER: new Set([
+    'Fairway Proximity',
+    'Rough Proximity',
+    'Fairway Proximity - Model',
+    'Rough Proximity - Model'
+  ]),
+  HIGHER_BETTER: new Set([
+    'SG Total',
+    'SG T2G',
+    'SG Approach',
+    'SG Around Green',
+    'SG OTT',
+    'SG Putting',
+    'SG BS',
+    'SG Total - Model',
+    'SG T2G - Model',
+    'SG Approach - Model',
+    'SG Around Green - Model',
+    'SG OTT - Model',
+    'SG Putting - Model',
+    'Driving Distance',
+    'Driving Distance - Model',
+    'Driving Accuracy',
+    'Driving Accuracy - Model',
+    'Greens in Regulation',
+    'Greens in Regulation - Model'
+  ]),
+  PERCENTAGE: new Set([
+    'Driving Accuracy',
+    'Driving Accuracy - Model',
+    'Greens in Regulation',
+    'Greens in Regulation - Model'
+  ]),
+  HAS_MODEL: new Set([
+    'SG Total',
+    'SG T2G',
+    'SG Approach',
+    'SG Around Green',
+    'SG OTT',
+    'SG Putting',
+    'Driving Distance',
+    'Driving Accuracy',
+    'Greens in Regulation',
+    'Fairway Proximity',
+    'Rough Proximity',
+    'WAR'
+  ]),
+  DECIMAL_3: new Set([
+    'SG Total',
+    'SG T2G',
+    'SG Approach',
+    'SG Around Green',
+    'SG OTT',
+    'SG Putting',
+    'SG BS',
+    'SG Total - Model',
+    'SG T2G - Model',
+    'SG Approach - Model',
+    'SG Around Green - Model',
+    'SG OTT - Model',
+    'SG Putting - Model'
+  ]),
+  DECIMAL_2: new Set([
+    'Driving Distance',
+    'Driving Distance - Model',
+    'Fairway Proximity',
+    'Fairway Proximity - Model',
+    'Rough Proximity',
+    'Rough Proximity - Model'
+  ]),
+  RANK: new Set(['Model Rank', 'Finish Position'])
+};
+
+const RESULT_METRIC_FIELDS = [
+  { label: 'SG Total', key: 'sg_total' },
+  { label: 'Driving Distance', key: 'driving_dist' },
+  { label: 'Driving Accuracy', key: 'driving_acc' },
+  { label: 'SG T2G', key: 'sg_t2g' },
+  { label: 'SG Approach', key: 'sg_app' },
+  { label: 'SG Around Green', key: 'sg_arg' },
+  { label: 'SG OTT', key: 'sg_ott' },
+  { label: 'SG Putting', key: 'sg_putt' },
+  { label: 'Greens in Regulation', key: 'gir' },
+  { label: 'Fairway Proximity', key: 'prox_fw' },
+  { label: 'Rough Proximity', key: 'prox_rgh' },
+  { label: 'SG BS', key: 'sg_bs', hasModel: false }
+];
+
 const getValidationOutputDir = (dataRootDir, season) => {
   return path.resolve(dataRootDir, String(season), DEFAULT_OUTPUT_DIR_NAME);
 };
@@ -375,6 +496,506 @@ const parseNumericValue = value => {
     return parsed / 100;
   }
   return parsed;
+};
+
+const formatPositionText = value => {
+  if (value === null || value === undefined) return '';
+  const raw = String(value).trim();
+  if (!raw) return '';
+  return raw;
+};
+
+const parseModelRankingData = rankingsCsvPath => {
+  if (!rankingsCsvPath || !fs.existsSync(rankingsCsvPath)) {
+    return { playersById: new Map(), metricStats: {} };
+  }
+
+  const rows = parseCsvRows(rankingsCsvPath);
+  const headerIndex = findHeaderRowIndex(rows, ['dg id', 'player name', 'rank']);
+  if (headerIndex === -1) return { playersById: new Map(), metricStats: {} };
+  const headers = rows[headerIndex];
+  const headerMap = buildHeaderIndexMap(headers);
+
+  const dgIdIdx = headerMap.get('dg id');
+  const nameIdx = headerMap.get('player name');
+  const rankIdx = headerMap.get('rank') ?? headerMap.get('model rank');
+  const warIdx = headerMap.get('war');
+
+  const metricIndices = new Map();
+  RESULT_METRIC_FIELDS.forEach(field => {
+    if (!field.label || field.hasModel === false) return;
+    const idx = headerMap.get(normalizeHeader(field.label));
+    if (idx !== undefined) metricIndices.set(field.label, idx);
+  });
+
+  const trendIndices = new Map();
+  headers.forEach((header, idx) => {
+    const headerText = String(header || '').trim();
+    if (!headerText || !headerText.toLowerCase().includes('trend')) return;
+    const baseMetric = headerText.replace(/\s*trend\s*$/i, '').trim();
+    if (!RESULTS_METRIC_TYPES.HAS_MODEL.has(baseMetric)) return;
+    trendIndices.set(baseMetric, idx);
+  });
+
+  const playersById = new Map();
+  const metricBuckets = {};
+
+  rows.slice(headerIndex + 1).forEach(row => {
+    const dgId = dgIdIdx !== undefined ? String(row[dgIdIdx] || '').trim() : '';
+    if (!dgId) return;
+    const name = nameIdx !== undefined ? String(row[nameIdx] || '').trim() : '';
+    const rankValue = rankIdx !== undefined ? parseInt(String(row[rankIdx] || '').trim(), 10) : NaN;
+    const warValue = warIdx !== undefined ? parseNumericValue(row[warIdx]) : null;
+
+    const metrics = {};
+    metricIndices.forEach((idx, label) => {
+      const value = parseNumericValue(row[idx]);
+      if (typeof value === 'number' && !Number.isNaN(value)) {
+        metrics[label] = value;
+        if (!metricBuckets[label]) metricBuckets[label] = [];
+        metricBuckets[label].push(value);
+      }
+    });
+
+    const trends = {};
+    trendIndices.forEach((idx, label) => {
+      const value = parseNumericValue(row[idx]);
+      if (typeof value === 'number' && !Number.isNaN(value)) {
+        trends[label] = value;
+      }
+    });
+
+    playersById.set(dgId, {
+      dgId,
+      name,
+      rank: Number.isNaN(rankValue) ? null : rankValue,
+      war: typeof warValue === 'number' ? warValue : null,
+      metrics,
+      trends
+    });
+  });
+
+  const metricStats = {};
+  Object.entries(metricBuckets).forEach(([label, values]) => {
+    const count = values.length;
+    if (!count) return;
+    const mean = values.reduce((sum, value) => sum + value, 0) / count;
+    const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count;
+    metricStats[label] = {
+      mean,
+      stdDev: Math.sqrt(variance)
+    };
+  });
+
+  return { playersById, metricStats };
+};
+
+const getCategoryForMetric = metricName => {
+  if (!metricName) return '';
+  const metricLower = String(metricName || '').toLowerCase();
+  if (metricLower.includes('ott') || metricLower.includes('driving')) {
+    return 'Driving';
+  }
+  if (metricLower.includes('approach') || metricLower.includes('iron')) {
+    return 'Approach';
+  }
+  if (metricLower.includes('around') || metricLower.includes('arg') || metricLower.includes('short game')) {
+    return 'Short Game';
+  }
+  if (metricLower.includes('putting') || metricLower.includes('putt')) {
+    return 'Putting';
+  }
+  if (metricLower.includes('total') || metricLower.includes('t2g')) {
+    return 'Overall';
+  }
+  if (metricLower.includes('gir') || metricLower.includes('greens')) {
+    return 'Approach';
+  }
+  if (metricLower.includes('proximity') || metricLower.includes('prox')) {
+    return 'Approach';
+  }
+  return '';
+};
+
+const buildPerformanceNotes = ({
+  dgId,
+  playerName,
+  modelRank,
+  finishPosition,
+  finishText,
+  modelData,
+  metricStats,
+  actualMetrics
+}) => {
+  const notes = [];
+  const safeFinish = typeof finishPosition === 'number' ? finishPosition : null;
+  const safeModelRank = typeof modelRank === 'number' ? modelRank : null;
+
+  if (safeFinish !== null && safeModelRank !== null) {
+    if (safeModelRank <= 10 && safeFinish <= 10) {
+      notes.push(`🎯 Model prediction on target: #${safeModelRank} → ${finishText || safeFinish}`);
+    } else if (safeFinish <= 10 && safeModelRank > 50) {
+      notes.push(`⚠️ Major model miss: #${safeModelRank} → ${finishText || safeFinish}`);
+    } else if (safeModelRank <= 10 && safeFinish > 50) {
+      notes.push('⚠️ Model overestimated performance');
+    } else if (Math.abs(safeModelRank - safeFinish) > 30) {
+      const direction = safeModelRank > safeFinish ? 'better' : 'worse';
+      notes.push(`${direction === 'better' ? '↑' : '↓'} Finished ${direction} than predicted`);
+    }
+  }
+
+  const trends = modelData?.trends || {};
+  const trendAnalysis = [];
+  Object.entries(trends).forEach(([metricName, trendValue]) => {
+    if (!RESULTS_METRIC_TYPES.HAS_MODEL.has(metricName)) return;
+    const currentValue = actualMetrics?.[metricName];
+    if (typeof currentValue !== 'number' || Number.isNaN(currentValue)) return;
+
+    const stats = metricStats?.[metricName] || null;
+    let isTrendSignificant = false;
+    let trendZScore = null;
+    if (stats?.stdDev && stats.stdDev > 0) {
+      const trendStdDev = stats.stdDev * 0.2;
+      trendZScore = trendValue / trendStdDev;
+      isTrendSignificant = Math.abs(trendZScore) > 1.96;
+    } else {
+      isTrendSignificant = Math.abs(trendValue) > 0.05;
+    }
+
+    if (!isTrendSignificant) return;
+
+    const isHigherBetter = !RESULTS_METRIC_TYPES.LOWER_BETTER.has(metricName);
+    let isGoodPerformance = false;
+    if (metricName.includes('SG')) {
+      isGoodPerformance = isHigherBetter ? currentValue > 0 : currentValue < 0;
+    } else if (stats?.mean !== undefined && stats.mean !== null) {
+      isGoodPerformance = isHigherBetter ? currentValue > stats.mean : currentValue < stats.mean;
+    } else {
+      isGoodPerformance = isHigherBetter ? currentValue > 0 : currentValue < 0;
+    }
+
+    const isPositiveTrend = trendValue > 0;
+    const isCorrelationConfirmed = (isPositiveTrend && isGoodPerformance) || (!isPositiveTrend && !isGoodPerformance);
+    const significanceScore = Math.abs(trendValue) * (isCorrelationConfirmed ? 2 : 1);
+
+    trendAnalysis.push({
+      metric: metricName,
+      trendValue,
+      correlation: isCorrelationConfirmed ? 'confirmed' : 'contradicted',
+      direction: isPositiveTrend ? 'improving' : 'declining',
+      significance: significanceScore
+    });
+  });
+
+  trendAnalysis.sort((a, b) => b.significance - a.significance);
+  if (trendAnalysis.length > 0) {
+    const primary = trendAnalysis[0];
+    const category = getCategoryForMetric(primary.metric);
+    if (category) {
+      const arrow = primary.direction === 'improving' ? '↑' : '↓';
+      notes.push(`${arrow} ${category}`);
+    }
+
+    trendAnalysis.slice(0, 3).forEach(trend => {
+      const emoji = trend.direction === 'improving' ? '📈' : '📉';
+      const trendDisplay = Math.abs(trend.trendValue).toFixed(3);
+      notes.push(`${emoji} ${trend.metric}: ${trend.correlation === 'confirmed' ? 'trend continuing' : 'trend reversing'} (${trendDisplay})`);
+    });
+  }
+
+  if (typeof modelData?.war === 'number') {
+    const war = modelData.war;
+    if (war >= 1.0) {
+      notes.push(`⭐ Elite performer (WAR: ${war.toFixed(1)})`);
+    } else if (war >= 0.5) {
+      notes.push('↑ Above average performer');
+    } else if (war <= -0.5) {
+      notes.push('↓ Below average performer');
+    }
+  }
+
+  if (safeFinish !== null && safeModelRank !== null) {
+    const performedWell = safeFinish <= 20;
+    const predictedWell = safeModelRank <= 20;
+    if (performedWell && predictedWell) {
+      notes.push('✅ Success aligned with model');
+    } else if (performedWell && !predictedWell) {
+      notes.push('⚠️ Success despite model prediction');
+    } else if (!performedWell && predictedWell) {
+      notes.push('❌ Underperformed model prediction');
+    }
+  }
+
+  if (!notes.length) {
+    return '';
+  }
+  return notes.join(' | ');
+};
+
+const computeMetricStatsFromResults = results => {
+  const buckets = {};
+  (results || []).forEach(entry => {
+    RESULT_METRIC_FIELDS.forEach(field => {
+      if (!field.label || field.hasModel === false) return;
+      const value = entry?.[field.label];
+      if (typeof value !== 'number' || Number.isNaN(value)) return;
+      if (!buckets[field.label]) buckets[field.label] = [];
+      buckets[field.label].push(value);
+    });
+  });
+
+  const stats = {};
+  Object.entries(buckets).forEach(([label, values]) => {
+    const count = values.length;
+    if (!count) return;
+    const mean = values.reduce((sum, value) => sum + value, 0) / count;
+    const variance = values.reduce((sum, value) => sum + Math.pow(value - mean, 2), 0) / count;
+    stats[label] = { mean, stdDev: Math.sqrt(variance) };
+  });
+
+  return stats;
+};
+
+const buildResultsFromHistoricalRows = (rows, eventId, season) => {
+  const eventIdStr = String(eventId || '').trim();
+  const seasonStr = season ? String(season).trim() : null;
+  const players = new Map();
+  let eventName = null;
+  let courseName = null;
+
+  (rows || []).forEach(row => {
+    const dgId = String(row?.dg_id || '').trim();
+    if (!dgId) return;
+    const rowEvent = String(row?.event_id || '').trim();
+    if (eventIdStr && rowEvent !== eventIdStr) return;
+    if (seasonStr) {
+      const rowSeason = String(row?.season || row?.year || '').trim();
+      if (rowSeason !== seasonStr) return;
+    }
+
+    if (!eventName && row?.event_name) eventName = row.event_name;
+    if (!courseName && (row?.course_name || row?.course)) courseName = row.course_name || row.course;
+
+    const finishText = row?.fin_text || row?.finish || row?.finishPosition || row?.fin;
+    const finishPosition = normalizeFinishPosition(finishText);
+    const player = players.get(dgId) || {
+      dgId,
+      playerName: row?.player_name || row?.playerName || row?.name || null,
+      finishPosition: null,
+      finishText: null,
+      scoreSum: 0,
+      parSum: 0,
+      rounds: 0,
+      metrics: {
+        sg_total: 0,
+        sg_t2g: 0,
+        sg_app: 0,
+        sg_arg: 0,
+        sg_ott: 0,
+        sg_putt: 0,
+        sg_bs: 0,
+        driving_dist: 0,
+        driving_acc: 0,
+        gir: 0,
+        prox_fw: 0,
+        prox_rgh: 0
+      }
+    };
+
+    if (typeof finishPosition === 'number' && !Number.isNaN(finishPosition)) {
+      if (player.finishPosition === null || finishPosition < player.finishPosition) {
+        player.finishPosition = finishPosition;
+        player.finishText = finishText ? String(finishText).trim() : String(finishPosition);
+      }
+    }
+
+    const scoreValue = parseNumericValue(row?.score);
+    const parValue = parseNumericValue(row?.course_par || row?.par);
+    if (typeof scoreValue === 'number') player.scoreSum += scoreValue;
+    if (typeof parValue === 'number') player.parSum += parValue;
+
+    player.metrics.sg_total += parseNumericValue(row?.sg_total) || 0;
+    player.metrics.sg_t2g += parseNumericValue(row?.sg_t2g) || 0;
+    player.metrics.sg_app += parseNumericValue(row?.sg_app) || 0;
+    player.metrics.sg_arg += parseNumericValue(row?.sg_arg) || 0;
+    player.metrics.sg_ott += parseNumericValue(row?.sg_ott) || 0;
+    player.metrics.sg_putt += parseNumericValue(row?.sg_putt) || 0;
+    player.metrics.sg_bs += parseNumericValue(row?.sg_bs) || 0;
+    player.metrics.driving_dist += parseNumericValue(row?.driving_dist) || 0;
+    player.metrics.driving_acc += parseNumericValue(row?.driving_acc) || 0;
+    player.metrics.gir += parseNumericValue(row?.gir) || 0;
+    player.metrics.prox_fw += parseNumericValue(row?.prox_fw) || 0;
+    player.metrics.prox_rgh += parseNumericValue(row?.prox_rgh) || 0;
+    player.rounds += 1;
+
+    players.set(dgId, player);
+  });
+
+  const results = Array.from(players.values()).map(player => {
+    const rounds = player.rounds || 1;
+    const totalScore = player.scoreSum && player.parSum
+      ? player.scoreSum - player.parSum
+      : null;
+    return {
+      dgId: player.dgId,
+      playerName: player.playerName || 'Unknown',
+      finishPosition: player.finishPosition,
+      finishText: player.finishText || (player.finishPosition !== null ? String(player.finishPosition) : ''),
+      score: totalScore,
+      metrics: {
+        sg_total: player.metrics.sg_total / rounds,
+        sg_t2g: player.metrics.sg_t2g / rounds,
+        sg_app: player.metrics.sg_app / rounds,
+        sg_arg: player.metrics.sg_arg / rounds,
+        sg_ott: player.metrics.sg_ott / rounds,
+        sg_putt: player.metrics.sg_putt / rounds,
+        sg_bs: player.metrics.sg_bs / rounds,
+        driving_dist: player.metrics.driving_dist / rounds,
+        driving_acc: player.metrics.driving_acc / rounds,
+        gir: player.metrics.gir / rounds,
+        prox_fw: player.metrics.prox_fw / rounds,
+        prox_rgh: player.metrics.prox_rgh / rounds
+      }
+    };
+  });
+
+  return {
+    eventName,
+    courseName,
+    results: applyFinishFallback(results)
+  };
+};
+
+const buildResultsFromLiveStatsPayload = payload => {
+  const liveStats = Array.isArray(payload?.live_stats) ? payload.live_stats : [];
+  const results = liveStats.map(entry => ({
+    dgId: String(entry?.dg_id || '').trim(),
+    playerName: String(entry?.player_name || '').trim(),
+    finishPosition: normalizeFinishPosition(entry?.position),
+    finishText: formatPositionText(entry?.position),
+    score: typeof entry?.total === 'number' ? entry.total : parseNumericValue(entry?.total),
+    metrics: {
+      sg_total: parseNumericValue(entry?.sg_total) || 0,
+      sg_t2g: parseNumericValue(entry?.sg_t2g) || 0,
+      sg_app: parseNumericValue(entry?.sg_app) || 0,
+      sg_arg: parseNumericValue(entry?.sg_arg) || 0,
+      sg_ott: parseNumericValue(entry?.sg_ott) || 0,
+      sg_putt: parseNumericValue(entry?.sg_putt) || 0,
+      sg_bs: parseNumericValue(entry?.sg_bs) || 0,
+      driving_dist: parseNumericValue(entry?.distance) || 0,
+      driving_acc: parseNumericValue(entry?.accuracy) || 0,
+      gir: parseNumericValue(entry?.gir) || 0,
+      prox_fw: parseNumericValue(entry?.prox_fw) || 0,
+      prox_rgh: parseNumericValue(entry?.prox_rgh ?? entry?.prox_rough) || 0
+    }
+  }));
+
+  return {
+    eventName: payload?.event_name || null,
+    courseName: payload?.course_name || null,
+    results: applyFinishFallback(results)
+  };
+};
+
+const buildTournamentResultsRows = ({
+  results,
+  modelData,
+  metricStats
+}) => {
+  const rows = [];
+  const normalizedStats = metricStats || {};
+
+  (results || []).forEach(entry => {
+    const dgId = String(entry?.dgId || '').trim();
+    if (!dgId) return;
+    const playerName = entry?.playerName || entry?.name || 'Unknown';
+    const modelEntry = modelData?.playersById?.get(dgId) || null;
+    const modelRank = modelEntry?.rank ?? null;
+    const finishPosition = entry?.finishPosition ?? null;
+    const finishText = entry?.finishText || (finishPosition !== null ? String(finishPosition) : '');
+    const actualMetrics = {};
+
+    const row = {
+      'Performance Analysis': '',
+      'DG ID': dgId,
+      'Player Name': playerName,
+      'Model Rank': modelRank ?? '',
+      'Finish Position': finishText || (finishPosition !== null ? String(finishPosition) : ''),
+      'Score': entry?.score ?? ''
+    };
+
+    RESULT_METRIC_FIELDS.forEach(field => {
+      const value = entry?.metrics?.[field.key];
+      if (field.hasModel === false) {
+        row[field.label] = typeof value === 'number' ? value : '';
+        return;
+      }
+      const modelValue = modelEntry?.metrics?.[field.label];
+      row[field.label] = typeof value === 'number' ? value : '';
+      row[`${field.label} - Model`] = typeof modelValue === 'number' ? modelValue : '';
+      if (typeof value === 'number' && !Number.isNaN(value)) {
+        actualMetrics[field.label] = value;
+      }
+    });
+
+    row['Performance Analysis'] = buildPerformanceNotes({
+      dgId,
+      playerName,
+      modelRank,
+      finishPosition,
+      finishText,
+      modelData: modelEntry,
+      metricStats: normalizedStats,
+      actualMetrics
+    });
+
+    rows.push(row);
+  });
+
+  rows.sort((a, b) => {
+    const posA = normalizeFinishPosition(a['Finish Position']) ?? 999;
+    const posB = normalizeFinishPosition(b['Finish Position']) ?? 999;
+    return posA - posB;
+  });
+
+  return rows;
+};
+
+const buildZScoresForRows = (rows, metricStats) => {
+  return rows.map(row => {
+    const zScores = {};
+    Object.entries(metricStats || {}).forEach(([metric, stats]) => {
+      const value = row[metric];
+      if (typeof value !== 'number' || Number.isNaN(value)) return;
+      if (!stats || !stats.stdDev || stats.stdDev === 0) return;
+      zScores[metric] = (value - stats.mean) / stats.stdDev;
+    });
+    return {
+      dgId: row['DG ID'],
+      zScores
+    };
+  });
+};
+
+const writeTournamentResultsCsv = (csvPath, rows, meta = {}) => {
+  if (!csvPath) return null;
+  ensureDirectory(path.dirname(csvPath));
+  const lines = [];
+  lines.push('');
+  lines.push([`Tournament: ${meta.tournament || ''}`, `Last updated: ${meta.lastUpdated || ''}`].join(','));
+  lines.push([`Course: ${meta.courseName || ''}`, `Found ${rows.length} players from ${meta.source || ''}`].join(','));
+  lines.push([`Data Date: ${meta.generatedAt || ''}`].join(','));
+  lines.push(RESULTS_HEADERS.join(','));
+  rows.forEach(row => {
+    const line = RESULTS_HEADERS.map(header => {
+      const value = row[header];
+      if (value === null || value === undefined) return '';
+      return JSON.stringify(value);
+    }).join(',');
+    lines.push(line);
+  });
+  fs.writeFileSync(csvPath, lines.join('\n'));
+  return csvPath;
 };
 
 const isLowerBetterMetric = label => {
@@ -1115,14 +1736,44 @@ const loadTournamentResultsFromJson = resultsJsonPath => {
   if (!Array.isArray(rows)) return { source: 'json', results: [] };
   const results = rows
     .map(row => ({
-      dgId: String(row?.dgId || row?.dg_id || '').trim(),
-      playerName: String(row?.playerName || row?.player_name || row?.name || '').trim(),
+      dgId: String(row?.dgId || row?.dg_id || row?.['DG ID'] || '').trim(),
+      playerName: String(row?.playerName || row?.player_name || row?.name || row?.['Player Name'] || '').trim(),
       finishPosition: typeof row?.finishPosition === 'number'
         ? row.finishPosition
-        : normalizeFinishPosition(row?.finish ?? row?.position)
+        : normalizeFinishPosition(row?.['Finish Position'] ?? row?.finish ?? row?.position)
     }))
     .filter(entry => entry.dgId);
   return { source: 'json', results: applyFinishFallback(results) };
+};
+
+const loadTournamentResultsFromResultsCsv = resultsCsvPath => {
+  if (!resultsCsvPath || !fs.existsSync(resultsCsvPath)) return { source: 'missing', results: [] };
+  const rows = parseCsvRows(resultsCsvPath);
+  const headerIndex = findHeaderRowIndex(rows, ['dg id', 'player name', 'finish position']);
+  if (headerIndex === -1) return { source: 'csv', results: [] };
+  const headers = rows[headerIndex];
+  const headerMap = buildHeaderIndexMap(headers);
+
+  const dgIdIdx = headerMap.get('dg id');
+  const nameIdx = headerMap.get('player name');
+  const finishIdx = headerMap.get('finish position') ?? headerMap.get('finish');
+
+  const results = rows.slice(headerIndex + 1)
+    .map(row => {
+      const dgId = dgIdIdx !== undefined ? String(row[dgIdIdx] || '').trim() : '';
+      if (!dgId) return null;
+      const playerName = nameIdx !== undefined ? String(row[nameIdx] || '').trim() : '';
+      const finishRaw = finishIdx !== undefined ? row[finishIdx] : null;
+      const finishPosition = normalizeFinishPosition(finishRaw);
+      return {
+        dgId,
+        playerName: playerName || 'Unknown',
+        finishPosition
+      };
+    })
+    .filter(Boolean);
+
+  return { source: 'results_csv', results: applyFinishFallback(results) };
 };
 
 const loadTournamentResultsFromHistoricalCsv = (historyCsvPath, eventId, season) => {
@@ -1279,61 +1930,141 @@ const writeTournamentResultsSnapshot = (resultsJsonPath, payload) => {
 
 const ensureTournamentResults = async ({
   resultsJsonPath,
+  resultsCsvPath,
+  legacyResultsJsonPath,
+  legacyResultsCsvPath,
+  rankingsCsvPath,
   historyCsvPath,
   eventId,
   season,
   tournamentName,
   logger = console
 }) => {
+  const resultsDir = resultsJsonPath ? path.dirname(resultsJsonPath) : null;
+  const resolvedResultsCsvPath = resultsCsvPath || (resultsDir ? path.resolve(resultsDir, 'tournament_results.csv') : null);
+  const modelData = parseModelRankingData(rankingsCsvPath);
+
   if (resultsJsonPath && fs.existsSync(resultsJsonPath)) {
+    if (resolvedResultsCsvPath && !fs.existsSync(resolvedResultsCsvPath)) {
+      const payload = readJsonFile(resultsJsonPath);
+      if (payload?.results && Array.isArray(payload.results)) {
+        writeTournamentResultsCsv(resolvedResultsCsvPath, payload.results, {
+          tournament: payload?.tournament || null,
+          courseName: payload?.courseName || null,
+          lastUpdated: payload?.lastUpdated || null,
+          generatedAt: payload?.generatedAt || null,
+          source: payload?.source || null
+        });
+      }
+    }
     return { source: 'existing_json', path: resultsJsonPath };
   }
 
-  const fromCsv = loadTournamentResultsFromHistoricalCsv(historyCsvPath, eventId, season);
-  if (fromCsv.results.length > 0) {
+  if (legacyResultsJsonPath && fs.existsSync(legacyResultsJsonPath) && resultsJsonPath) {
+    const legacyPayload = readJsonFile(legacyResultsJsonPath);
+    if (legacyPayload?.results && Array.isArray(legacyPayload.results)) {
+      const legacyRows = legacyPayload.results;
+      const pathWritten = writeTournamentResultsSnapshot(resultsJsonPath, legacyPayload);
+      if (resolvedResultsCsvPath) {
+        writeTournamentResultsCsv(resolvedResultsCsvPath, legacyRows, {
+          tournament: legacyPayload?.tournament || null,
+          courseName: legacyPayload?.courseName || null,
+          lastUpdated: legacyPayload?.lastUpdated || null,
+          generatedAt: legacyPayload?.generatedAt || null,
+          source: legacyPayload?.source || 'legacy_json'
+        });
+      }
+      logger.log(`✓ Migrated legacy results JSON to ${path.basename(resultsJsonPath)}.`);
+      return { source: 'legacy_json', path: pathWritten };
+    }
+  }
+
+  const buildPayloadAndWrite = ({ source, results, eventName, courseName, lastUpdated, apiSnapshots }) => {
+    const rows = buildTournamentResultsRows({
+      results,
+      modelData,
+      metricStats: modelData.metricStats
+    });
+    const metricStats = computeMetricStatsFromResults(rows);
+    const zScores = buildZScoresForRows(rows, metricStats);
     const payload = {
       generatedAt: new Date().toISOString(),
       tournament: tournamentName || null,
       eventId: eventId || null,
       season: season || null,
-      source: fromCsv.source,
-      results: fromCsv.results
+      source,
+      eventName: eventName || null,
+      courseName: courseName || null,
+      lastUpdated: lastUpdated || null,
+      metricStats,
+      zScores,
+      results: rows,
+      apiSnapshots: apiSnapshots || undefined
     };
     const pathWritten = writeTournamentResultsSnapshot(resultsJsonPath, payload);
-    logger.log(`✓ Tournament results sourced from Historical Data CSV (${fromCsv.results.length} players).`);
-    return { source: fromCsv.source, path: pathWritten };
+    if (resolvedResultsCsvPath) {
+      writeTournamentResultsCsv(resolvedResultsCsvPath, rows, {
+        tournament: tournamentName || null,
+        courseName: courseName || null,
+        lastUpdated: lastUpdated || null,
+        generatedAt: payload.generatedAt,
+        source
+      });
+    }
+    return { pathWritten, rows };
+  };
+
+  if (historyCsvPath && fs.existsSync(historyCsvPath)) {
+    const rawRows = loadCsv(historyCsvPath, { skipFirstColumn: true });
+    const build = buildResultsFromHistoricalRows(rawRows, eventId, season);
+    if (build.results.length > 0) {
+      const stats = fs.statSync(historyCsvPath);
+      const lastUpdated = stats?.mtime ? stats.mtime.toISOString() : null;
+      buildPayloadAndWrite({
+        source: 'historical_csv',
+        results: build.results,
+        eventName: build.eventName,
+        courseName: build.courseName,
+        lastUpdated
+      });
+      logger.log(`✓ Tournament results sourced from Historical Data CSV (${build.results.length} players).`);
+      return { source: 'historical_csv', path: resultsJsonPath };
+    }
   }
 
   const fromApi = await loadTournamentResultsFromHistoricalApi(eventId, season);
   if (fromApi.results.length > 0) {
-    const payload = {
-      generatedAt: new Date().toISOString(),
-      tournament: tournamentName || null,
-      eventId: eventId || null,
-      season: season || null,
+    const rows = extractHistoricalRowsFromSnapshotPayload(fromApi.snapshot?.payload)
+      .map(normalizeHistoricalRoundRow)
+      .filter(Boolean);
+    const build = buildResultsFromHistoricalRows(rows, eventId, season);
+    buildPayloadAndWrite({
       source: fromApi.source,
+      results: build.results,
+      eventName: build.eventName,
+      courseName: build.courseName,
+      lastUpdated: fromApi.snapshot?.payload?.last_updated || null,
       apiSnapshots: {
         dataGolfHistoricalRounds: {
           source: fromApi.snapshot?.source || null,
           path: fromApi.snapshot?.path || null,
           lastUpdated: fromApi.snapshot?.payload?.last_updated || null
         }
-      },
-      results: fromApi.results
-    };
-    const pathWritten = writeTournamentResultsSnapshot(resultsJsonPath, payload);
-    logger.log(`✓ Tournament results sourced from DataGolf historical rounds (${fromApi.results.length} players).`);
-    return { source: fromApi.source, path: pathWritten };
+      }
+    });
+    logger.log(`✓ Tournament results sourced from DataGolf historical rounds (${build.results.length} players).`);
+    return { source: fromApi.source, path: resultsJsonPath };
   }
 
   const fromLive = await loadTournamentResultsFromLiveStats();
   if (fromLive.results.length > 0) {
-    const payload = {
-      generatedAt: new Date().toISOString(),
-      tournament: tournamentName || null,
-      eventId: eventId || null,
-      season: season || null,
+    const build = buildResultsFromLiveStatsPayload(fromLive.snapshot?.payload || {});
+    buildPayloadAndWrite({
       source: fromLive.source,
+      results: build.results,
+      eventName: build.eventName,
+      courseName: build.courseName,
+      lastUpdated: fromLive.snapshot?.payload?.last_updated || null,
       apiSnapshots: {
         dataGolfLiveStats: {
           source: fromLive.snapshot?.source || null,
@@ -1344,12 +2075,10 @@ const ensureTournamentResults = async ({
           statRound: fromLive.snapshot?.payload?.stat_round || null,
           statDisplay: fromLive.snapshot?.payload?.stat_display || null
         }
-      },
-      results: fromLive.results
-    };
-    const pathWritten = writeTournamentResultsSnapshot(resultsJsonPath, payload);
-    logger.log(`✓ Tournament results sourced from DataGolf live stats (${fromLive.results.length} players).`);
-    return { source: fromLive.source, path: pathWritten };
+      }
+    });
+    logger.log(`✓ Tournament results sourced from DataGolf live stats (${build.results.length} players).`);
+    return { source: fromLive.source, path: resultsJsonPath };
   }
 
   logger.warn('⚠️  Tournament results unavailable (CSV + API fallbacks failed).');
@@ -1413,7 +2142,11 @@ const runValidation = async ({
   const postEventDir = resolvedTournamentDir ? path.resolve(resolvedTournamentDir, 'post_event') : null;
   const rankingsJsonPath = preEventDir ? path.resolve(preEventDir, `optimizer_${resolvedSlug}_pre_event_rankings.json`) : null;
   const rankingsCsvPath = preEventDir ? path.resolve(preEventDir, `optimizer_${resolvedSlug}_pre_event_rankings.csv`) : null;
-  const resultsJsonPath = postEventDir ? path.resolve(postEventDir, 'tournament_results.json') : null;
+  const resultsBaseName = resolvedSlug || slugifyTournament(tournamentName) || 'tournament';
+  const resultsJsonPath = postEventDir ? path.resolve(postEventDir, `${resultsBaseName}_results.json`) : null;
+  const resultsCsvPath = postEventDir ? path.resolve(postEventDir, `${resultsBaseName}_results.csv`) : null;
+  const legacyResultsJsonPath = postEventDir ? path.resolve(postEventDir, 'tournament_results.json') : null;
+  const legacyResultsCsvPath = postEventDir ? path.resolve(postEventDir, 'tournament_results.csv') : null;
   const historyCsvPath = inputsDir && resolvedSlug
     ? path.resolve(inputsDir, `${tournamentName || resolvedSlug} (${season}) - Historical Data.csv`)
     : null;
@@ -1436,6 +2169,10 @@ const runValidation = async ({
 
   await ensureTournamentResults({
     resultsJsonPath,
+    resultsCsvPath,
+    legacyResultsJsonPath,
+    legacyResultsCsvPath,
+    rankingsCsvPath,
     historyCsvPath,
     eventId: config.eventId || eventId,
     season,
@@ -1451,6 +2188,12 @@ const runValidation = async ({
   const resultsResult = (() => {
     const fromJson = loadTournamentResultsFromJson(resultsJsonPath);
     if (fromJson.results.length > 0) return fromJson;
+    const fromLegacyJson = loadTournamentResultsFromJson(legacyResultsJsonPath);
+    if (fromLegacyJson.results.length > 0) return fromLegacyJson;
+    const fromCsv = loadTournamentResultsFromResultsCsv(resultsCsvPath);
+    if (fromCsv.results.length > 0) return fromCsv;
+    const fromLegacyCsv = loadTournamentResultsFromResultsCsv(legacyResultsCsvPath);
+    if (fromLegacyCsv.results.length > 0) return fromLegacyCsv;
     return loadTournamentResultsFromHistoricalCsv(historyCsvPath, config.eventId || eventId, season);
   })();
 
