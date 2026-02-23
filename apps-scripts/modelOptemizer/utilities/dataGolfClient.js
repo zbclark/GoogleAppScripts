@@ -305,11 +305,55 @@ const getDataGolfHistoricalRounds = async (options = {}) => {
   return { source: 'api', path: cachePath, payload };
 };
 
+const getDataGolfLiveTournamentStats = async (options = {}) => {
+  const {
+    apiKey,
+    cacheDir,
+    ttlMs = DEFAULT_TTL_MS,
+    allowStale = true,
+    stats = 'sg_ott,sg_app,sg_arg,sg_putt,sg_t2g,sg_bs,sg_total,distance,accuracy,gir,prox_fw,prox_rgh,scrambling,great_shots,poor_shots',
+    round = 'event_avg',
+    display = 'value',
+    fileFormat = 'json'
+  } = options;
+
+  const safeStats = String(stats || '').trim().toLowerCase();
+  const safeRound = String(round || 'event_avg').trim().toLowerCase() || 'event_avg';
+  const safeDisplay = String(display || 'value').trim().toLowerCase() || 'value';
+  const safeFormat = String(fileFormat || 'json').trim().toLowerCase() || 'json';
+  const statsSlug = safeStats.replace(/[^a-z0-9]+/g, '_').slice(0, 120) || 'default';
+  const cacheSuffix = `${statsSlug}_${safeRound}_${safeDisplay}_${safeFormat}`.replace(/[^a-z0-9._-]/g, '_');
+  const cachePath = cacheDir
+    ? path.resolve(cacheDir, `datagolf_live_tournament_stats_${cacheSuffix}.json`)
+    : null;
+
+  if (cachePath && isFresh(cachePath, ttlMs)) {
+    return { source: 'cache', path: cachePath, payload: readJson(cachePath) };
+  }
+
+  if (!apiKey) {
+    if (cachePath && allowStale && fs.existsSync(cachePath)) {
+      return { source: 'cache-stale', path: cachePath, payload: readJson(cachePath) };
+    }
+    return { source: 'missing-key', path: cachePath, payload: null };
+  }
+
+  const endpoint = `https://feeds.datagolf.com/preds/live-tournament-stats?stats=${safeStats}&round=${safeRound}&display=${safeDisplay}&file_format=${safeFormat}&key=${apiKey}`;
+  const payload = await fetchJsonWithRetry(endpoint);
+
+  if (cachePath) {
+    writeJson(cachePath, payload);
+  }
+
+  return { source: 'api', path: cachePath, payload };
+};
+
 module.exports = {
   getDataGolfRankings,
   getDataGolfApproachSkill,
   getDataGolfFieldUpdates,
   getDataGolfPlayerDecompositions,
   getDataGolfSkillRatings,
-  getDataGolfHistoricalRounds
+  getDataGolfHistoricalRounds,
+  getDataGolfLiveTournamentStats
 };

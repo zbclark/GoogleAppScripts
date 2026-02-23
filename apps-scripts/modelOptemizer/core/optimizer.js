@@ -32,14 +32,34 @@ const {
 } = require('../utilities/dataGolfClient');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-let DATA_DIR = ROOT_DIR;
-let DEFAULT_DATA_DIR = path.resolve(ROOT_DIR, 'data');
+let DATA_ROOT_DIR = path.resolve(ROOT_DIR, 'data');
+let DATA_DIR = DATA_ROOT_DIR;
+let DEFAULT_DATA_DIR = DATA_ROOT_DIR;
 let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
+let TOURNAMENT_INPUT_DIRS = [];
+let VALIDATION_OUTPUT_DIRS = [];
 const APPROACH_DELTA_DIR = path.resolve(ROOT_DIR, 'data', 'approach_deltas');
 const APPROACH_SNAPSHOT_DIR = path.resolve(ROOT_DIR, 'data', 'approach_snapshot');
 const APPROACH_SNAPSHOT_L24_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l24.json');
 const APPROACH_SNAPSHOT_L12_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_l12.json');
 const APPROACH_SNAPSHOT_YTD_LATEST_PATH = path.resolve(APPROACH_SNAPSHOT_DIR, 'approach_ytd_latest.json');
+const APPROACH_L12_REFRESH_MONTH = (() => {
+  const raw = parseInt(String(process.env.APPROACH_L12_REFRESH_MONTH || '').trim(), 10);
+  if (Number.isNaN(raw)) return 12;
+  return Math.min(12, Math.max(1, raw));
+})();
+const APPROACH_L12_FORCE_REFRESH = String(process.env.APPROACH_L12_FORCE_REFRESH || '').trim().toLowerCase();
+const APPROACH_L12_REFRESH_SEASON = String(process.env.APPROACH_L12_REFRESH_SEASON || '').trim();
+const APPROACH_L12_REFRESH_EVENT_ID = String(process.env.APPROACH_L12_REFRESH_EVENT_ID || '60').trim();
+const APPROACH_SNAPSHOT_RETENTION_COUNTS = {
+  ytd: (() => {
+    const raw = parseInt(String(process.env.APPROACH_SNAPSHOT_RETENTION_YTD || '').trim(), 10);
+    if (Number.isNaN(raw)) return 4;
+    return Math.max(2, raw);
+  })(),
+  l24: null,
+  l12: null
+};
 const COURSE_CONTEXT_PATH = path.resolve(ROOT_DIR, 'utilities', 'course_context.json');
 const DATAGOLF_CACHE_DIR = path.resolve(ROOT_DIR, 'data', 'cache');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
@@ -182,6 +202,10 @@ let OVERRIDE_DIR = null;
 let OVERRIDE_DATA_DIR = null;
 let OVERRIDE_OUTPUT_DIR = null;
 let OVERRIDE_ROLLING_DELTAS = null;
+let FORCE_RUN_MODE = null;
+let FORCE_PRE_FLAG = false;
+let FORCE_POST_FLAG = false;
+let RUN_VALIDATION_ONLY = false;
 
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--template' && args[i + 1]) {
@@ -224,6 +248,23 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '--writeValidationTemplates') {
     WRITE_VALIDATION_TEMPLATES = true;
   }
+  if (
+    args[i] === '--validation' ||
+    args[i] === '--validationOnly' ||
+    args[i] === '--validation-only' ||
+    args[i] === '--runValidation' ||
+    args[i] === '--run-validation'
+  ) {
+    RUN_VALIDATION_ONLY = true;
+  }
+  if (args[i] === '--pre' || args[i] === '--preTournament' || args[i] === '--pre-tournament') {
+    FORCE_RUN_MODE = 'pre';
+    FORCE_PRE_FLAG = true;
+  }
+  if (args[i] === '--post' || args[i] === '--postTournament' || args[i] === '--post-tournament') {
+    FORCE_RUN_MODE = 'post';
+    FORCE_POST_FLAG = true;
+  }
   if (args[i] === '--dryRun' || args[i] === '--dry-run') {
     DRY_RUN = true;
   }
@@ -251,6 +292,11 @@ if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesE
   DRY_RUN = false;
 }
 
+if (FORCE_PRE_FLAG && FORCE_POST_FLAG) {
+  console.error('\n❌ Invalid flags: --pre and --post cannot both be set.');
+  process.exit(1);
+}
+
 
 if (OVERRIDE_DIR) {
   const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
@@ -262,6 +308,7 @@ if (OVERRIDE_DIR) {
   if (!fs.existsSync(outputFolder)) {
     fs.mkdirSync(outputFolder, { recursive: true });
   }
+  DATA_ROOT_DIR = dataFolder;
   DATA_DIR = dataFolder;
   DEFAULT_DATA_DIR = dataFolder;
   OUTPUT_DIR = outputFolder;
@@ -269,6 +316,7 @@ if (OVERRIDE_DIR) {
 
 if (OVERRIDE_DATA_DIR) {
   const resolvedDataDir = path.resolve(OVERRIDE_DATA_DIR);
+  DATA_ROOT_DIR = resolvedDataDir;
   DATA_DIR = resolvedDataDir;
   DEFAULT_DATA_DIR = resolvedDataDir;
 }
@@ -3378,6 +3426,38 @@ function loadRampSummary(options = {}) {
   return null;
 }
 
+function ensureEarlySeasonRampSummary(options = {}) {
+  const { outputDir = null, metric = 'sg_total', dataDir = null } = options;
+  if (!outputDir) return loadRampSummary({ outputDir, metric });
+  const existing = loadRampSummary({ outputDir, metric });
+  if (existing) return existing;
+
+  console.log(`ℹ️  Early-season ramp summary missing; generating (${metric}).`);
+  const originalArgv = process.argv.slice();
+  try {
+    const scriptPath = path.resolve(__dirname, '..', 'scripts', 'analyze_early_season_ramp.js');
+    const scriptArgs = [
+      scriptPath,
+      '--outputDir',
+      outputDir,
+      '--metric',
+      String(metric || 'sg_total').trim().toLowerCase()
+    ];
+    if (dataDir) {
+      scriptArgs.push('--dataDir', dataDir);
+    }
+    process.argv = ['node', ...scriptArgs];
+    delete require.cache[require.resolve('../scripts/analyze_early_season_ramp')];
+    require('../scripts/analyze_early_season_ramp');
+  } catch (error) {
+    console.warn(`ℹ️  Early-season ramp generation failed: ${error.message}`);
+  } finally {
+    process.argv = originalArgv;
+  }
+
+  return loadRampSummary({ outputDir, metric });
+}
+
 function computePastPerformanceWeightFromRegression(entry) {
   if (!entry) return null;
   const slope = Number(entry.slope);
@@ -3618,9 +3698,93 @@ function loadApproachSnapshotFromDisk(filePath) {
   return { source: 'snapshot', path: filePath, payload: readJsonFile(filePath) };
 }
 
-async function getOrCreateApproachSnapshot({ period, snapshotPath, apiKey, cacheDir, ttlMs }) {
+function listApproachSnapshotArchives() {
+  if (!fs.existsSync(APPROACH_SNAPSHOT_DIR)) return [];
+  return fs.readdirSync(APPROACH_SNAPSHOT_DIR)
+    .filter(name => /^approach_(ytd|l24|l12)_\d{4}-\d{2}-\d{2}\.json$/i.test(name))
+    .map(name => {
+      const match = name.match(/^approach_(ytd|l24|l12)_(\d{4}-\d{2}-\d{2})\.json$/i);
+      const period = match ? match[1].toLowerCase() : null;
+      const dateStr = match ? match[2] : null;
+      const time = dateStr ? Date.parse(`${dateStr}T00:00:00Z`) : NaN;
+      return {
+        name,
+        period,
+        dateStr,
+        time,
+        path: path.resolve(APPROACH_SNAPSHOT_DIR, name)
+      };
+    })
+    .filter(entry => entry.period && !Number.isNaN(entry.time))
+    .sort((a, b) => b.time - a.time);
+}
+
+function resolveLatestApproachArchiveYear(period) {
+  const archives = listApproachSnapshotArchives().filter(entry => entry.period === period);
+  if (archives.length === 0) return null;
+  const latest = archives[0];
+  if (!latest?.dateStr) return null;
+  const year = parseInt(latest.dateStr.slice(0, 4), 10);
+  return Number.isNaN(year) ? null : year;
+}
+
+function pruneApproachSnapshotArchives() {
+  const archives = listApproachSnapshotArchives();
+  if (archives.length === 0) return { removed: 0, kept: 0 };
+  const byPeriod = archives.reduce((acc, entry) => {
+    if (!acc[entry.period]) acc[entry.period] = [];
+    acc[entry.period].push(entry);
+    return acc;
+  }, {});
+
+  let removed = 0;
+  Object.entries(byPeriod).forEach(([period, entries]) => {
+    const retentionCount = APPROACH_SNAPSHOT_RETENTION_COUNTS[period];
+    if (!retentionCount) return;
+    const sorted = entries.sort((a, b) => b.time - a.time);
+    const keepSet = new Set(sorted.slice(0, retentionCount).map(entry => entry.path));
+    sorted.forEach((entry, index) => {
+      if (index < retentionCount || keepSet.has(entry.path)) return;
+      try {
+        fs.unlinkSync(entry.path);
+        removed += 1;
+      } catch (error) {
+        console.warn(`⚠️  Unable to remove approach snapshot archive ${entry.name}: ${error.message}`);
+      }
+    });
+  });
+
+  const kept = Math.max(0, archives.length - removed);
+  return { removed, kept };
+}
+
+async function getOrCreateApproachSnapshot({ period, snapshotPath, apiKey, cacheDir, ttlMs, season, eventId, isPostTournament }) {
   if (snapshotPath && fs.existsSync(snapshotPath)) {
-    return loadApproachSnapshotFromDisk(snapshotPath);
+    const normalizedPeriod = String(period || '').trim().toLowerCase();
+    if (normalizedPeriod !== 'l12') {
+      return loadApproachSnapshotFromDisk(snapshotPath);
+    }
+
+    const now = new Date();
+    const month = now.getUTCMonth() + 1;
+    const seasonValue = season ? parseInt(String(season).trim(), 10) : null;
+    const eventIdValue = eventId ? String(eventId).trim() : null;
+    const latestYear = resolveLatestApproachArchiveYear('l12');
+    const forceRefresh = APPROACH_L12_FORCE_REFRESH === '1'
+      || APPROACH_L12_FORCE_REFRESH === 'true'
+      || (APPROACH_L12_REFRESH_SEASON && seasonValue && String(seasonValue) === APPROACH_L12_REFRESH_SEASON);
+    const isTourChampEvent = eventIdValue && APPROACH_L12_REFRESH_EVENT_ID
+      ? eventIdValue === APPROACH_L12_REFRESH_EVENT_ID
+      : false;
+    const allowRefresh = !!isPostTournament;
+    const shouldRefresh = (forceRefresh && allowRefresh)
+      || (allowRefresh && isTourChampEvent)
+      || (allowRefresh && seasonValue && latestYear && seasonValue > latestYear && month >= APPROACH_L12_REFRESH_MONTH);
+
+    if (!shouldRefresh) {
+      return loadApproachSnapshotFromDisk(snapshotPath);
+    }
+    console.log('ℹ️  Refreshing L12 snapshot for end-of-season update.');
   }
 
   const fetched = await getDataGolfApproachSkill({
@@ -3639,10 +3803,12 @@ async function getOrCreateApproachSnapshot({ period, snapshotPath, apiKey, cache
     if (!fs.existsSync(archivePath)) {
       writeJsonFile(archivePath, fetched.payload);
     }
+    pruneApproachSnapshotArchives();
     return { ...fetched, path: snapshotPath };
   }
 
   if (snapshotPath && fs.existsSync(snapshotPath)) {
+    pruneApproachSnapshotArchives();
     return { source: 'snapshot-stale', path: snapshotPath, payload: readJsonFile(snapshotPath) };
   }
 
@@ -3666,10 +3832,12 @@ async function refreshYtdApproachSnapshot({ apiKey, cacheDir, ttlMs }) {
     if (!fs.existsSync(archivePath)) {
       writeJsonFile(archivePath, fetched.payload);
     }
+    pruneApproachSnapshotArchives();
     return { ...fetched, path: APPROACH_SNAPSHOT_YTD_LATEST_PATH, archivePath };
   }
 
   if (fs.existsSync(APPROACH_SNAPSHOT_YTD_LATEST_PATH)) {
+    pruneApproachSnapshotArchives();
     return {
       source: 'snapshot',
       path: APPROACH_SNAPSHOT_YTD_LATEST_PATH,
@@ -4066,13 +4234,78 @@ function resolveDataFile(fileName) {
   return primary;
 }
 
+function normalizeTournamentSlug(value) {
+  return String(value || '')
+    .trim()
+    .toLowerCase()
+    .replace(/&/g, 'and')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function listSeasonInputDirs(season) {
+  const dirs = [];
+  if (!season) return dirs;
+  const seasonDir = path.resolve(DATA_ROOT_DIR, String(season));
+  if (!fs.existsSync(seasonDir)) return dirs;
+  const entries = fs.readdirSync(seasonDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && entry.name !== 'validation_outputs')
+    .map(entry => entry.name);
+  entries.forEach(name => {
+    const inputDir = path.resolve(seasonDir, name, 'inputs');
+    if (fs.existsSync(inputDir)) dirs.push(inputDir);
+  });
+  return dirs;
+}
+
+function resolveTournamentDir(season, tournamentName, fallbackName) {
+  const seasonDir = path.resolve(DATA_ROOT_DIR, String(season));
+  const normalized = normalizeTournamentSlug(tournamentName || fallbackName);
+  if (!fs.existsSync(seasonDir)) {
+    return path.resolve(seasonDir, normalized || `event-${OVERRIDE_EVENT_ID || 'unknown'}`);
+  }
+
+  const entries = fs.readdirSync(seasonDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory() && entry.name !== 'validation_outputs')
+    .map(entry => entry.name);
+
+  if (normalized && entries.includes(normalized)) {
+    return path.resolve(seasonDir, normalized);
+  }
+
+  if (normalized) {
+    const tokens = normalized.split('-').filter(Boolean);
+    if (tokens.length > 0) {
+      let best = null;
+      entries.forEach(name => {
+        const dirTokens = name.split('-').filter(Boolean);
+        const overlap = tokens.filter(token => dirTokens.includes(token)).length;
+        if (!best || overlap > best.overlap) {
+          best = { name, overlap };
+        }
+      });
+      if (best && best.overlap > 0) {
+        return path.resolve(seasonDir, best.name);
+      }
+    }
+  }
+
+  return path.resolve(seasonDir, normalized || `event-${OVERRIDE_EVENT_ID || 'unknown'}`);
+}
+
 function resolveTournamentFile(suffix, tournamentName, season, fallbackName) {
   const baseName = String(tournamentName || fallbackName || '').trim();
   const seasonTag = season ? `(${season})` : '';
   const exactName = baseName ? `${baseName} ${seasonTag} - ${suffix}.csv`.replace(/\s+/g, ' ').trim() : '';
   const altName = baseName ? `${baseName} - ${suffix}.csv` : '';
 
-  const dirs = [DATA_DIR, DEFAULT_DATA_DIR];
+  const seasonInputDirs = listSeasonInputDirs(season);
+  const dirs = [
+    ...(TOURNAMENT_INPUT_DIRS || []),
+    ...seasonInputDirs,
+    DATA_DIR,
+    DEFAULT_DATA_DIR
+  ].filter(Boolean);
   const candidates = [];
 
   dirs.forEach(dir => {
@@ -4111,6 +4344,25 @@ function resolveTournamentFile(suffix, tournamentName, season, fallbackName) {
   if (exactName) return resolveDataFile(exactName);
   if (altName) return resolveDataFile(altName);
   return resolveDataFile(`${suffix}.csv`);
+}
+
+function detectPostTournamentFromHistory(historyPath, eventId, season) {
+  if (!historyPath || !fs.existsSync(historyPath)) return false;
+  try {
+    const rows = loadCsv(historyPath, { skipFirstColumn: true });
+    if (!Array.isArray(rows) || rows.length === 0) return false;
+    const eventIdStr = String(eventId || '').trim();
+    const seasonStr = String(season || '').trim();
+    return rows.some(row => {
+      const rowEvent = String(row?.event_id || '').trim();
+      if (eventIdStr && rowEvent !== eventIdStr) return false;
+      const rowSeason = String(row?.season || row?.year || '').trim();
+      if (seasonStr && rowSeason !== seasonStr) return false;
+      return !!String(row?.fin_text || row?.finish || row?.finishPosition || '').trim();
+    });
+  } catch (error) {
+    return false;
+  }
 }
 
 function upsertTemplateInFile(filePath, template, options = {}) {
@@ -4382,11 +4634,74 @@ async function runAdaptiveOptimizer() {
   const CURRENT_EVENT_ID = OVERRIDE_EVENT_ID;
   const CURRENT_SEASON = OVERRIDE_SEASON ?? 2026;
   const tournamentNameFallback = TOURNAMENT_NAME || 'Sony Open';
-  let APPROACH_DELTA_PATH = findApproachDeltaFile([APPROACH_DELTA_DIR, OUTPUT_DIR, DATA_DIR, DEFAULT_DATA_DIR], TOURNAMENT_NAME, tournamentNameFallback);
+  const seasonDir = path.resolve(DATA_ROOT_DIR, String(CURRENT_SEASON));
+  const tournamentDir = resolveTournamentDir(CURRENT_SEASON, TOURNAMENT_NAME, tournamentNameFallback);
+  const tournamentInputsDir = path.resolve(tournamentDir, 'inputs');
+  const preEventOutputDir = OVERRIDE_OUTPUT_DIR
+    ? path.resolve(OVERRIDE_OUTPUT_DIR)
+    : path.resolve(tournamentDir, 'pre_event');
+  const postEventOutputDir = OVERRIDE_OUTPUT_DIR
+    ? path.resolve(OVERRIDE_OUTPUT_DIR)
+    : path.resolve(tournamentDir, 'post_event');
+  const validationOutputsDir = path.resolve(seasonDir, 'validation_outputs');
+
+  TOURNAMENT_INPUT_DIRS = [tournamentInputsDir];
+  VALIDATION_OUTPUT_DIRS = [validationOutputsDir];
+  DATA_DIR = tournamentInputsDir;
+  DEFAULT_DATA_DIR = tournamentInputsDir;
+  OUTPUT_DIR = preEventOutputDir;
+
+  ensureDirectory(preEventOutputDir);
+  ensureDirectory(postEventOutputDir);
+  ensureDirectory(validationOutputsDir);
+
+  if (RUN_VALIDATION_ONLY) {
+    try {
+      const { runValidation } = require('./validationRunner');
+      if (typeof runValidation !== 'function') {
+        throw new Error('validationRunner is unavailable');
+      }
+      console.log('🧪 Running validation runner (standalone mode)...');
+      const validationResult = await runValidation({
+        season: CURRENT_SEASON,
+        dataRootDir: DATA_ROOT_DIR,
+        tournamentName: TOURNAMENT_NAME || tournamentNameFallback,
+        tournamentSlug: null,
+        tournamentDir,
+        eventId: CURRENT_EVENT_ID
+      });
+      console.log(`✅ Validation outputs written to: ${validationResult.outputDir}`);
+      return;
+    } catch (error) {
+      console.error(`\n❌ Validation runner failed: ${error.message}`);
+      process.exit(1);
+    }
+  }
+
+  let APPROACH_DELTA_PATH = findApproachDeltaFile([
+    APPROACH_DELTA_DIR,
+    OUTPUT_DIR,
+    DATA_DIR,
+    DEFAULT_DATA_DIR
+  ], TOURNAMENT_NAME, tournamentNameFallback);
   let CONFIG_PATH = resolveTournamentFile('Configuration Sheet', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const FIELD_PATH = resolveTournamentFile('Tournament Field', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const HISTORY_PATH = resolveTournamentFile('Historical Data', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
   const APPROACH_PATH = resolveTournamentFile('Approach Skill', TOURNAMENT_NAME, CURRENT_SEASON, tournamentNameFallback);
+  const POST_TOURNAMENT_HINT = FORCE_RUN_MODE === 'post'
+    ? true
+    : (FORCE_RUN_MODE === 'pre'
+      ? false
+      : detectPostTournamentFromHistory(
+          HISTORY_PATH,
+          CURRENT_EVENT_ID,
+          CURRENT_SEASON
+        ));
+  if (FORCE_RUN_MODE === 'pre') {
+    console.log('ℹ️  Forced pre-tournament mode (--pre).');
+  } else if (FORCE_RUN_MODE === 'post') {
+    console.log('ℹ️  Forced post-tournament mode (--post).');
+  }
 
   requiredFiles[0].path = CONFIG_PATH;
   requiredFiles[1].path = FIELD_PATH;
@@ -4402,6 +4717,8 @@ async function runAdaptiveOptimizer() {
       console.warn(`   - ${file.name}: ${path.basename(file.path)}`);
     });
     console.warn('\nExpected locations:');
+    console.warn(`   - ${tournamentInputsDir}`);
+    console.warn(`   - ${seasonDir}`);
     console.warn(`   - ${DATA_DIR}`);
     console.warn(`   - ${DEFAULT_DATA_DIR}`);
   }
@@ -4413,8 +4730,17 @@ async function runAdaptiveOptimizer() {
 
   const fallbackDirName = CONFIG_PATH ? path.basename(path.dirname(CONFIG_PATH)) : null;
   const outputDir = OUTPUT_DIR
+    || preEventOutputDir
     || (fallbackDirName ? path.resolve(ROOT_DIR, 'output', fallbackDirName) : null);
-  if (outputDir) {
+  const analysisOutputDir = outputDir ? path.resolve(outputDir, 'analysis') : null;
+  const regressionOutputDir = outputDir ? path.resolve(outputDir, 'course_history_regression') : null;
+  const dryRunOutputDir = outputDir ? path.resolve(outputDir, 'dryrun') : null;
+  if (analysisOutputDir) ensureDirectory(analysisOutputDir);
+  if (regressionOutputDir) ensureDirectory(regressionOutputDir);
+  if (dryRunOutputDir) ensureDirectory(dryRunOutputDir);
+  if (regressionOutputDir) {
+    process.env.PRE_TOURNAMENT_OUTPUT_DIR = regressionOutputDir;
+  } else if (outputDir) {
     process.env.PRE_TOURNAMENT_OUTPUT_DIR = outputDir;
   }
   if (WRITE_TEMPLATES) {
@@ -4423,7 +4749,11 @@ async function runAdaptiveOptimizer() {
   process.env.PRE_TOURNAMENT_EVENT_ID = String(CURRENT_EVENT_ID || '');
   process.env.PRE_TOURNAMENT_SEASON = String(CURRENT_SEASON || '');
 
-  const rampSummary = loadRampSummary({ outputDir, metric: 'sg_total' });
+  const rampSummary = ensureEarlySeasonRampSummary({
+    outputDir: analysisOutputDir || outputDir,
+    metric: 'sg_total',
+    dataDir: DATA_DIR || DATA_ROOT_DIR
+  });
   const rampPlayers = Array.isArray(rampSummary?.payload?.players)
     ? rampSummary.payload.players
     : [];
@@ -4449,7 +4779,9 @@ async function runAdaptiveOptimizer() {
     console.warn(`ℹ️  Course history regression generation skipped: ${error.message}`);
   }
 
-  const regressionSnapshot = loadCourseHistoryRegressionMap({ outputDir });
+  const regressionSnapshot = loadCourseHistoryRegressionMap({
+    outputDir: regressionOutputDir || outputDir
+  });
   let courseContext = loadCourseContext(COURSE_CONTEXT_PATH);
   let courseContextUpdateSummary = null;
   if (courseContext && regressionSnapshot?.map) {
@@ -4616,7 +4948,13 @@ async function runAdaptiveOptimizer() {
 
   const metricConfig = baseMetricConfig;
 
-  const validationData = loadValidationOutputs(metricConfig, [DATA_DIR, DEFAULT_DATA_DIR]);
+  const validationData = loadValidationOutputs(metricConfig, [
+    validationOutputsDir,
+    path.resolve(DATA_ROOT_DIR, 'validation_outputs'),
+    ...VALIDATION_OUTPUT_DIRS,
+    DATA_DIR,
+    DEFAULT_DATA_DIR
+  ]);
   if (!validationData?.weightTemplatesPath || !validationData?.deltaTrendsPath) {
     const missing = [];
     if (!validationData?.weightTemplatesPath) missing.push('validation weight templates CSV');
@@ -4625,6 +4963,8 @@ async function runAdaptiveOptimizer() {
     missing.forEach(item => console.error(`   - ${item}`));
     console.error('\nThis optimizer run requires the Algo Validation outputs (weight templates + delta trends).');
     console.error('Run the GAS validation workflow first, then place the resulting CSVs in:');
+    console.error(`   - ${validationOutputsDir}`);
+    console.error(`   - ${path.resolve(DATA_ROOT_DIR, 'validation_outputs')}`);
     console.error(`   - ${DATA_DIR}`);
     console.error(`   - ${DEFAULT_DATA_DIR}`);
     console.error('\nFix: re-run validation and copy the CSVs into one of those folders, or update filenames in optimizer.js.');
@@ -4700,7 +5040,8 @@ async function runAdaptiveOptimizer() {
         snapshotPath: APPROACH_SNAPSHOT_L24_PATH,
         apiKey: DATAGOLF_API_KEY,
         cacheDir: DATAGOLF_CACHE_DIR,
-        ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+        ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
+        isPostTournament: POST_TOURNAMENT_HINT
       });
       if (approachSnapshotL24?.payload?.last_updated) {
         console.log(`✓ Approach snapshot l24 ready (${approachSnapshotL24.source}, updated ${approachSnapshotL24.payload.last_updated})`);
@@ -4715,7 +5056,10 @@ async function runAdaptiveOptimizer() {
         snapshotPath: APPROACH_SNAPSHOT_L12_PATH,
         apiKey: DATAGOLF_API_KEY,
         cacheDir: DATAGOLF_CACHE_DIR,
-        ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+        ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
+        season: CURRENT_SEASON,
+        eventId: CURRENT_EVENT_ID,
+        isPostTournament: POST_TOURNAMENT_HINT
       });
       if (approachSnapshotL12?.payload?.last_updated) {
         console.log(`✓ Approach snapshot l12 ready (${approachSnapshotL12.source}, updated ${approachSnapshotL12.payload.last_updated})`);
@@ -5124,13 +5468,25 @@ async function runAdaptiveOptimizer() {
     if (playerName) acc[dgId] = playerName;
     return acc;
   }, {});
-  const resultsCurrent = deriveResultsFromHistory(historyData, CURRENT_EVENT_ID, effectiveSeason, fieldNameLookup);
+  let resultsCurrent = deriveResultsFromHistory(historyData, CURRENT_EVENT_ID, effectiveSeason, fieldNameLookup);
   console.log(`ℹ️  Derived ${resultsCurrent.length} results from historical data.`);
 
+  if (FORCE_RUN_MODE === 'pre') {
+    resultsCurrent = [];
+    console.log('ℹ️  Pre-tournament override active: ignoring results for mode selection.');
+  }
+
   const HAS_CURRENT_RESULTS = resultsCurrent.length > 0;
+  if (FORCE_RUN_MODE === 'post' && !HAS_CURRENT_RESULTS) {
+    console.error('\n❌ Forced post-tournament mode but no results were found for the current season/event.');
+    process.exit(1);
+  }
   if (!HAS_CURRENT_RESULTS) {
     console.warn('\n⚠️  No results found for the current season/event.');
     console.warn('   Falling back to historical + similar-course outcomes for supervised metric training.');
+  } else {
+    OUTPUT_DIR = postEventOutputDir;
+    ensureDirectory(OUTPUT_DIR);
   }
 
   if (!HAS_CURRENT_RESULTS && !APPROACH_DELTA_PATH) {
@@ -6097,7 +6453,6 @@ async function runAdaptiveOptimizer() {
 
     const preEventRankingPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_rankings.json`);
     const preEventRankingCsvPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_rankings.csv`);
-    const preEventRankingTxtPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_rankings.txt`);
     fs.writeFileSync(preEventRankingPath, JSON.stringify({
       timestamp: new Date().toISOString(),
       eventId: CURRENT_EVENT_ID,
@@ -6112,7 +6467,6 @@ async function runAdaptiveOptimizer() {
 
     const rankingCsvContent = buildSheetLikeRankingCsv(preEventRanking, preEventGroups);
     fs.writeFileSync(preEventRankingCsvPath, rankingCsvContent);
-    fs.writeFileSync(preEventRankingTxtPath, rankingCsvContent);
 
     const output = {
       timestamp: new Date().toISOString(),
@@ -6462,8 +6816,8 @@ async function runAdaptiveOptimizer() {
     fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
     console.log('✅ Pre-event training output saved (rankings generated).');
-    console.log(`✅ JSON results saved to: output/optimizer_${outputBaseName}_pre_event_results.json`);
-    console.log(`✅ Text results saved to: output/optimizer_${outputBaseName}_pre_event_results.txt\n`);
+    console.log(`✅ JSON results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.json`)}`);
+    console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.txt`)}\n`);
 
     if (WRITE_TEMPLATES) {
       const preEventTemplateName = courseTemplateKey || String(CURRENT_EVENT_ID);
@@ -6484,7 +6838,7 @@ async function runAdaptiveOptimizer() {
         const result = upsertTemplateInFile(filePath, preEventTemplate, { replaceByEventId: true, dryRun: DRY_RUN });
         if (result.updated) {
           if (DRY_RUN && result.content) {
-            const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
+            const dryRunPath = path.resolve(dryRunOutputDir || OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
             fs.writeFileSync(dryRunPath, result.content, 'utf8');
             console.log(`🧪 Dry-run template output saved to: ${dryRunPath}`);
           } else {
@@ -6508,7 +6862,7 @@ async function runAdaptiveOptimizer() {
         ];
         const outputs = writeDeltaPlayerScoresFiles(deltaScoreTargets, deltaScoresByEvent, {
           dryRun: DRY_RUN,
-          outputDir: OUTPUT_DIR
+          outputDir: dryRunOutputDir || OUTPUT_DIR
         });
         outputs.forEach(entry => {
           const label = entry.action === 'dryRun' ? '🧪 Dry-run delta scores saved to' : '✅ Delta scores written to';
@@ -8520,7 +8874,7 @@ async function runAdaptiveOptimizer() {
       const result = upsertTemplateInFile(filePath, optimizedTemplate, { replaceByEventId: true, dryRun: DRY_RUN });
       if (result.updated) {
         if (DRY_RUN && result.content) {
-          const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
+          const dryRunPath = path.resolve(dryRunOutputDir || OUTPUT_DIR, `dryrun_${path.basename(filePath)}`);
           fs.writeFileSync(dryRunPath, result.content, 'utf8');
           console.log(`🧪 Dry-run template output saved to: ${dryRunPath}`);
           eventTemplateAction = 'dryRun';
@@ -8546,7 +8900,7 @@ async function runAdaptiveOptimizer() {
         const validationResult = upsertTemplateInFile(filePath, validationTemplate, { replaceByEventId: false, dryRun: DRY_RUN });
         if (validationResult.updated) {
           if (DRY_RUN && validationResult.content) {
-            const dryRunPath = path.resolve(OUTPUT_DIR, `dryrun_${validationTemplate.name}_${path.basename(filePath)}`);
+            const dryRunPath = path.resolve(dryRunOutputDir || OUTPUT_DIR, `dryrun_${validationTemplate.name}_${path.basename(filePath)}`);
             fs.writeFileSync(dryRunPath, validationResult.content, 'utf8');
             console.log(`🧪 Dry-run validation template saved to: ${dryRunPath}`);
             validationTemplateActions.push({
@@ -8588,8 +8942,26 @@ async function runAdaptiveOptimizer() {
     console.log('   Standard templates: no updates');
   }
 
-  console.log(`✅ JSON results also saved to: output/optimizer_${outputBaseName}_post_tournament_results.json`);
-  console.log(`✅ Text results saved to: output/optimizer_${outputBaseName}_post_tournament_results.txt\n`);
+  console.log(`✅ JSON results also saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.json`)}`);
+  console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.txt`)}\n`);
+
+  try {
+    const { runValidation } = require('./validationRunner');
+    if (typeof runValidation === 'function') {
+      console.log('🔄 Running validation runner (post-tournament)...');
+      const validationResult = await runValidation({
+        season: CURRENT_SEASON,
+        dataRootDir: DATA_ROOT_DIR,
+        tournamentName: TOURNAMENT_NAME,
+        tournamentSlug: outputBaseName,
+        tournamentDir,
+        eventId: CURRENT_EVENT_ID
+      });
+      console.log(`✅ Validation outputs written to: ${validationResult.outputDir}`);
+    }
+  } catch (error) {
+    console.warn(`⚠️  Validation runner failed: ${error.message}`);
+  }
 }
 
 runAdaptiveOptimizer().catch(error => {

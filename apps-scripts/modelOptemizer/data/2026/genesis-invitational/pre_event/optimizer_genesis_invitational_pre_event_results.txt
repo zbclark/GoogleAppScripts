@@ -1,7 +1,7 @@
 ====================================================================================================
 ADAPTIVE WEIGHT OPTIMIZER - PRE-EVENT TRAINING
 ====================================================================================================
-DRY RUN: OFF (templates written)
+DRY RUN: ON (template files not modified)
 
 MODE: Historical + Similar-Course Training (no current-year results)
 Event: 7 | Tournament: Genesis Invitational

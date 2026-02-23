@@ -1,0 +1,712 @@
+{
+  "timestamp": "2026-02-23T02:12:04.098Z",
+  "eventId": "7",
+  "season": 2026,
+  "tournament": "Genesis Invitational",
+  "weights": {
+    "groupWeights": {
+      "Driving Performance": 0.08103458149256845,
+      "Approach - Short (<100)": 0.054249566208180285,
+      "Approach - Mid (100-150)": 0.1350245325113916,
+      "Approach - Long (150-200)": 0.14567298358259811,
+      "Approach - Very Long (>200)": 0.07574856124820695,
+      "Putting": 0.07061800977996809,
+      "Around the Green": 0.037954940265280554,
+      "Scoring": 0.1765987247684606,
+      "Course Management": 0.2230981001433454
+    },
+    "metricWeights": {
+      "Driving Performance::Driving Distance": 0.033416958393746456,
+      "Driving Performance::Driving Accuracy": 0.34776936697459276,
+      "Driving Performance::SG OTT": 0.6188136746316608,
+      "Approach - Short (<100)::Approach <100 GIR": 0.12426292425471001,
+      "Approach - Short (<100)::Approach <100 SG": 0.16655076614453962,
+      "Approach - Short (<100)::Approach <100 Prox": 0.7091863096007505,
+      "Approach - Mid (100-150)::Approach <150 FW GIR": 0.08680721261333971,
+      "Approach - Mid (100-150)::Approach <150 FW SG": 0.16079161643317424,
+      "Approach - Mid (100-150)::Approach <150 FW Prox": 0.49579739736362066,
+      "Approach - Mid (100-150)::Approach <150 Rough GIR": 0.02968684657184789,
+      "Approach - Mid (100-150)::Approach <150 Rough SG": 0.06666994661147163,
+      "Approach - Mid (100-150)::Approach <150 Rough Prox": 0.16024698040654592,
+      "Approach - Long (150-200)::Approach <200 FW GIR": 0.07568370338433934,
+      "Approach - Long (150-200)::Approach <200 FW SG": 0.2446208825496572,
+      "Approach - Long (150-200)::Approach <200 FW Prox": 0.4223705732971464,
+      "Approach - Long (150-200)::Approach >150 Rough GIR": 0.025035700153316527,
+      "Approach - Long (150-200)::Approach >150 Rough SG": 0.08555449740222608,
+      "Approach - Long (150-200)::Approach >150 Rough Prox": 0.14673464321331436,
+      "Approach - Very Long (>200)::Approach >200 FW GIR": 0.08691028651663273,
+      "Approach - Very Long (>200)::Approach >200 FW SG": 0.18274964773340815,
+      "Approach - Very Long (>200)::Approach >200 FW Prox": 0.7303400657499591,
+      "Putting::SG Putting": 1,
+      "Around the Green::SG Around Green": 1,
+      "Scoring::SG T2G": 0.5113681269174508,
+      "Scoring::Scoring Average": 0.24159674218078153,
+      "Scoring::Birdie Chances Created": 0.11022600134258223,
+      "Scoring::Scoring: Approach <100 SG": 0.01127472223502835,
+      "Scoring::Scoring: Approach <150 FW SG": 0.013337171424362805,
+      "Scoring::Scoring: Approach <150 Rough SG": 0.013337171424362805,
+      "Scoring::Scoring: Approach <200 FW SG": 0.05334868569745122,
+      "Scoring::Scoring: Approach >200 FW SG": 0.022755689388990145,
+      "Scoring::Scoring: Approach >150 Rough SG": 0.022755689388990145,
+      "Course Management::Scrambling": 0.24343132803828743,
+      "Course Management::Great Shots": 0.22753437274979146,
+      "Course Management::Poor Shots": 0.09417005117284079,
+      "Course Management::Course Management: Approach <100 Prox": 0.03583805863236641,
+      "Course Management::Course Management: Approach <150 FW Prox": 0.04239380106511636,
+      "Course Management::Course Management: Approach <150 Rough Prox": 0.04239380106511636,
+      "Course Management::Course Management: Approach >150 Rough Prox": 0.0723316915080078,
+      "Course Management::Course Management: Approach <200 FW Prox": 0.16957520426046543,
+      "Course Management::Course Management: Approach >200 FW Prox": 0.0723316915080078
+    }
+  },
+  "players": [
+    {
+      "rank": 1,
+      "dgId": "18417",
+      "name": "Scheffler, Scottie",
+      "refinedWeightedScore": 1.6665709083427371,
+      "weightedScore": 1.6874063007359184,
+      "compositeScore": 1.4667421641914096,
+      "war": 0.9518591789208894
+    },
+    {
+      "rank": 2,
+      "dgId": "17511",
+      "name": "Straka, Sepp",
+      "refinedWeightedScore": 1.1057877408183927,
+      "weightedScore": 1.1196122479954869,
+      "compositeScore": 0.9669424716028421,
+      "war": 0.6107129933533377
+    },
+    {
+      "rank": 3,
+      "dgId": "22085",
+      "name": "Morikawa, Collin",
+      "refinedWeightedScore": 1.0195926654763445,
+      "weightedScore": 1.0389590043390398,
+      "compositeScore": 0.8982751427623366,
+      "war": 0.5700127990833628
+    },
+    {
+      "rank": 4,
+      "dgId": "14578",
+      "name": "Henley, Russell",
+      "refinedWeightedScore": 0.9607053977117062,
+      "weightedScore": 0.9727160921474296,
+      "compositeScore": 0.8294884055820109,
+      "war": 0.4952904702627007
+    },
+    {
+      "rank": 5,
+      "dgId": "10091",
+      "name": "McIlroy, Rory",
+      "refinedWeightedScore": 0.9261931683826754,
+      "weightedScore": 0.9437854592636933,
+      "compositeScore": 0.812642831482281,
+      "war": 0.5066433666589858
+    },
+    {
+      "rank": 6,
+      "dgId": "13562",
+      "name": "Matsuyama, Hideki",
+      "refinedWeightedScore": 0.8245739625403535,
+      "weightedScore": 0.8348827480716052,
+      "compositeScore": 0.7285902437659076,
+      "war": 0.4805744003859468
+    },
+    {
+      "rank": 7,
+      "dgId": "18841",
+      "name": "Hovland, Viktor",
+      "refinedWeightedScore": 0.6881428731207894,
+      "weightedScore": 0.6967460034840215,
+      "compositeScore": 0.6210622029625491,
+      "war": 0.4444666684124468
+    },
+    {
+      "rank": 8,
+      "dgId": "19895",
+      "name": "Schauffele, Xander",
+      "refinedWeightedScore": 0.6779480570550129,
+      "weightedScore": 0.6864237322994479,
+      "compositeScore": 0.6089243400137281,
+      "war": 0.4280924246803822
+    },
+    {
+      "rank": 9,
+      "dgId": "12294",
+      "name": "Fleetwood, Tommy",
+      "refinedWeightedScore": 0.6792428542276523,
+      "weightedScore": 0.6877347169664366,
+      "compositeScore": 0.5978496808744472,
+      "war": 0.388117929993139
+    },
+    {
+      "rank": 10,
+      "dgId": "14609",
+      "name": "Kim, Si Woo",
+      "refinedWeightedScore": 0.5789962008021506,
+      "weightedScore": 0.5862347845176615,
+      "compositeScore": 0.5379561782551028,
+      "war": 0.42530609697579913
+    },
+    {
+      "rank": 11,
+      "dgId": "13900",
+      "name": "Lowry, Shane",
+      "refinedWeightedScore": 0.49285671231562894,
+      "weightedScore": 0.499018384131274,
+      "compositeScore": 0.45881818161100774,
+      "war": 0.3650177090637198
+    },
+    {
+      "rank": 12,
+      "dgId": "23950",
+      "name": "Aberg, Ludvig",
+      "refinedWeightedScore": 0.5019486481329503,
+      "weightedScore": 0.5082239869095504,
+      "compositeScore": 0.4324883173739494,
+      "war": 0.2557717551242138
+    },
+    {
+      "rank": 13,
+      "dgId": "11889",
+      "name": "Fox, Ryan",
+      "refinedWeightedScore": 0.4781866344095496,
+      "weightedScore": 0.4841649015899153,
+      "compositeScore": 0.41571227734294214,
+      "war": 0.25598948743333805
+    },
+    {
+      "rank": 14,
+      "dgId": "17576",
+      "name": "Conners, Corey",
+      "refinedWeightedScore": 0.5018605934903381,
+      "weightedScore": 0.5081348314118701,
+      "compositeScore": 0.4135914489388396,
+      "war": 0.1929902231684351
+    },
+    {
+      "rank": 15,
+      "dgId": "6093",
+      "name": "Rose, Justin",
+      "refinedWeightedScore": 0.44902509066091084,
+      "weightedScore": 0.4546387815704727,
+      "compositeScore": 0.3891040593134793,
+      "war": 0.2361897073804947
+    },
+    {
+      "rank": 16,
+      "dgId": "15575",
+      "name": "Hoge, Tom",
+      "refinedWeightedScore": 0.41736081167029965,
+      "weightedScore": 0.4225786372288501,
+      "compositeScore": 0.36434938604096734,
+      "war": 0.22848113326924097
+    },
+    {
+      "rank": 17,
+      "dgId": "15466",
+      "name": "Cantlay, Patrick",
+      "refinedWeightedScore": 0.34750672352269907,
+      "weightedScore": 0.35185123650298633,
+      "compositeScore": 0.3311375115229725,
+      "war": 0.28280548656960697
+    },
+    {
+      "rank": 18,
+      "dgId": "17646",
+      "name": "Fitzpatrick, Matt",
+      "refinedWeightedScore": 0.3854088129789046,
+      "weightedScore": 0.3902271761280556,
+      "compositeScore": 0.3231717836571217,
+      "war": 0.16670920122494273
+    },
+    {
+      "rank": 19,
+      "dgId": "18634",
+      "name": "McNealy, Maverick",
+      "refinedWeightedScore": 0.36204486112821677,
+      "weightedScore": 0.36892161073766083,
+      "compositeScore": 0.31447897209854003,
+      "war": 0.18744614860725808
+    },
+    {
+      "rank": 20,
+      "dgId": "26096",
+      "name": "Bhatia, Akshay",
+      "refinedWeightedScore": 0.2833065836828897,
+      "weightedScore": 0.2886877633317959,
+      "compositeScore": 0.2644558088310276,
+      "war": 0.2079145816625682
+    },
+    {
+      "rank": 21,
+      "dgId": "22760",
+      "name": "Hisatsune, Ryo",
+      "refinedWeightedScore": 0.27729665209255333,
+      "weightedScore": 0.28076340200804845,
+      "compositeScore": 0.25132463157287127,
+      "war": 0.18263416722412454
+    },
+    {
+      "rank": 22,
+      "dgId": "17536",
+      "name": "Spaun, J.J.",
+      "refinedWeightedScore": 0.20606968561777747,
+      "weightedScore": 0.20864595929367852,
+      "compositeScore": 0.19990701570768737,
+      "war": 0.17951614734037474
+    },
+    {
+      "rank": 23,
+      "dgId": "14577",
+      "name": "English, Harris",
+      "refinedWeightedScore": 0.19495993912158857,
+      "weightedScore": 0.19739731926078014,
+      "compositeScore": 0.19421022484991438,
+      "war": 0.18677367122456104
+    },
+    {
+      "rank": 24,
+      "dgId": "13872",
+      "name": "Bradley, Keegan",
+      "refinedWeightedScore": 0.19703272063943533,
+      "weightedScore": 0.199496014597267,
+      "compositeScore": 0.17988402113539004,
+      "war": 0.1341227030576771
+    },
+    {
+      "rank": 25,
+      "dgId": "24968",
+      "name": "Griffin, Ben",
+      "refinedWeightedScore": 0.20646827197171416,
+      "weightedScore": 0.20904952875577176,
+      "compositeScore": 0.17270903424679157,
+      "war": 0.08791454705917112
+    },
+    {
+      "rank": 26,
+      "dgId": "18554",
+      "name": "Rai, Aaron",
+      "refinedWeightedScore": 0.18553777687810638,
+      "weightedScore": 0.1878573615808407,
+      "compositeScore": 0.16699975288414506,
+      "war": 0.1183319992585219
+    },
+    {
+      "rank": 27,
+      "dgId": "22833",
+      "name": "Echavarria, Nico",
+      "refinedWeightedScore": 0.18629659051968603,
+      "weightedScore": 0.18862566187546131,
+      "compositeScore": 0.14485619523084833,
+      "war": 0.042727439726751415
+    },
+    {
+      "rank": 28,
+      "dgId": "23504",
+      "name": "Hoey, Rico",
+      "refinedWeightedScore": 0.10736583299834253,
+      "weightedScore": 0.1087081156752709,
+      "compositeScore": 0.11826434398642785,
+      "war": 0.14056221004579408
+    },
+    {
+      "rank": 29,
+      "dgId": "7399",
+      "name": "Glover, Lucas",
+      "refinedWeightedScore": 0.12778447156143943,
+      "weightedScore": 0.12938202711302738,
+      "compositeScore": 0.09836456509623157,
+      "war": 0.02599048705704137
+    },
+    {
+      "rank": 30,
+      "dgId": "23323",
+      "name": "MacIntyre, Robert",
+      "refinedWeightedScore": 0.11817011616949193,
+      "weightedScore": 0.11964747349477223,
+      "compositeScore": 0.08958938769831307,
+      "war": 0.01945385417324168
+    },
+    {
+      "rank": 31,
+      "dgId": "29433",
+      "name": "Bridgeman, Jacob",
+      "refinedWeightedScore": 0.11070085047979814,
+      "weightedScore": 0.11280352368976942,
+      "compositeScore": 0.08742520848648414,
+      "war": 0.02820913967881848
+    },
+    {
+      "rank": 32,
+      "dgId": "13126",
+      "name": "Taylor, Nick",
+      "refinedWeightedScore": 0.11878515763513164,
+      "weightedScore": 0.12027020418036083,
+      "compositeScore": 0.0819808317071731,
+      "war": -0.007361037396931574
+    },
+    {
+      "rank": 33,
+      "dgId": "17606",
+      "name": "Berger, Daniel",
+      "refinedWeightedScore": 0.06058142507301186,
+      "weightedScore": 0.06133881124651078,
+      "compositeScore": 0.07526978193380642,
+      "war": 0.10777538020416293
+    },
+    {
+      "rank": 34,
+      "dgId": "17780",
+      "name": "Pendrith, Taylor",
+      "refinedWeightedScore": 0.09614818480330456,
+      "weightedScore": 0.09735022496147644,
+      "compositeScore": 0.060284198788280986,
+      "war": -0.026203195615841713
+    },
+    {
+      "rank": 35,
+      "dgId": "19483",
+      "name": "Burns, Sam",
+      "refinedWeightedScore": 0.09351589278062422,
+      "weightedScore": 0.09468502414570999,
+      "compositeScore": 0.05075910016367044,
+      "war": -0.051734722461088484
+    },
+    {
+      "rank": 36,
+      "dgId": "12965",
+      "name": "Fowler, Rickie",
+      "refinedWeightedScore": 0.02816539369869574,
+      "weightedScore": 0.028517516147661515,
+      "compositeScore": 0.0427964155480523,
+      "war": 0.07611384748229746
+    },
+    {
+      "rank": 37,
+      "dgId": "23816",
+      "name": "Valimaki, Sami",
+      "refinedWeightedScore": 0.041020456689797515,
+      "weightedScore": 0.04153329254154614,
+      "compositeScore": 0.024057766697783426,
+      "war": -0.016718460270996237
+    },
+    {
+      "rank": 38,
+      "dgId": "6430",
+      "name": "Scott, Adam",
+      "refinedWeightedScore": 0.003983355437007384,
+      "weightedScore": 0.004033155162393262,
+      "compositeScore": 0.015092815203656016,
+      "war": 0.04089868863326911
+    },
+    {
+      "rank": 39,
+      "dgId": "27774",
+      "name": "Gotterup, Chris",
+      "refinedWeightedScore": -0.010761264336745634,
+      "weightedScore": -0.010895801165620084,
+      "compositeScore": -0.004058881924449748,
+      "war": 0.011893929638281033
+    },
+    {
+      "rank": 40,
+      "dgId": "21891",
+      "name": "Kitayama, Kurt",
+      "refinedWeightedScore": -0.02181164343687243,
+      "weightedScore": -0.022084331594017396,
+      "compositeScore": -0.012969795391023806,
+      "war": 0.008297455749294566
+    },
+    {
+      "rank": 41,
+      "dgId": "29767",
+      "name": "Gerard, Ryan",
+      "refinedWeightedScore": -0.07203782838087061,
+      "weightedScore": -0.07293844197850063,
+      "compositeScore": -0.03129793505715485,
+      "war": 0.06586324775931864
+    },
+    {
+      "rank": 42,
+      "dgId": "11676",
+      "name": "Finau, Tony",
+      "refinedWeightedScore": -0.040981679432671746,
+      "weightedScore": -0.04149403049294579,
+      "compositeScore": -0.034591401333823615,
+      "war": -0.018485266629205226
+    },
+    {
+      "rank": 43,
+      "dgId": "14636",
+      "name": "Spieth, Jordan",
+      "refinedWeightedScore": -0.02860891722972641,
+      "weightedScore": -0.028966584589357774,
+      "compositeScore": -0.043314547152902866,
+      "war": -0.07679312646784144
+    },
+    {
+      "rank": 44,
+      "dgId": "19396",
+      "name": "Knapp, Jake",
+      "refinedWeightedScore": -0.02882890684615543,
+      "weightedScore": -0.0291893245057937,
+      "compositeScore": -0.04765824543453278,
+      "war": -0.0907523942682573
+    },
+    {
+      "rank": 45,
+      "dgId": "10419",
+      "name": "Noren, Alex",
+      "refinedWeightedScore": -0.07399719120199832,
+      "weightedScore": -0.07492230066296932,
+      "compositeScore": -0.083864820981426,
+      "war": -0.1047307017244916
+    },
+    {
+      "rank": 46,
+      "dgId": "26651",
+      "name": "Young, Cameron",
+      "refinedWeightedScore": -0.11370362065533704,
+      "weightedScore": -0.11512513806033915,
+      "compositeScore": -0.10274891296341462,
+      "war": -0.07387105440392407
+    },
+    {
+      "rank": 47,
+      "dgId": "16841",
+      "name": "Lee, Min Woo",
+      "refinedWeightedScore": -0.11046731402410756,
+      "weightedScore": -0.11184837127333186,
+      "compositeScore": -0.12578786252558388,
+      "war": -0.15831334211417197
+    },
+    {
+      "rank": 48,
+      "dgId": "9771",
+      "name": "Day, Jason",
+      "refinedWeightedScore": -0.1548673631106599,
+      "weightedScore": -0.1568035077194222,
+      "compositeScore": -0.13507436400726333,
+      "war": -0.08437302867889268
+    },
+    {
+      "rank": 49,
+      "dgId": "27194",
+      "name": "Hall, Harry",
+      "refinedWeightedScore": -0.20174987955599238,
+      "weightedScore": -0.20427214721636228,
+      "compositeScore": -0.19689064837382297,
+      "war": -0.1796671510745646
+    },
+    {
+      "rank": 50,
+      "dgId": "17543",
+      "name": "Kim, Michael",
+      "refinedWeightedScore": -0.20309972093802375,
+      "weightedScore": -0.20563886425290218,
+      "compositeScore": -0.20531958954166585,
+      "war": -0.20457461521544779
+    },
+    {
+      "rank": 51,
+      "dgId": "28635",
+      "name": "McCarty, Matt",
+      "refinedWeightedScore": -0.2611258921719238,
+      "weightedScore": -0.26439047599502186,
+      "compositeScore": -0.22344701782335047,
+      "war": -0.12791228208945057
+    },
+    {
+      "rank": 52,
+      "dgId": "23505",
+      "name": "McGreevy, Max",
+      "refinedWeightedScore": -0.2718401571871058,
+      "weightedScore": -0.27523869025573455,
+      "compositeScore": -0.22651768341573322,
+      "war": -0.11283533412239684
+    },
+    {
+      "rank": 53,
+      "dgId": "19870",
+      "name": "McCarthy, Denny",
+      "refinedWeightedScore": -0.262660872384818,
+      "weightedScore": -0.2659446464595227,
+      "compositeScore": -0.2604830564360245,
+      "war": -0.24773934638119538
+    },
+    {
+      "rank": 54,
+      "dgId": "21554",
+      "name": "Poston, J.T.",
+      "refinedWeightedScore": -0.30389070397973506,
+      "weightedScore": -0.3076899315015656,
+      "compositeScore": -0.26645109805286354,
+      "war": -0.17022715333922547
+    },
+    {
+      "rank": 55,
+      "dgId": "23475",
+      "name": "Novak, Andrew",
+      "refinedWeightedScore": -0.2880874848103535,
+      "weightedScore": -0.2916891412172551,
+      "compositeScore": -0.26876738696955793,
+      "war": -0.21528329372493124
+    },
+    {
+      "rank": 56,
+      "dgId": "14502",
+      "name": "Cauley, Bud",
+      "refinedWeightedScore": -0.3558549924195737,
+      "weightedScore": -0.36030387507138195,
+      "compositeScore": -0.29967670057213186,
+      "war": -0.158213293407215
+    },
+    {
+      "rank": 57,
+      "dgId": "23604",
+      "name": "Clark, Wyndham",
+      "refinedWeightedScore": -0.33418939336449893,
+      "weightedScore": -0.3383674136992668,
+      "compositeScore": -0.3081752217170065,
+      "war": -0.2377267737583992
+    },
+    {
+      "rank": 58,
+      "dgId": "8825",
+      "name": "Harman, Brian",
+      "refinedWeightedScore": -0.40657660434936577,
+      "weightedScore": -0.41165960624691483,
+      "compositeScore": -0.36825149932763845,
+      "war": -0.2669659165159936
+    },
+    {
+      "rank": 59,
+      "dgId": "16283",
+      "name": "Rodgers, Patrick",
+      "refinedWeightedScore": -0.39009590741813777,
+      "weightedScore": -0.39497286840512236,
+      "compositeScore": -0.39062654244098033,
+      "war": -0.38048511519131567
+    },
+    {
+      "rank": 60,
+      "dgId": "22465",
+      "name": "Penge, Marco",
+      "refinedWeightedScore": -0.4561221468178551,
+      "weightedScore": -0.46182456479515,
+      "compositeScore": -0.38195841501741756,
+      "war": -0.19560406553604184
+    },
+    {
+      "rank": 61,
+      "dgId": "25569",
+      "name": "Stevens, Sam",
+      "refinedWeightedScore": -0.42291259102496215,
+      "weightedScore": -0.4281998246721548,
+      "compositeScore": -0.4173786547112966,
+      "war": -0.3921292581359609
+    },
+    {
+      "rank": 62,
+      "dgId": "23014",
+      "name": "Theegala, Sahith",
+      "refinedWeightedScore": -0.509303448921604,
+      "weightedScore": -0.5156707370773983,
+      "compositeScore": -0.4523854975118048,
+      "war": -0.3047199385254199
+    },
+    {
+      "rank": 63,
+      "dgId": "17538",
+      "name": "Homa, Max",
+      "refinedWeightedScore": -0.5348195239910536,
+      "weightedScore": -0.54150581293688,
+      "compositeScore": -0.5007734697727267,
+      "war": -0.4057313357230359
+    },
+    {
+      "rank": 64,
+      "dgId": "28309",
+      "name": "Coody, Pierceson",
+      "refinedWeightedScore": -0.6055823672663071,
+      "weightedScore": -0.6131533300049596,
+      "compositeScore": -0.5088502258219486,
+      "war": -0.2654763160615896
+    },
+    {
+      "rank": 65,
+      "dgId": "23465",
+      "name": "Greyserman, Max",
+      "refinedWeightedScore": -0.5690891722089759,
+      "weightedScore": -0.5762038987113578,
+      "compositeScore": -0.5216940255873066,
+      "war": -0.3945043216311871
+    },
+    {
+      "rank": 66,
+      "dgId": "20722",
+      "name": "Schmid, Matti",
+      "refinedWeightedScore": -0.6102046573151166,
+      "weightedScore": -0.6178334077101119,
+      "compositeScore": -0.5565814714237128,
+      "war": -0.41366028675544847
+    },
+    {
+      "rank": 67,
+      "dgId": "24342",
+      "name": "Higgo, Garrick",
+      "refinedWeightedScore": -0.6042579412554625,
+      "weightedScore": -0.6118123460814012,
+      "compositeScore": -0.5619340760194542,
+      "war": -0.44555144587491136
+    },
+    {
+      "rank": 68,
+      "dgId": "24766",
+      "name": "Kim, Tom",
+      "refinedWeightedScore": -0.6421034556269082,
+      "weightedScore": -0.6501310033226183,
+      "compositeScore": -0.5816991381732483,
+      "war": -0.4220247861580516
+    },
+    {
+      "rank": 69,
+      "dgId": "17881",
+      "name": "Yu, Kevin",
+      "refinedWeightedScore": -0.6596757140557782,
+      "weightedScore": -0.6679229493133959,
+      "compositeScore": -0.598421413710378,
+      "war": -0.436251163970003
+    },
+    {
+      "rank": 70,
+      "dgId": "18628",
+      "name": "Campbell, Brian",
+      "refinedWeightedScore": -0.7158001174733825,
+      "weightedScore": -0.7247490174259646,
+      "compositeScore": -0.6449980200108454,
+      "war": -0.4589123593755673
+    },
+    {
+      "rank": 71,
+      "dgId": "27900",
+      "name": "Potgieter, Aldrich",
+      "refinedWeightedScore": -0.9220716190784249,
+      "weightedScore": -0.933599315801044,
+      "compositeScore": -0.8304530370932379,
+      "war": -0.589778386775024
+    },
+    {
+      "rank": 72,
+      "dgId": "13508",
+      "name": "Vegas, Jhonattan",
+      "refinedWeightedScore": -1.0814760247162052,
+      "weightedScore": -1.094996587943357,
+      "compositeScore": -0.9818364732391859,
+      "war": -0.7177962055961202
+    }
+  ]
+}
