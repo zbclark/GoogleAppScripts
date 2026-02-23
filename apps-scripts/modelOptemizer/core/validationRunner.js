@@ -3222,7 +3222,7 @@ const loadTournamentResultsFromHistoricalApi = async (eventId, season) => {
     ttlMs: DATAGOLF_HISTORICAL_TTL_HOURS * 60 * 60 * 1000,
     allowStale: true,
     tour: DATAGOLF_HISTORICAL_TOUR,
-    eventId: eventIdStr,
+    eventId: 'all',
     year: seasonValue,
     fileFormat: 'json'
   });
@@ -3572,6 +3572,11 @@ const ensureTournamentResults = async ({
     });
     logger.log(`✓ Tournament results sourced from DataGolf historical rounds (${build.results.length} players).`);
     return { source: fromApi.source, path: resultsJsonPath };
+  }
+
+  if (fromApi.snapshot?.payload) {
+    logger.warn('⚠️  Historical rounds payload loaded but no results found; skipping live stats fallback.');
+    return { source: fromApi.source || 'historical_api', path: resultsJsonPath || null };
   }
 
   const fromLive = await loadTournamentResultsFromLiveStats();

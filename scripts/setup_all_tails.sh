@@ -9,12 +9,53 @@ SESSION="all_tails"
 tmux kill-session -t $SESSION 2>/dev/null
 cd /workspaces/GoogleAppScripts/apps-scripts/modelOptemizer
 
-# Normalize tournament name for file prefix
-PREFIX=$(echo "$TOURNAMENT" | tr '[:upper:]' '[:lower:]' | tr ' ' '_')
+normalize_slug() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/&/and/g' -e 's/[^a-z0-9]/-/g' -e 's/-\{2,\}/-/g' -e 's/^-\|-$//g'
+}
+
+normalize_prefix() {
+  echo "$1" | tr '[:upper:]' '[:lower:]' \
+    | sed -e 's/&/and/g' -e 's/[^a-z0-9]/_/g' -e 's/_\{2,\}/_/g' -e 's/^_\|_$//g'
+}
+
+if [ ${#SEEDS[@]} -eq 0 ]; then
+  SEEDS=(a b c d e)
+fi
+
+SLUG=$(normalize_slug "$TOURNAMENT")
+PREFIX=$(normalize_prefix "$TOURNAMENT")
+LOG_DIR="output"
+
+POST_SEED_DIR="data/2026/${SLUG}/post_event/seed_runs"
+if [ -d "$POST_SEED_DIR" ]; then
+  LOG_DIR="$POST_SEED_DIR"
+fi
+
+# Detect existing prefix/tag from available logs (first matching seed)
+DETECTED_PREFIX=""
+DETECTED_TAG=""
+for seed in "${SEEDS[@]}"; do
+  candidate=$(ls "$LOG_DIR"/*_seed-${seed}_*run.log 2>/dev/null | head -n 1)
+  if [ -n "$candidate" ]; then
+    base=$(basename "$candidate")
+    DETECTED_PREFIX=${base%%_seed-${seed}_*}
+    if echo "$base" | grep -q "_LOEO_"; then
+      DETECTED_TAG="_LOEO"
+    elif echo "$base" | grep -q "_KFOLDS_"; then
+      DETECTED_TAG="_KFOLDS"
+    fi
+    break
+  fi
+done
+
+if [ -n "$DETECTED_PREFIX" ]; then
+  PREFIX="$DETECTED_PREFIX"
+fi
 
 # Touch log files to ensure they exist
 for seed in "${SEEDS[@]}"; do
-  touch output/${PREFIX}_seed-${seed}_run.log
+  touch "$LOG_DIR/${PREFIX}_seed-${seed}${DETECTED_TAG}_run.log"
 done
 
 tmux new-session -d -s $SESSION
@@ -39,7 +80,7 @@ PANES=( $(tmux list-panes -t $SESSION -F '#{pane_id}') )
 
 # Assign logs to available panes
 for idx in "${!SEEDS[@]}"; do
-  tmux send-keys -t ${PANES[$idx]} "tail -F output/${PREFIX}_seed-${SEEDS[$idx]}_run.log" C-m
+  tmux send-keys -t ${PANES[$idx]} "tail -F $LOG_DIR/${PREFIX}_seed-${SEEDS[$idx]}${DETECTED_TAG}_run.log" C-m
 done
 
 # Auto-close the last (empty) pane if more panes than seeds

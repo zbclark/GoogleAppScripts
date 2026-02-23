@@ -1,5 +1,5 @@
 {
-  "generatedAt": "2026-02-23T18:20:23.086Z",
+  "generatedAt": "2026-02-23T22:07:16.550Z",
   "entries": [
     {
       "tournament": "american-express",
@@ -23,6 +23,13 @@
       "source": "config_csv"
     },
     {
+      "tournament": "genesis_invitational_seed-a",
+      "displayName": "Genesis Invitational Seed A (2026)",
+      "eventId": "7",
+      "courseType": "BALANCED",
+      "source": "config_csv"
+    },
+    {
       "tournament": "pebble-beach",
       "displayName": "Pebble Beach (2026)",
       "eventId": "5",
@@ -41,6 +48,13 @@
       "displayName": "Wm Phoenix Open (2026)",
       "eventId": "3",
       "courseType": "POWER",
+      "source": "config_csv"
+    },
+    {
+      "tournament": "genesis_invitational_seed-b",
+      "displayName": "Genesis Invitational Seed B (2026)",
+      "eventId": "7",
+      "courseType": "BALANCED",
       "source": "config_csv"
     }
   ]

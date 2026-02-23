@@ -53,6 +53,15 @@ function loadCsv(filePath, options = {}) {
       return idx === -1 ? '' : line.slice(idx + 1);
     });
   }
+
+  processedLines = processedLines.filter(line => {
+    if (!line) return false;
+    const trimmed = String(line).trim();
+    if (!trimmed) return false;
+    // Treat comma-only rows as empty
+    const contentOnly = trimmed.replace(/,+/g, '').trim();
+    return contentOnly.length > 0;
+  });
   // Print processed header line for diagnostics
   const trimmedContent = processedLines.join('\n');
   const parseOpts = { ...options };

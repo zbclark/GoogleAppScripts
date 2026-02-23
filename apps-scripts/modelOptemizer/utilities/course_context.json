@@ -1,12 +1,12 @@
 {
-  "updatedAt": "2026-02-22T05:26:51.839Z",
+  "updatedAt": "2026-02-23T21:15:39.833Z",
   "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data",
   "defaultTours": [
     "pga"
   ],
   "byEventId": {
     "3": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/wm-phoenix-open/inputs/WM Phoenix Open (2026) - Configuration Sheet.csv",
       "eventId": "3",
       "templateKey": "POWER",
       "courseNum": "510",
@@ -63,7 +63,7 @@
       "pastPerformanceWeight": 0.1
     },
     "5": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/pebble_beach/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/pebble-beach/inputs/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
       "eventId": "5",
       "templateKey": "TECHNICAL",
       "courseNum": "5",
@@ -93,7 +93,8 @@
       },
       "puttingCourseCourseNums": {
         "7": [
-          "500"
+          "500",
+          "939"
         ]
       },
       "similarCoursesWeight": 0.65,
@@ -107,9 +108,9 @@
       "pastPerformanceWeight": 0.1
     },
     "7": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
       "eventId": "7",
-      "templateKey": "BALANCED",
+      "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseNum": "500",
       "courseNums": [
         "500",
@@ -161,7 +162,6 @@
       "puttingCourseCourseNums": {
         "4": [
           "4",
-          "939",
           "104"
         ],
         "5": [
@@ -760,7 +760,7 @@
   },
   "byCourseNum": {
     "5": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/pebble_beach/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/pebble-beach/inputs/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
       "eventId": "5",
       "templateKey": "TECHNICAL",
       "courseNum": "5",
@@ -790,7 +790,8 @@
       },
       "puttingCourseCourseNums": {
         "7": [
-          "500"
+          "500",
+          "939"
         ]
       },
       "similarCoursesWeight": 0.65,
@@ -864,9 +865,6 @@
       "puttingCourseCourseNums": {
         "3": [
           "510"
-        ],
-        "11": [
-          "11"
         ],
         "475": [
           "665"
@@ -1072,12 +1070,13 @@
       }
     },
     "500": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
       "eventId": "7",
-      "templateKey": "BALANCED",
+      "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseNum": "500",
       "courseNums": [
-        "500"
+        "500",
+        "939"
       ],
       "courseNameKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseType": "BALANCED",
@@ -1102,14 +1101,36 @@
         ],
         "14": [
           "14"
+        ],
+        "23": [
+          "23"
+        ],
+        "33": [
+          "241",
+          "872"
+        ],
+        "480": [
+          "241",
+          "872"
+        ],
+        "536": [
+          "23"
+        ],
+        "538": [
+          "241",
+          "872"
         ]
       },
       "puttingCourseCourseNums": {
+        "4": [
+          "4",
+          "104"
+        ],
         "5": [
           "5"
         ],
         "26": [
-          "528"
+          "43"
         ]
       },
       "similarCoursesWeight": 0.55,
@@ -1123,7 +1144,7 @@
       "pastPerformanceWeight": 0.4
     },
     "510": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/wm_phoenix_open/Waste Management (2026) - Configuration Sheet (1).csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/wm-phoenix-open/inputs/WM Phoenix Open (2026) - Configuration Sheet.csv",
       "eventId": "3",
       "templateKey": "POWER",
       "courseNum": "510",
@@ -1141,8 +1162,8 @@
         "7"
       ],
       "puttingCourseIds": [
-        "11",
-        "3"
+        "475",
+        "11"
       ],
       "similarCourseCourseNums": {
         "7": [
@@ -1197,7 +1218,6 @@
         "10"
       ],
       "puttingCourseIds": [
-        "475",
         "11",
         "3"
       ],
@@ -1486,24 +1506,21 @@
           "977"
         ]
       },
-      "puttingCourseCourseNums": {
-        "10": [
-          "928"
-        ]
-      },
+      "puttingCourseCourseNums": {},
       "similarCoursesWeight": null,
       "puttingCoursesWeight": null,
       "shotDistribution": null
     },
     "939": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/genesis/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
       "eventId": "7",
-      "templateKey": "BALANCED",
-      "courseNum": "939",
+      "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
+      "courseNum": "500",
       "courseNums": [
+        "500",
         "939"
       ],
-      "courseNameKey": "TORREY PINES_GOLF_COURSE (NORTH)",
+      "courseNameKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseType": "BALANCED",
       "pastPerformance": true,
       "similarCourseIds": [
@@ -1526,23 +1543,45 @@
         ],
         "14": [
           "14"
+        ],
+        "23": [
+          "23"
+        ],
+        "33": [
+          "241",
+          "872"
+        ],
+        "480": [
+          "241",
+          "872"
+        ],
+        "536": [
+          "23"
+        ],
+        "538": [
+          "241",
+          "872"
         ]
       },
       "puttingCourseCourseNums": {
+        "4": [
+          "4",
+          "104"
+        ],
         "5": [
           "5"
         ],
         "26": [
-          "528"
+          "43"
         ]
       },
       "similarCoursesWeight": 0.55,
       "puttingCoursesWeight": 0.55,
       "shotDistribution": {
-        "under100": 0.087,
-        "from100to150": 0.238,
-        "from150to200": 0.338,
-        "over200": 0.336
+        "under100": 0.082,
+        "from100to150": 0.194,
+        "from150to200": 0.388,
+        "over200": 0.331
       },
       "pastPerformanceWeight": 0.1
     }

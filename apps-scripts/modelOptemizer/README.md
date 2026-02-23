@@ -48,7 +48,8 @@ Use tmux to keep runs alive after disconnecting, monitor progress, and manage mu
 - **Create a new session:**
 	- `tmux new -s [session_name]` — start a new tmux session for long-running jobs.
 - **Run the 5‑seed, 10,000‑test batch:**
-	- `for seed in a b c d e; do OPT_TESTS=[tests] OPT_SEED=[seed] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun > output/[tournament]_seed-[seed]_run.log 2>&1; done` — sequentially run five seeds in one session.
+	- `cd apps-scripts/modelOptemizer`
+	- `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done` — sequentially run five seeds in one session.
 
 ### Detach / attach / list
 
@@ -153,9 +154,8 @@ node core/summarizeSeedResults.js --tournament "[tournament name]"
 
 1) Kick off the seed runs (same tests for all seeds):
 
-- `OPT_TESTS=[tests] OPT_SEED=[seed1] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun --log > output/[tournament]_seed-[seed1]_run.log 2>&1 &` — run seed 1 in background and log output.
-- `OPT_TESTS=[tests] OPT_SEED=[seed2] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun --log > output/[tournament]_seed-[seed2]_run.log 2>&1 &` — run seed 2 in background and log output.
-- `OPT_TESTS=[tests] OPT_SEED=[seed3] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun --log > output/[tournament]_seed-[seed3]_run.log 2>&1 &` — run seed 3 in background and log output.
+- `cd apps-scripts/modelOptemizer`
+- `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done`
 
 2) Monitor logs (recommended):
 
