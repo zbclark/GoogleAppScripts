@@ -82,6 +82,83 @@ const WEIGHT_TEMPLATES = {
       }
     }
   },  
+  PGA_NATIONAL_RESORT_CHAMPION_COURSE: {
+    name: "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
+    eventId: "10",
+    description: "Cognizant Classic 2025 Optimized: 0.5892 corr, 75.0% Top-20, 73.4% Top-20 Weighted",
+    groupWeights: {
+      "Driving Performance": 0.16611275164753542,
+      "Approach - Short (<100)": 0.11771976281126519,
+      "Approach - Mid (100-150)": 0.15642446026315018,
+      "Approach - Long (150-200)": 0.14520510816177137,
+      "Approach - Very Long (>200)": 0.029041021632354277,
+      "Putting": 0.1383106454323132,
+      "Around the Green": 0.08746063107366182,
+      "Scoring": 0.10648374598529901,
+      "Course Management": 0.05324187299264951
+    },
+    metricWeights: {
+      "Driving Performance": {
+        "Driving Distance": { weight: 0.3918541982985746 },
+        "Driving Accuracy": { weight: 0.11432301001545213 },
+        "SG OTT": { weight: 0.4938227916859733 }
+      },
+      "Approach - Short (<100)": {
+        "Approach <100 GIR": { weight: 0.29100945502420583 },
+        "Approach <100 SG": { weight: 0.7087878962368616 },
+        "Approach <100 Prox": { weight: -0.00020264873893265507 }
+      },
+      "Approach - Mid (100-150)": {
+        "Approach <150 FW GIR": { weight: 0.13504538072117933 },
+        "Approach <150 FW SG": { weight: 0.42263101442386786 },
+        "Approach <150 FW Prox": { weight: 0.00022759461244793548 },
+        "Approach <150 Rough GIR": { weight: 0.12508531431396439 },
+        "Approach <150 Rough SG": { weight: 0.31678310131609255 },
+        "Approach <150 Rough Prox": { weight: -0.00022759461244793548 }
+      },
+      "Approach - Long (150-200)": {
+        "Approach <200 FW GIR": { weight: 0.16470582791240168 },
+        "Approach <200 FW SG": { weight: 0.36942886016176296 },
+        "Approach <200 FW Prox": { weight: -0.0002490907277751966 },
+        "Approach >150 Rough GIR": { weight: 0.14856700544742352 },
+        "Approach >150 Rough SG": { weight: 0.31680012502286137 },
+        "Approach >150 Rough Prox": { weight: 0.0002490907277751966 }
+      },
+      "Approach - Very Long (>200)": {
+        "Approach >200 FW GIR": { weight: 0.26369605026424925 },
+        "Approach >200 FW SG": { weight: 0.7359999837297282 },
+        "Approach >200 FW Prox": { weight: -0.00030396600602245665 }
+      },
+      "Putting": {
+        "SG Putting": { weight: 1 }
+      },
+      "Around the Green": {
+        "SG Around Green": { weight: 1 }
+      },
+      "Scoring": {
+        "SG T2G": { weight: 0.23577862776545383 },
+        "Scoring Average": { weight: 0.00010696943887961882 },
+        "Birdie Chances Created": { weight: 0.09974683075039514 },
+        "Scoring: Approach <100 SG": { weight: 0.1794409774085429 },
+        "Scoring: Approach <150 FW SG": { weight: 0.15959910146251563 },
+        "Scoring: Approach <150 Rough SG": { weight: 0.15331373218407082 },
+        "Scoring: Approach <200 FW SG": { weight: 0.04935256085109975 },
+        "Scoring: Approach >200 FW SG": { weight: 0.00010696943887961882 },
+        "Scoring: Approach >150 Rough SG": { weight: 0.12255423070016257 }
+      },
+      "Course Management": {
+        "Scrambling": { weight: 0.5178855777906508 },
+        "Great Shots": { weight: 0.4786812653124182 },
+        "Poor Shot Avoidance": { weight: -0.07380916582883787 },
+        "Course Management: Approach <100 Prox": { weight: -0.0004904509852759214 },
+        "Course Management: Approach <150 FW Prox": { weight: 0.0004904509852759214 },
+        "Course Management: Approach <150 Rough Prox": { weight: -0.0004904509852759214 },
+        "Course Management: Approach >150 Rough Prox": { weight: 0.0004904509852759214 },
+        "Course Management: Approach <200 FW Prox": { weight: -0.0004904509852759214 },
+        "Course Management: Approach >200 FW Prox": { weight: -0.0004904509852759214 }
+      }
+    }
+  },
   TECHNICAL: {
     name: "TECHNICAL",
     description: "Validation CSV TECHNICAL template (2026 Validation - Weight Templates.csv)",

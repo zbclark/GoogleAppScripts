@@ -1,6 +1,6 @@
 {
   "updatedAt": "2026-02-23T21:15:39.833Z",
-  "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data",
+  "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data",
   "defaultTours": [
     "pga"
   ],
@@ -207,14 +207,15 @@
     "10": {
       "sourcePath": null,
       "eventId": "10",
-      "templateKey": "POWER",
+      "templateKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
       "courseNum": "928",
       "courseNums": [
         "928"
       ],
       "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
-      "courseType": "POWER",
+      "courseType": "BALANCED",
       "pastPerformance": true,
+      "pastPerformanceWeight": 0.3,
       "similarCourseIds": [
         "541",
         "483"
@@ -231,7 +232,12 @@
       "puttingCourseCourseNums": {},
       "similarCoursesWeight": null,
       "puttingCoursesWeight": null,
-      "shotDistribution": null
+      "shotDistribution": { 
+        "under100": 0.066,
+        "from100to150": 0.286,
+        "from150to200": 0.409,
+        "over200": 0.239
+      }
     },
     "11": {
       "sourcePath": null,
@@ -1485,7 +1491,7 @@
     "928": {
       "sourcePath": null,
       "eventId": "10",
-      "templateKey": "POWER",
+      "templateKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
       "courseNum": "928",
       "courseNums": [
         "928"
@@ -1493,6 +1499,7 @@
       "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
       "courseType": "POWER",
       "pastPerformance": true,
+      "pastPerformanceWeight": 0.5,
       "similarCourseIds": [
         "541",
         "483"

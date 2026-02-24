@@ -5197,30 +5197,45 @@ async function runAdaptiveOptimizer() {
 
   const metricConfig = baseMetricConfig;
 
-  const validationData = loadValidationOutputs(metricConfig, [
+  let validationData = loadValidationOutputs(metricConfig, [
     validationOutputsDir,
     path.resolve(DATA_ROOT_DIR, 'validation_outputs'),
     ...VALIDATION_OUTPUT_DIRS,
     DATA_DIR,
     DEFAULT_DATA_DIR
   ]);
+  const skipValidationOutputs = ['1', 'true', 'yes'].includes(String(process.env.SKIP_VALIDATION_OUTPUTS || '').trim().toLowerCase());
   if (!validationData?.weightTemplatesPath || !validationData?.deltaTrendsPath) {
     const missing = [];
     if (!validationData?.weightTemplatesPath) missing.push('validation weight templates CSV');
     if (!validationData?.deltaTrendsPath) missing.push('validation delta trends CSV');
-    console.error('\n❌ Validation outputs missing:');
-    missing.forEach(item => console.error(`   - ${item}`));
-    console.error('\nThis optimizer run requires the Algo Validation outputs (weight templates + delta trends).');
-    console.error('Run the GAS validation workflow first, then place the resulting CSVs in:');
-    console.error(`   - ${validationOutputsDir}`);
-    console.error(`   - ${path.resolve(DATA_ROOT_DIR, 'validation_outputs')}`);
-    console.error(`   - ${DATA_DIR}`);
-    console.error(`   - ${DEFAULT_DATA_DIR}`);
-    console.error('\nFix: re-run validation and copy the CSVs into one of those folders, or update filenames in optimizer.js.');
-    process.exit(1);
+    if (!skipValidationOutputs) {
+      console.error('\n❌ Validation outputs missing:');
+      missing.forEach(item => console.error(`   - ${item}`));
+      console.error('\nThis optimizer run requires the Algo Validation outputs (weight templates + delta trends).');
+      console.error('Run the GAS validation workflow first, then place the resulting CSVs in:');
+      console.error(`   - ${validationOutputsDir}`);
+      console.error(`   - ${path.resolve(DATA_ROOT_DIR, 'validation_outputs')}`);
+      console.error(`   - ${DATA_DIR}`);
+      console.error(`   - ${DEFAULT_DATA_DIR}`);
+      console.error('\nFix: re-run validation and copy the CSVs into one of those folders, or update filenames in optimizer.js.');
+      process.exit(1);
+    }
+    console.warn('\n⚠️  Validation outputs missing, but SKIP_VALIDATION_OUTPUTS is enabled. Proceeding without validation priors.');
   }
 
+  const validationDataSafe = validationData || {
+    courseType: null,
+    weightTemplates: { POWER: [], TECHNICAL: [], BALANCED: [] },
+    typeSummaries: { POWER: [], TECHNICAL: [], BALANCED: [] },
+    deltaTrends: [],
+    deltaTrendsPath: null,
+    weightTemplatesPath: null
+  };
+  validationData = validationDataSafe;
+
   let rankingsSnapshot = { source: 'csv_primary', path: null, payload: null };
+  const SHOULD_REFRESH_YTD = FORCE_RUN_MODE === 'pre' || (!FORCE_RUN_MODE && !POST_TOURNAMENT_HINT);
   if (shouldFetchApi) {
     rankingsSnapshot = { source: 'unavailable', path: null, payload: null };
     try {
@@ -5251,7 +5266,7 @@ async function runAdaptiveOptimizer() {
     try {
       approachSkillSnapshot = await getDataGolfApproachSkill({
         apiKey: DATAGOLF_API_KEY,
-        cacheDir: DATAGOLF_CACHE_DIR,
+        cacheDir: null,
         ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
         allowStale: true,
         period: DATAGOLF_APPROACH_PERIOD,
@@ -5288,7 +5303,7 @@ async function runAdaptiveOptimizer() {
         period: 'l24',
         snapshotPath: APPROACH_SNAPSHOT_L24_PATH,
         apiKey: DATAGOLF_API_KEY,
-        cacheDir: DATAGOLF_CACHE_DIR,
+        cacheDir: null,
         ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
         isPostTournament: POST_TOURNAMENT_HINT
       });
@@ -5304,7 +5319,7 @@ async function runAdaptiveOptimizer() {
         period: 'l12',
         snapshotPath: APPROACH_SNAPSHOT_L12_PATH,
         apiKey: DATAGOLF_API_KEY,
-        cacheDir: DATAGOLF_CACHE_DIR,
+        cacheDir: null,
         ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000,
         season: CURRENT_SEASON,
         eventId: CURRENT_EVENT_ID,
@@ -5317,17 +5332,21 @@ async function runAdaptiveOptimizer() {
       console.warn(`ℹ️  Approach snapshot l12 fetch failed: ${error.message}`);
     }
 
-    try {
-      approachSnapshotYtd = await refreshYtdApproachSnapshot({
-        apiKey: DATAGOLF_API_KEY,
-        cacheDir: DATAGOLF_CACHE_DIR,
-        ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
-      });
-      if (approachSnapshotYtd?.payload?.last_updated) {
-        console.log(`✓ Approach snapshot ytd ready (${approachSnapshotYtd.source}, updated ${approachSnapshotYtd.payload.last_updated})`);
+    if (SHOULD_REFRESH_YTD) {
+      try {
+        approachSnapshotYtd = await refreshYtdApproachSnapshot({
+          apiKey: DATAGOLF_API_KEY,
+          cacheDir: null,
+          ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
+        });
+        if (approachSnapshotYtd?.payload?.last_updated) {
+          console.log(`✓ Approach snapshot ytd ready (${approachSnapshotYtd.source}, updated ${approachSnapshotYtd.payload.last_updated})`);
+        }
+      } catch (error) {
+        console.warn(`ℹ️  Approach snapshot ytd fetch failed: ${error.message}`);
       }
-    } catch (error) {
-      console.warn(`ℹ️  Approach snapshot ytd fetch failed: ${error.message}`);
+    } else {
+      console.log('ℹ️  Skipping YTD approach snapshot refresh (post-tournament run).');
     }
   }
   let fieldUpdatesSnapshot = { source: 'csv_primary', path: null, payload: null };
@@ -5844,11 +5863,11 @@ async function runAdaptiveOptimizer() {
 
   if (!HAS_CURRENT_RESULTS && !APPROACH_DELTA_PATH) {
     console.log('ℹ️  No approach delta JSON found; attempting auto-generation (pre-tournament).');
-    if (DATAGOLF_API_KEY) {
+    if (DATAGOLF_API_KEY && SHOULD_REFRESH_YTD) {
       try {
         const refreshed = await refreshYtdApproachSnapshot({
           apiKey: DATAGOLF_API_KEY,
-          cacheDir: DATAGOLF_CACHE_DIR,
+          cacheDir: null,
           ttlMs: DATAGOLF_APPROACH_TTL_HOURS * 60 * 60 * 1000
         });
         if (refreshed?.payload) {
@@ -5859,6 +5878,8 @@ async function runAdaptiveOptimizer() {
       } catch (error) {
         console.warn(`ℹ️  Unable to refresh YTD snapshot for delta generation: ${error.message}`);
       }
+    } else if (!SHOULD_REFRESH_YTD) {
+      console.log('ℹ️  Skipping YTD snapshot refresh for delta generation (post-tournament run).');
     }
 
     let previousRows = loadApproachCsv('snapshot:previous');
