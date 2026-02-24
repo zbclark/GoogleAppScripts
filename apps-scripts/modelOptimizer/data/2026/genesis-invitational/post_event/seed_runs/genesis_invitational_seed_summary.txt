@@ -1,0 +1,21 @@
+====================================================================================================
+ADAPTIVE OPTIMIZER SEED SUMMARY
+====================================================================================================
+Base: genesis_invitational
+Seeds analyzed: 5
+
+Top seed ranking (sorted by correlation, then Top-20, then Top-20 Weighted):
+
+1. seed=c | corr=0.6418 | top20=65.0% | top20W=72.4% | rmse=16.01 | mae=12.65 | players=72 | rec=optimized | baseline=THE_RIVIERA_COUNTRY_CLUB | file=optimizer_genesis_invitational_seed-c_post_tournament_results.json
+2. seed=e | corr=0.6395 | top20=70.0% | top20W=72.4% | rmse=16.15 | mae=12.71 | players=72 | rec=optimized | baseline=THE_RIVIERA_COUNTRY_CLUB | file=optimizer_genesis_invitational_seed-e_post_tournament_results.json
+3. seed=d | corr=0.6363 | top20=70.0% | top20W=72.4% | rmse=16.17 | mae=12.73 | players=72 | rec=optimized | baseline=THE_RIVIERA_COUNTRY_CLUB | file=optimizer_genesis_invitational_seed-d_post_tournament_results.json
+4. seed=a | corr=0.6321 | top20=65.0% | top20W=72.6% | rmse=16.27 | mae=12.96 | players=72 | rec=optimized | baseline=THE_RIVIERA_COUNTRY_CLUB | file=optimizer_genesis_invitational_seed-a_post_tournament_results.json
+5. seed=b | corr=0.6320 | top20=70.0% | top20W=71.9% | rmse=16.15 | mae=12.67 | players=72 | rec=optimized | baseline=THE_RIVIERA_COUNTRY_CLUB | file=optimizer_genesis_invitational_seed-b_post_tournament_results.json
+
+Best seed:
+seed=c | file=optimizer_genesis_invitational_seed-c_post_tournament_results.json
+Recommendation for best seed: Use optimized weights | baseline=THE_RIVIERA_COUNTRY_CLUB
+Note: Optimized weights recommended over baseline template.
+
+Recommendation rollup (from results.json):
+- optimized: Use optimized weights | baseline=THE_RIVIERA_COUNTRY_CLUB | seeds=c, e, d, a, b | count=5
