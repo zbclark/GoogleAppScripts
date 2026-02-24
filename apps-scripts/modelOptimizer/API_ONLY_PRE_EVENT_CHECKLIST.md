@@ -46,10 +46,8 @@ Use this checklist when **no CSV inputs are available** (no config sheet, histor
 - [ ] `output/optimizer_<tournament>_pre_event_results.txt`
 - [ ] Optional: dry-run template outputs (if enabled)
   - [ ] `output/dryrun_weightTemplates.js`
-  - [ ] `output/dryrun_templateLoader.js`
   - [ ] `output/dryrun_deltaPlayerScores.node.js`
-  - [ ] `output/dryrun_deltaPlayerScores.gas.js`
-
+  
 ---
 
 ## Notes

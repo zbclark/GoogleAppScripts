@@ -1,0 +1,257 @@
+{
+  "metrics": [
+    {
+      "metric": "Driving Distance",
+      "avgDelta": 11.709673239436682,
+      "avgCorrelation": 0.058326692470872715,
+      "samples": 2
+    },
+    {
+      "metric": "Driving Accuracy",
+      "avgDelta": 0.016046478873239733,
+      "avgCorrelation": 0.0520869619216667,
+      "samples": 2
+    },
+    {
+      "metric": "SG OTT",
+      "avgDelta": -0.025695774647887366,
+      "avgCorrelation": 0.11931574671004927,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <100 GIR",
+      "avgDelta": 0.07845492957746547,
+      "avgCorrelation": 0.12736092343459599,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <100 SG",
+      "avgDelta": -0.005274647887323945,
+      "avgCorrelation": 0.026783191627708133,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <100 Prox",
+      "avgDelta": 1.7537267605633762,
+      "avgCorrelation": -0.005903085948002888,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 FW GIR",
+      "avgDelta": 0.11208873239436634,
+      "avgCorrelation": 0.10407097042859105,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 FW SG",
+      "avgDelta": 0.015452112676056336,
+      "avgCorrelation": 0.11811231733125493,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 FW Prox",
+      "avgDelta": 2.7443985915492917,
+      "avgCorrelation": -0.014497850120299041,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 Rough GIR",
+      "avgDelta": 0.017873239436619892,
+      "avgCorrelation": 0.043617341323028094,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 Rough SG",
+      "avgDelta": -0.0026450704225352106,
+      "avgCorrelation": 0.04147320322299076,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <150 Rough Prox",
+      "avgDelta": 2.8380492957746455,
+      "avgCorrelation": 0.05522166018347768,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <200 FW GIR",
+      "avgDelta": 0.06182957746478879,
+      "avgCorrelation": 0.20962724171382865,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <200 FW SG",
+      "avgDelta": 0.015452112676056336,
+      "avgCorrelation": 0.11811231733125493,
+      "samples": 2
+    },
+    {
+      "metric": "Approach <200 FW Prox",
+      "avgDelta": 2.7443985915492917,
+      "avgCorrelation": -0.014497850120299041,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >150 Rough GIR",
+      "avgDelta": 0.06083802816901418,
+      "avgCorrelation": 0.12554797706838705,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >150 Rough SG",
+      "avgDelta": 0.031,
+      "avgCorrelation": 0.1690338676590401,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >150 Rough Prox",
+      "avgDelta": 1.9912901408450807,
+      "avgCorrelation": 0.0025236445985279076,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >200 FW GIR",
+      "avgDelta": 0.07584225352112667,
+      "avgCorrelation": 0.27542350629741164,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >200 FW SG",
+      "avgDelta": 0.01215774647887324,
+      "avgCorrelation": 0.14700993425521894,
+      "samples": 2
+    },
+    {
+      "metric": "Approach >200 FW Prox",
+      "avgDelta": 3.0414704225351983,
+      "avgCorrelation": -0.07454142774892825,
+      "samples": 2
+    },
+    {
+      "metric": "SG Putting",
+      "avgDelta": 0.014869014084507064,
+      "avgCorrelation": 0.013242681235480308,
+      "samples": 2
+    },
+    {
+      "metric": "SG Around Green",
+      "avgDelta": 0.018178873239436625,
+      "avgCorrelation": 0.06506284644853015,
+      "samples": 2
+    },
+    {
+      "metric": "SG T2G",
+      "avgDelta": 0.09989718309859152,
+      "avgCorrelation": 0.08948967822422517,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring Average",
+      "avgDelta": 1.3142704225351878,
+      "avgCorrelation": 0.058047550411132125,
+      "samples": 2
+    },
+    {
+      "metric": "Birdies or Better",
+      "avgDelta": -0.16721408450704045,
+      "avgCorrelation": -0.025897540864140058,
+      "samples": 2
+    },
+    {
+      "metric": "Greens in Regulation",
+      "avgDelta": 0.019142253521126862,
+      "avgCorrelation": -0.00041184801290841395,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach <100 SG",
+      "avgDelta": -0.005274647887323945,
+      "avgCorrelation": 0.026783191627708133,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach <150 FW SG",
+      "avgDelta": 0.015452112676056336,
+      "avgCorrelation": 0.11811231733125493,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach <150 Rough SG",
+      "avgDelta": -0.0026450704225352106,
+      "avgCorrelation": 0.04147320322299076,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach >150 Rough SG",
+      "avgDelta": 0.031,
+      "avgCorrelation": 0.1690338676590401,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach <200 FW SG",
+      "avgDelta": 0.015452112676056336,
+      "avgCorrelation": 0.11811231733125493,
+      "samples": 2
+    },
+    {
+      "metric": "Scoring: Approach >200 FW SG",
+      "avgDelta": 0.01215774647887324,
+      "avgCorrelation": 0.14700993425521894,
+      "samples": 2
+    },
+    {
+      "metric": "Scrambling",
+      "avgDelta": 0.012056338028169133,
+      "avgCorrelation": 0.15696659415211645,
+      "samples": 2
+    },
+    {
+      "metric": "Great Shots",
+      "avgDelta": 0.21502957746478946,
+      "avgCorrelation": 0.12426064183932439,
+      "samples": 2
+    },
+    {
+      "metric": "Poor Shot Avoidance",
+      "avgDelta": 0.11323802816901374,
+      "avgCorrelation": -0.10876836567077645,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach <100 Prox",
+      "avgDelta": 1.7537267605633762,
+      "avgCorrelation": -0.005903085948002888,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach <150 FW Prox",
+      "avgDelta": 2.7443985915492917,
+      "avgCorrelation": -0.014497850120299041,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach <150 Rough Prox",
+      "avgDelta": 2.8380492957746455,
+      "avgCorrelation": 0.05522166018347768,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach >150 Rough Prox",
+      "avgDelta": 1.9912901408450807,
+      "avgCorrelation": 0.0025236445985279076,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach <200 FW Prox",
+      "avgDelta": 2.7443985915492917,
+      "avgCorrelation": -0.014497850120299041,
+      "samples": 2
+    },
+    {
+      "metric": "Course Management: Approach >200 FW Prox",
+      "avgDelta": 3.0414704225351983,
+      "avgCorrelation": -0.07454142774892825,
+      "samples": 2
+    }
+  ],
+  "generatedAt": "2026-02-24T15:34:59.943Z"
+}

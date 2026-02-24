@@ -48,7 +48,7 @@ Use tmux to keep runs alive after disconnecting, monitor progress, and manage mu
 - **Create a new session:**
 	- `tmux new -s [session_name]` — start a new tmux session for long-running jobs.
 - **Run the 5‑seed, 10,000‑test batch:**
-	- `cd apps-scripts/modelOptemizer`
+	- `cd apps-scripts/modelOptimizer`
 	- `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done` — sequentially run five seeds in one session.
 
 ### Detach / attach / list
@@ -154,7 +154,7 @@ node core/summarizeSeedResults.js --tournament "[tournament name]"
 
 1) Kick off the seed runs (same tests for all seeds):
 
-- `cd apps-scripts/modelOptemizer`
+- `cd apps-scripts/modelOptimizer`
 - `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done`
 
 2) Monitor logs (recommended):
@@ -214,8 +214,8 @@ Optional (standard templates):
 
 The script looks in **two places** for tournament files:
 
-1. `apps-scripts/modelOptemizer/` (repo root of this module)
-2. `apps-scripts/modelOptemizer/data/`
+1. `apps-scripts/modelOptimizer/` (repo root of this module)
+2. `apps-scripts/modelOptimizer/data/`
 
 Files are resolved via the tournament name + season (fallbacks included):
 
@@ -229,7 +229,7 @@ Files are resolved via the tournament name + season (fallbacks included):
 
 All outputs are written to:
 
-`apps-scripts/modelOptemizer/output/`
+`apps-scripts/modelOptimizer/output/`
 
 **Full optimization run (current results exist):**
 
@@ -325,7 +325,7 @@ node core/optimizer.js --event [event id] --season [season] --tournament "[tourn
 
 ### Template write‑back paths (only when `--writeTemplates` is used)
 
-- `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
+- `apps-scripts/modelOptimizer/utilities/weightTemplates.js`
 
 These are updated with the optimized weights for the target event.
 

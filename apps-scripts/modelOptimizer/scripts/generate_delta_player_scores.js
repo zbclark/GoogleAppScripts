@@ -127,7 +127,6 @@ if (!deltaScoresByEvent) {
 }
 
 const nodeTarget = path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js');
-const gasTarget = path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'deltaPlayerScores.js');
 const targets = [nodeTarget, gasTarget];
 
 const outputDir = path.resolve(ROOT_DIR, 'output');

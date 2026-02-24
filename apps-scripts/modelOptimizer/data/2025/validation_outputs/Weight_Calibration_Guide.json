@@ -1,0 +1,995 @@
+{
+  "generatedAt": "2026-02-24T15:34:59.944Z",
+  "types": {
+    "POWER": [
+      {
+        "metric": "Driving Distance",
+        "templateMetric": "Driving Distance",
+        "group": "Driving Performance",
+        "templateWeight": 0.404,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Driving Accuracy",
+        "templateMetric": "Driving Accuracy",
+        "group": "Driving Performance",
+        "templateWeight": 0.123,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG OTT",
+        "templateMetric": "SG OTT",
+        "group": "Driving Performance",
+        "templateWeight": 0.472,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 GIR",
+        "templateMetric": "Approach <100 GIR",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.14,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 SG",
+        "templateMetric": "Approach <100 SG",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.33,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 Prox",
+        "templateMetric": "Approach <100 Prox",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.53,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW GIR",
+        "templateMetric": "Approach <150 FW GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW SG",
+        "templateMetric": "Approach <150 FW SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.32,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW Prox",
+        "templateMetric": "Approach <150 FW Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.56,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough GIR",
+        "templateMetric": "Approach <150 Rough GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough SG",
+        "templateMetric": "Approach <150 Rough SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.32,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough Prox",
+        "templateMetric": "Approach <150 Rough Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.56,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW GIR",
+        "templateMetric": "Approach <200 FW GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.11,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW SG",
+        "templateMetric": "Approach <200 FW SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.3,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW Prox",
+        "templateMetric": "Approach <200 FW Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.59,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough GIR",
+        "templateMetric": "Approach >150 Rough GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.11,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough SG",
+        "templateMetric": "Approach >150 Rough SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.3,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough Prox",
+        "templateMetric": "Approach >150 Rough Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.59,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW GIR",
+        "templateMetric": "Approach >200 FW GIR",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW SG",
+        "templateMetric": "Approach >200 FW SG",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.25,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW Prox",
+        "templateMetric": "Approach >200 FW Prox",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.65,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG Putting",
+        "templateMetric": "SG Putting",
+        "group": "Putting",
+        "templateWeight": 1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG Around Green",
+        "templateMetric": "SG Around Green",
+        "group": "Around the Green",
+        "templateWeight": 1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG T2G",
+        "templateMetric": "SG T2G",
+        "group": "Scoring",
+        "templateWeight": 0.2,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring Average",
+        "templateMetric": "Scoring Average",
+        "group": "Scoring",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Birdie Chances Created",
+        "templateMetric": "Birdie Chances Created",
+        "group": "Scoring",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <100 SG",
+        "templateMetric": "Scoring: Approach <100 SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <150 FW SG",
+        "templateMetric": "Scoring: Approach <150 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <150 Rough SG",
+        "templateMetric": "Scoring: Approach <150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <200 FW SG",
+        "templateMetric": "Scoring: Approach <200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.05,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach >200 FW SG",
+        "templateMetric": "Scoring: Approach >200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach >150 Rough SG",
+        "templateMetric": "Scoring: Approach >150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scrambling",
+        "templateMetric": "Scrambling",
+        "group": "Course Management",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Great Shots",
+        "templateMetric": "Great Shots",
+        "group": "Course Management",
+        "templateWeight": 0.08,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Poor Shot Avoidance",
+        "templateMetric": "Poor Shot Avoidance",
+        "group": "Course Management",
+        "templateWeight": 0.08,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <100 Prox",
+        "templateMetric": "Course Management: Approach <100 Prox",
+        "group": "Course Management",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <150 FW Prox",
+        "templateMetric": "Course Management: Approach <150 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <150 Rough Prox",
+        "templateMetric": "Course Management: Approach <150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach >150 Rough Prox",
+        "templateMetric": "Course Management: Approach >150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.2,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <200 FW Prox",
+        "templateMetric": "Course Management: Approach <200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach >200 FW Prox",
+        "templateMetric": "Course Management: Approach >200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.05,
+        "correlation": 0,
+        "recommendedWeight": 0
+      }
+    ],
+    "TECHNICAL": [
+      {
+        "metric": "Driving Distance",
+        "templateMetric": "Driving Distance",
+        "group": "Driving Performance",
+        "templateWeight": 0.11474316210807203,
+        "correlation": 0.058326692470872715,
+        "recommendedWeight": 0.253893024536403
+      },
+      {
+        "metric": "Driving Accuracy",
+        "templateMetric": "Driving Accuracy",
+        "group": "Driving Performance",
+        "templateWeight": 0.28739159439626416,
+        "correlation": 0.0520869619216667,
+        "recommendedWeight": 0.22673180564470535
+      },
+      {
+        "metric": "SG OTT",
+        "templateMetric": "SG OTT",
+        "group": "Driving Performance",
+        "templateWeight": 0.5978652434956637,
+        "correlation": 0.11931574671004927,
+        "recommendedWeight": 0.5193751698188916
+      },
+      {
+        "metric": "Approach <100 GIR",
+        "templateMetric": "Approach <100 GIR",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.12888443362451668,
+        "correlation": 0.12736092343459599,
+        "recommendedWeight": 0.7957710139922657
+      },
+      {
+        "metric": "Approach <100 SG",
+        "templateMetric": "Approach <100 SG",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.09351281684089932,
+        "correlation": 0.026783191627708133,
+        "recommendedWeight": 0.16734557967048294
+      },
+      {
+        "metric": "Approach <100 Prox",
+        "templateMetric": "Approach <100 Prox",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.777602749534584,
+        "correlation": -0.005903085948002888,
+        "recommendedWeight": 0.03688340633725128
+      },
+      {
+        "metric": "Approach <150 FW GIR",
+        "templateMetric": "Approach <150 FW GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.11734028683181226,
+        "correlation": 0.10407097042859105,
+        "recommendedWeight": 0.2760551942593626
+      },
+      {
+        "metric": "Approach <150 FW SG",
+        "templateMetric": "Approach <150 FW SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.19335071707953064,
+        "correlation": 0.11811231733125493,
+        "recommendedWeight": 0.31330080397083965
+      },
+      {
+        "metric": "Approach <150 FW Prox",
+        "templateMetric": "Approach <150 FW Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.6893089960886571,
+        "correlation": -0.014497850120299041,
+        "recommendedWeight": 0.03845651496109008
+      },
+      {
+        "metric": "Approach <150 Rough GIR",
+        "templateMetric": "Approach <150 Rough GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0,
+        "correlation": 0.043617341323028094,
+        "recommendedWeight": 0.11569790867153784
+      },
+      {
+        "metric": "Approach <150 Rough SG",
+        "templateMetric": "Approach <150 Rough SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0,
+        "correlation": 0.04147320322299076,
+        "recommendedWeight": 0.11001043927169359
+      },
+      {
+        "metric": "Approach <150 Rough Prox",
+        "templateMetric": "Approach <150 Rough Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0,
+        "correlation": 0.05522166018347768,
+        "recommendedWeight": 0.14647913886547603
+      },
+      {
+        "metric": "Approach <200 FW GIR",
+        "templateMetric": "Approach <200 FW GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.10435349747268874,
+        "correlation": 0.20962724171382865,
+        "recommendedWeight": 0.32787920567896767
+      },
+      {
+        "metric": "Approach <200 FW SG",
+        "templateMetric": "Approach <200 FW SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.3277352030001631,
+        "correlation": 0.11811231733125493,
+        "recommendedWeight": 0.1847401724645186
+      },
+      {
+        "metric": "Approach <200 FW Prox",
+        "templateMetric": "Approach <200 FW Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.5679112995271483,
+        "correlation": -0.014497850120299041,
+        "recommendedWeight": 0.02267617291833495
+      },
+      {
+        "metric": "Approach >150 Rough GIR",
+        "templateMetric": "Approach >150 Rough GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0,
+        "correlation": 0.12554797706838705,
+        "recommendedWeight": 0.19637033173379037
+      },
+      {
+        "metric": "Approach >150 Rough SG",
+        "templateMetric": "Approach >150 Rough SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0,
+        "correlation": 0.1690338676590401,
+        "recommendedWeight": 0.2643868697969597
+      },
+      {
+        "metric": "Approach >150 Rough Prox",
+        "templateMetric": "Approach >150 Rough Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0,
+        "correlation": 0.0025236445985279076,
+        "recommendedWeight": 0.003947247407428738
+      },
+      {
+        "metric": "Approach >200 FW GIR",
+        "templateMetric": "Approach >200 FW GIR",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.09394081728511038,
+        "correlation": 0.27542350629741164,
+        "recommendedWeight": 0.5542000689867635
+      },
+      {
+        "metric": "Approach >200 FW SG",
+        "templateMetric": "Approach >200 FW SG",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.15089243776420855,
+        "correlation": 0.14700993425521894,
+        "recommendedWeight": 0.2958095944723204
+      },
+      {
+        "metric": "Approach >200 FW Prox",
+        "templateMetric": "Approach >200 FW Prox",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.755166744950681,
+        "correlation": -0.07454142774892825,
+        "recommendedWeight": 0.14999033654091606
+      },
+      {
+        "metric": "SG Putting",
+        "templateMetric": "SG Putting",
+        "group": "Putting",
+        "templateWeight": 1,
+        "correlation": 0.013242681235480308,
+        "recommendedWeight": 1
+      },
+      {
+        "metric": "SG Around Green",
+        "templateMetric": "SG Around Green",
+        "group": "Around the Green",
+        "templateWeight": 1,
+        "correlation": 0.06506284644853015,
+        "recommendedWeight": 1
+      },
+      {
+        "metric": "SG T2G",
+        "templateMetric": "SG T2G",
+        "group": "Scoring",
+        "templateWeight": 0.40277466994853434,
+        "correlation": 0.08948967822422517,
+        "recommendedWeight": 0.11651360336286525
+      },
+      {
+        "metric": "Scoring Average",
+        "templateMetric": "Scoring Average",
+        "group": "Scoring",
+        "templateWeight": 0.18550011188185275,
+        "correlation": 0.058047550411132125,
+        "recommendedWeight": 0.0755766407813244
+      },
+      {
+        "metric": "Birdie Chances Created",
+        "templateMetric": "Birdie Chances Created",
+        "group": "Scoring",
+        "templateWeight": 0.18371000223763706,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <100 SG",
+        "templateMetric": "Scoring: Approach <100 SG",
+        "group": "Scoring",
+        "templateWeight": 0.06645782054150817,
+        "correlation": 0.026783191627708133,
+        "recommendedWeight": 0.03487112958751973
+      },
+      {
+        "metric": "Scoring: Approach <150 FW SG",
+        "templateMetric": "Scoring: Approach <150 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.14499888118147236,
+        "correlation": 0.11811231733125493,
+        "recommendedWeight": 0.15377965332852625
+      },
+      {
+        "metric": "Scoring: Approach <150 Rough SG",
+        "templateMetric": "Scoring: Approach <150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0.0165585142089953,
+        "correlation": 0.04147320322299076,
+        "recommendedWeight": 0.05399720332442717
+      },
+      {
+        "metric": "Scoring: Approach <200 FW SG",
+        "templateMetric": "Scoring: Approach <200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0,
+        "correlation": 0.11811231733125493,
+        "recommendedWeight": 0.15377965332852625
+      },
+      {
+        "metric": "Scoring: Approach >200 FW SG",
+        "templateMetric": "Scoring: Approach >200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0,
+        "correlation": 0.14700993425521894,
+        "recommendedWeight": 0.19140371839639364
+      },
+      {
+        "metric": "Scoring: Approach >150 Rough SG",
+        "templateMetric": "Scoring: Approach >150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0,
+        "correlation": 0.1690338676590401,
+        "recommendedWeight": 0.22007839789041744
+      },
+      {
+        "metric": "Scrambling",
+        "templateMetric": "Scrambling",
+        "group": "Course Management",
+        "templateWeight": 0.12983536340516666,
+        "correlation": 0.15696659415211645,
+        "recommendedWeight": 0.28171556502950235
+      },
+      {
+        "metric": "Great Shots",
+        "templateMetric": "Great Shots",
+        "group": "Course Management",
+        "templateWeight": 0.10708071208673539,
+        "correlation": 0.12426064183932439,
+        "recommendedWeight": 0.22301660500303264
+      },
+      {
+        "metric": "Poor Shot Avoidance",
+        "templateMetric": "Poor Shot Avoidance",
+        "group": "Course Management",
+        "templateWeight": 0.06715031454959175,
+        "correlation": -0.10876836567077645,
+        "recommendedWeight": 0.1952118650327813
+      },
+      {
+        "metric": "Course Management: Approach <100 Prox",
+        "templateMetric": "Course Management: Approach <100 Prox",
+        "group": "Course Management",
+        "templateWeight": 0.10279748360326597,
+        "correlation": -0.005903085948002888,
+        "recommendedWeight": 0.010594554862085768
+      },
+      {
+        "metric": "Course Management: Approach <150 FW Prox",
+        "templateMetric": "Course Management: Approach <150 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.12434747691072147,
+        "correlation": -0.014497850120299041,
+        "recommendedWeight": 0.026019995276160567
+      },
+      {
+        "metric": "Course Management: Approach <150 Rough Prox",
+        "templateMetric": "Course Management: Approach <150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.1489760406906706,
+        "correlation": 0.05522166018347768,
+        "recommendedWeight": 0.09910899376066909
+      },
+      {
+        "metric": "Course Management: Approach >150 Rough Prox",
+        "templateMetric": "Course Management: Approach >150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.25351358586534606,
+        "correlation": 0.0025236445985279076,
+        "recommendedWeight": 0.004529307448175622
+      },
+      {
+        "metric": "Course Management: Approach <200 FW Prox",
+        "templateMetric": "Course Management: Approach <200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.08914469281220723,
+        "correlation": -0.014497850120299041,
+        "recommendedWeight": 0.026019995276160567
+      },
+      {
+        "metric": "Course Management: Approach >200 FW Prox",
+        "templateMetric": "Course Management: Approach >200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.05715433007629502,
+        "correlation": -0.07454142774892825,
+        "recommendedWeight": 0.13378311831143214
+      }
+    ],
+    "BALANCED": [
+      {
+        "metric": "Driving Distance",
+        "templateMetric": "Driving Distance",
+        "group": "Driving Performance",
+        "templateWeight": 0.061,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Driving Accuracy",
+        "templateMetric": "Driving Accuracy",
+        "group": "Driving Performance",
+        "templateWeight": 0.41,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG OTT",
+        "templateMetric": "SG OTT",
+        "group": "Driving Performance",
+        "templateWeight": 0.529,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 GIR",
+        "templateMetric": "Approach <100 GIR",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 SG",
+        "templateMetric": "Approach <100 SG",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.34,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <100 Prox",
+        "templateMetric": "Approach <100 Prox",
+        "group": "Approach - Short (<100)",
+        "templateWeight": 0.54,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW GIR",
+        "templateMetric": "Approach <150 FW GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW SG",
+        "templateMetric": "Approach <150 FW SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.3,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 FW Prox",
+        "templateMetric": "Approach <150 FW Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.6,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough GIR",
+        "templateMetric": "Approach <150 Rough GIR",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough SG",
+        "templateMetric": "Approach <150 Rough SG",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.3,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <150 Rough Prox",
+        "templateMetric": "Approach <150 Rough Prox",
+        "group": "Approach - Mid (100-150)",
+        "templateWeight": 0.6,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW GIR",
+        "templateMetric": "Approach <200 FW GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.09,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW SG",
+        "templateMetric": "Approach <200 FW SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.28,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach <200 FW Prox",
+        "templateMetric": "Approach <200 FW Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.63,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough GIR",
+        "templateMetric": "Approach >150 Rough GIR",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.09,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough SG",
+        "templateMetric": "Approach >150 Rough SG",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.28,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >150 Rough Prox",
+        "templateMetric": "Approach >150 Rough Prox",
+        "group": "Approach - Long (150-200)",
+        "templateWeight": 0.63,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW GIR",
+        "templateMetric": "Approach >200 FW GIR",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.09,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW SG",
+        "templateMetric": "Approach >200 FW SG",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.24,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Approach >200 FW Prox",
+        "templateMetric": "Approach >200 FW Prox",
+        "group": "Approach - Very Long (>200)",
+        "templateWeight": 0.67,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG Putting",
+        "templateMetric": "SG Putting",
+        "group": "Putting",
+        "templateWeight": 1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG Around Green",
+        "templateMetric": "SG Around Green",
+        "group": "Around the Green",
+        "templateWeight": 1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "SG T2G",
+        "templateMetric": "SG T2G",
+        "group": "Scoring",
+        "templateWeight": 0.19,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring Average",
+        "templateMetric": "Scoring Average",
+        "group": "Scoring",
+        "templateWeight": 0.11,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Birdie Chances Created",
+        "templateMetric": "Birdie Chances Created",
+        "group": "Scoring",
+        "templateWeight": 0.1,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <100 SG",
+        "templateMetric": "Scoring: Approach <100 SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <150 FW SG",
+        "templateMetric": "Scoring: Approach <150 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <150 Rough SG",
+        "templateMetric": "Scoring: Approach <150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0.15,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach <200 FW SG",
+        "templateMetric": "Scoring: Approach <200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.07,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach >200 FW SG",
+        "templateMetric": "Scoring: Approach >200 FW SG",
+        "group": "Scoring",
+        "templateWeight": 0.03,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scoring: Approach >150 Rough SG",
+        "templateMetric": "Scoring: Approach >150 Rough SG",
+        "group": "Scoring",
+        "templateWeight": 0.05,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Scrambling",
+        "templateMetric": "Scrambling",
+        "group": "Course Management",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Great Shots",
+        "templateMetric": "Great Shots",
+        "group": "Course Management",
+        "templateWeight": 0.08,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Poor Shot Avoidance",
+        "templateMetric": "Poor Shot Avoidance",
+        "group": "Course Management",
+        "templateWeight": 0.08,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <100 Prox",
+        "templateMetric": "Course Management: Approach <100 Prox",
+        "group": "Course Management",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <150 FW Prox",
+        "templateMetric": "Course Management: Approach <150 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.12,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <150 Rough Prox",
+        "templateMetric": "Course Management: Approach <150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.16,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach >150 Rough Prox",
+        "templateMetric": "Course Management: Approach >150 Rough Prox",
+        "group": "Course Management",
+        "templateWeight": 0.18,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach <200 FW Prox",
+        "templateMetric": "Course Management: Approach <200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.11,
+        "correlation": 0,
+        "recommendedWeight": 0
+      },
+      {
+        "metric": "Course Management: Approach >200 FW Prox",
+        "templateMetric": "Course Management: Approach >200 FW Prox",
+        "group": "Course Management",
+        "templateWeight": 0.03,
+        "correlation": 0,
+        "recommendedWeight": 0
+      }
+    ]
+  }
+}

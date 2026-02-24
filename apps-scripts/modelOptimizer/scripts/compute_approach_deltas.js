@@ -22,14 +22,49 @@ const previousPath = args.previous || args.prev;
 const currentPath = args.current || args.curr;
 let fieldPath = args.field || args.fieldPath || null;
 const outPath = args.out || 'output/approach_deltas.csv';
+
+// Auto-scan approach_snapshot folder if paths not provided
+const snapshotDir = path.resolve(__dirname, '../data/approach_snapshot');
+function getSnapshotJsons() {
+  if (!fs.existsSync(snapshotDir)) return [];
+  return fs.readdirSync(snapshotDir)
+    .filter(f => f.endsWith('.json'))
+    .map(f => ({
+      name: f,
+      path: path.join(snapshotDir, f),
+      mtime: fs.statSync(path.join(snapshotDir, f)).mtime
+    }))
+    .sort((a, b) => b.mtime - a.mtime);
+}
+
+let autoPrev = previousPath, autoCurr = currentPath;
+if (!previousPath || !currentPath) {
+  const snapshots = getSnapshotJsons();
+  if (snapshots.length >= 2) {
+    autoCurr = snapshots[0].path;
+    autoPrev = snapshots[1].path;
+  } else if (snapshots.length === 1) {
+    autoCurr = snapshots[0].path;
+    // For outlier, previous is event CSV (must be specified)
+    if (!previousPath) {
+      console.error('Only one snapshot found. Please specify event CSV for previous.');
+      process.exit(1);
+    }
+  } else {
+    console.error('No snapshots found in approach_snapshot folder.');
+    process.exit(1);
+  }
+}
+
 const defaultJsonName = `approach_deltas_${new Date().toISOString().slice(0, 10)}.json`;
 const outJsonPath = args.outJson || `data/approach_deltas/${defaultJsonName}`;
 
 if (!previousPath || !currentPath) {
   console.error('Usage: node scripts/compute_approach_deltas.js --previous <csv|snapshot:previous> --current <csv|snapshot:current> [--out <csv>] [--outJson <json>]');
-  console.error('Paths can be absolute or relative to the repo root or modelOptemizer/ directory.');
+  console.error('Paths can be absolute or relative to the repo root or modelOptimizer/ directory.');
   console.error('Snapshot selectors: snapshot:current, snapshot:previous, snapshot:latest, snapshot:l24, snapshot:l12, snapshot:YYYY-MM-DD');
   console.error('Optional: --field <csv> to filter deltas to the tournament field.');
+  console.error('If paths are not specified, script will auto-select latest two snapshots from approach_snapshot folder.');
   process.exit(1);
 }
 
@@ -64,14 +99,12 @@ const resolveOutputPath = (value) => {
   return modulePath;
 };
 
-const previousRows = loadApproachCsv(resolveInputPath(previousPath));
-const currentRows = loadApproachCsv(resolveInputPath(currentPath));
+const previousRows = loadApproachCsv(resolveInputPath(autoPrev));
+const currentRows = loadApproachCsv(resolveInputPath(autoCurr));
 
 if (!fieldPath) {
   fieldPath = findDefaultFieldPath();
 }
-
-const resolvedPrevPath = resolveInputPath(previousPath);
 const resolvedCurrPath = resolveInputPath(currentPath);
 const resolvedFieldPath = fieldPath ? resolveInputPath(fieldPath) : null;
 const resolvedOutPath = resolveOutputPath(outPath);

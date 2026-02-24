@@ -2,6 +2,9 @@ const fs = require('fs');
 const path = require('path');
 const { loadCsv } = require('../utilities/csvLoader');
 const { getDataGolfHistoricalRounds } = require('../utilities/dataGolfClient');
+const buildRecentYears = require('../utilities/buildRecentYears');
+const collectRecords = require('../utilities/collectRecords');
+const { extractHistoricalRowsFromSnapshotPayload } = require('../utilities/extractHistoricalRows');
 
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const OUTPUT_DIR = process.env.PRE_TOURNAMENT_OUTPUT_DIR
@@ -274,33 +277,6 @@ const computeRegression = (pairs) => {
   return { n, slope, intercept, r, tStat, pValue };
 };
 
-const collectRecords = () => {
-  const files = walkDir(DATA_DIR).filter(isHistoricalFile);
-  if (!files.length) {
-    return [];
-  }
-
-  const rawRows = [];
-  files.forEach(filePath => {
-    const rows = loadCsv(filePath, { skipFirstColumn: true });
-    rows.forEach(row => rawRows.push(row));
-  });
-
-  return rawRows;
-};
-
-const extractHistoricalRowsFromPayload = (payload) => {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload.rows)) return payload.rows;
-  if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.rounds)) return payload.rounds;
-  if (typeof payload === 'object') {
-    const nested = Object.values(payload).flatMap(value => Array.isArray(value) ? value : []);
-    if (nested.length > 0) return nested;
-  }
-  return [];
-};
 
 const normalizeHistoricalRow = (row) => {
   if (!row || typeof row !== 'object') return null;
@@ -338,37 +314,6 @@ const isRowInRecentMonths = (row, monthSet) => {
   return monthSet.has(key);
 };
 
-const buildRecentYears = (season, yearCount = 5) => {
-  const baseYear = season || new Date().getFullYear();
-  return Array.from({ length: yearCount }, (_, idx) => baseYear - idx);
-};
-
-const fetchHistoricalRounds = async ({ tours, years }) => {
-  const rows = [];
-  for (const tour of tours) {
-    for (const year of years) {
-      try {
-        const snapshot = await getDataGolfHistoricalRounds({
-          apiKey: DATAGOLF_API_KEY,
-          cacheDir: DATAGOLF_CACHE_DIR,
-          ttlMs: DATAGOLF_HISTORICAL_TTL_MS,
-          allowStale: true,
-          tour,
-          eventId: 'all',
-          year,
-          fileFormat: 'json'
-        });
-        const payloadRows = extractHistoricalRowsFromPayload(snapshot?.payload)
-          .map(normalizeHistoricalRow)
-          .filter(Boolean);
-        rows.push(...payloadRows);
-      } catch (error) {
-        console.warn(`⚠️  Historical rounds fetch failed (${tour} ${year}): ${error.message}`);
-      }
-    }
-  }
-  return rows;
-};
 
 const normalizeEventKey = (row) => {
   const year = row.year || row.season || row.event_year || '';
@@ -614,15 +559,21 @@ const run = async () => {
   const recentYears = Array.from(recentMonthYears).filter(year => Number.isFinite(year));
   const yearsToFetch = Array.from(new Set([...lastFiveYears, ...recentYears])).filter(year => Number.isFinite(year));
 
-  let rawRows = collectRecords();
+  let apiPayload = await collectRecords({
+    years: yearsToFetch,
+    tours,
+    dataDir: DATA_DIR,
+    datagolfApiKey: DATAGOLF_API_KEY,
+    datagolfCacheDir: DATAGOLF_CACHE_DIR,
+    datagolfHistoricalTtlMs: DATAGOLF_HISTORICAL_TTL_MS,
+    getDataGolfHistoricalRounds
+  });
+  let rawRows = extractHistoricalRowsFromSnapshotPayload(apiPayload);
   if (rawRows.length === 0) {
-    if (!DATAGOLF_API_KEY) {
-      console.error('No historical data CSVs found and DATAGOLF_API_KEY is not set.');
-      process.exit(1);
-    }
-    rawRows = await fetchHistoricalRounds({ tours, years: yearsToFetch });
+    console.error('No historical data found in JSON, CSV, or API.');
+    process.exit(1);
   }
-
+  
   const scopedEventIds = new Set([
     eventId,
     ...similarEventIds,
@@ -675,11 +626,15 @@ const run = async () => {
   const detailedRowsSimilar = [];
 
   courseMap.forEach((entries, courseNum) => {
+    console.log(`DEBUG: courseNum ${courseNum} has ${entries.length} entries`);
     const withPrior = assignPriorStarts(entries);
     withPrior.forEach(entry => detailedRows.push(entry));
 
     const regression = computeRegression(withPrior);
-    if (!regression) return;
+    if (!regression) {
+      console.log(`DEBUG: No regression computed for courseNum ${courseNum} (not enough data)`);
+      return;
+    }
 
     summary.push({
       courseNum,

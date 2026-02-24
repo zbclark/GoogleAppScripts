@@ -261,31 +261,51 @@ const main = async () => {
 
   let historicalPath = null;
   let rows = [];
-  let sourceMeta = { historicalCsv: null, api: null, metric };
+  let sourceMeta = { historicalCsv: null, historicalJson: null, api: null, metric };
 
-  if (apiYears.length > 0) {
+  // 1. Try cache JSON first
+  const cacheDir = datagolfCacheDir || path.resolve(ROOT_DIR, 'data', 'cache');
+  const jsonFiles = fs.existsSync(cacheDir)
+    ? fs.readdirSync(cacheDir).filter(file => file.toLowerCase().includes('historical_rounds') && file.endsWith('.json'))
+    : [];
+  let historicalJsonPath = jsonFiles.length ? path.resolve(cacheDir, jsonFiles[0]) : null;
+
+  if (historicalJsonPath) {
+    const payload = JSON.parse(fs.readFileSync(historicalJsonPath, 'utf8'));
+    rows = extractHistoricalRowsFromSnapshotPayload(payload);
+    sourceMeta.historicalJson = historicalJsonPath;
+    console.log(`✓ Loaded historical data JSON: ${path.basename(historicalJsonPath)} (${rows.length} rows)`);
+  }
+
+  // 2. Try CSV if JSON failed
+  if (rows.length === 0) {
+    let historicalCsvPath = findHistoricalCsv(DATA_DIR);
+    if (historicalCsvPath) {
+      rows = loadCsv(historicalCsvPath, { skipFirstColumn: true });
+      sourceMeta.historicalCsv = historicalCsvPath;
+      console.log(`✓ Loaded historical data CSV: ${path.basename(historicalCsvPath)} (${rows.length} rows)`);
+    }
+  }
+
+  // 3. Try API if JSON and CSV failed and years specified
+  if (rows.length === 0 && apiYears.length > 0) {
     const apiResult = await loadHistoricalRowsFromApi({ years: apiYears, tour: apiTour });
     if (apiResult.rows.length > 0) {
       rows = apiResult.rows;
       sourceMeta.api = apiResult.meta;
       console.log(`✓ Loaded historical rounds from API: ${rows.length} rows (${apiTour}, ${apiYears.join(', ')})`);
     } else if (apiResult.meta?.source === 'missing-key') {
-      console.warn('ℹ️  DataGolf API key missing; falling back to historical CSV if available.');
+      console.warn('ℹ️  DataGolf API key missing; no historical data found in cache or CSV.');
     } else {
-      console.warn('ℹ️  DataGolf historical rounds API returned no rows; falling back to CSV if available.');
+      console.warn('ℹ️  DataGolf historical rounds API returned no rows; no historical data found in cache or CSV.');
       sourceMeta.api = apiResult.meta;
     }
   }
 
+  // 4. Error if all sources failed
   if (rows.length === 0) {
-    historicalPath = findHistoricalCsv(DATA_DIR);
-    if (!historicalPath) {
-      console.error(`❌ No historical data available (API empty + no CSV in ${DATA_DIR}).`);
-      process.exit(1);
-    }
-    rows = loadCsv(historicalPath, { skipFirstColumn: true });
-    sourceMeta.historicalCsv = historicalPath;
-    console.log(`✓ Loaded historical data CSV: ${path.basename(historicalPath)} (${rows.length} rows)`);
+    console.error(`❌ No historical data available (no JSON + no CSV + API empty in ${DATA_DIR}).`);
+    process.exit(1);
   }
 
 const eventMap = new Map();

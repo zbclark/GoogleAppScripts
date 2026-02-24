@@ -217,19 +217,68 @@
       "pastPerformance": true,
       "pastPerformanceWeight": 0.3,
       "similarCourseIds": [
-        "541",
-        "483"
+        "475",
+        "12",
+        "13",
+        "27",
+        "533",
+        "11",
+        "21"
       ],
-      "puttingCourseIds": [],
+      "puttingCourseIds": [
+        "9",
+        "475",
+        "13",
+        "538",
+        "33",
+        "480"
+      ],
       "similarCourseCourseNums": {
-        "483": [
-          "742"
+        "11": [
+          "11"
         ],
-        "541": [
-          "977"
+        "12": [
+          "12"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "27": [
+          "513"
+        ],
+        "533": [
+          "513"
+        ],
+        "475": [
+          "665"
         ]
       },
-      "puttingCourseCourseNums": {},
+      "puttingCourseCourseNums": {
+        "9": [
+          "9"
+        ],
+        "13": [
+          "752"
+        ],
+        "33": [
+          "241",
+          "872"
+        ],
+        "475": [
+          "665"
+        ],
+        "480": [
+          "241",
+          "872"
+        ],
+        "538": [
+          "241",
+          "872"
+        ]
+      },
       "similarCoursesWeight": null,
       "puttingCoursesWeight": null,
       "shotDistribution": { 
@@ -1497,23 +1546,72 @@
         "928"
       ],
       "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
-      "courseType": "POWER",
+      "courseType": "BALANCED",
       "pastPerformance": true,
-      "pastPerformanceWeight": 0.5,
+      "pastPerformanceWeight": 0.35,
       "similarCourseIds": [
-        "541",
-        "483"
+        "475",
+        "12",
+        "13",
+        "27",
+        "533",
+        "11",
+        "21"
       ],
-      "puttingCourseIds": [],
+      "puttingCourseIds": [
+        "9",
+        "475",
+        "13",
+        "538",
+        "33",
+        "480"
+      ],
       "similarCourseCourseNums": {
-        "483": [
-          "742"
+        "11": [
+          "11"
         ],
-        "541": [
-          "977"
+        "12": [
+          "12"
+        ],
+        "13": [
+          "752"
+        ],
+        "21": [
+          "21"
+        ],
+        "27": [
+          "513"
+        ],
+        "533": [
+          "513"
+        ],
+        "475": [
+          "665"
         ]
       },
-      "puttingCourseCourseNums": {},
+      "puttingCourseCourseNums": {
+        "9": [
+          "9"
+        ],
+        "13": [
+          "752"
+        ],
+        "33": [
+          "241",
+          "872"
+        ],
+        "475": [
+          "665"
+        ],
+        "480": [
+          "241",
+          "872"
+        ],
+        "538": [
+          "241",
+          "872"
+        ]
+      },
       "similarCoursesWeight": null,
       "puttingCoursesWeight": null,
       "shotDistribution": null

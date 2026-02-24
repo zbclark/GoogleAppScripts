@@ -1,0 +1,163 @@
+{
+  "generatedAt": "2026-02-24T15:34:59.949Z",
+  "tournament": "cognizant_classic",
+  "eventId": "10",
+  "season": 2025,
+  "skipMetricAnalysis": false,
+  "dataProcessed": {
+    "predictionsCount": 144,
+    "resultsCount": 144,
+    "metricAnalysis": {
+      "metrics": 42,
+      "top10Finishers": 10,
+      "totalFinishers": 144
+    },
+    "modelDeltaTrends": {
+      "metrics": 0,
+      "totalSamples": 0,
+      "tournamentCount": 0,
+      "source": "season_aggregate"
+    }
+  },
+  "inputs": {
+    "rankingsJsonPath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/cognizant-classic/pre_event/cognizant-classic_pre_event_rankings.json",
+    "rankingsCsvPath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/cognizant-classic/pre_event/cognizant-classic_pre_event_rankings.csv",
+    "resultsJsonPath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/cognizant-classic/post_event/cognizant-classic_results.json",
+    "resultsCsvPath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/cognizant-classic/post_event/cognizant-classic_results.csv",
+    "configCsvPath": null
+  },
+  "sources": {
+    "rankings": "csv",
+    "results": "results_csv",
+    "resultsGeneratedFrom": "cache",
+    "config": "none"
+  },
+  "outputs": [
+    {
+      "label": "calibrationReport.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Calibration_Report.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "calibrationReport.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Calibration_Report.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "metricAnalysis.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/metric_analysis/cognizant_classic_metric_analysis.json",
+      "existedBefore": false,
+      "written": true,
+      "overwritten": false
+    },
+    {
+      "label": "metricAnalysis.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/metric_analysis/cognizant_classic_metric_analysis.csv",
+      "existedBefore": false,
+      "written": true,
+      "overwritten": false
+    },
+    {
+      "label": "courseTypeClassification.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Course_Type_Classification.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "courseTypeClassification.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Course_Type_Classification.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "powerCorrelationSummary.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/POWER_Correlation_Summary.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "powerCorrelationSummary.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/POWER_Correlation_Summary.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "technicalCorrelationSummary.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/TECHNICAL_Correlation_Summary.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "technicalCorrelationSummary.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/TECHNICAL_Correlation_Summary.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "balancedCorrelationSummary.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/BALANCED_Correlation_Summary.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "balancedCorrelationSummary.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/template_correlation_summaries/BALANCED_Correlation_Summary.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "weightCalibrationGuide.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Weight_Calibration_Guide.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "weightCalibrationGuide.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Weight_Calibration_Guide.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "weightTemplates.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Weight_Templates.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "weightTemplates.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Weight_Templates.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "modelDeltaTrends.json",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Model_Delta_Trends.json",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    },
+    {
+      "label": "modelDeltaTrends.csv",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2025/validation_outputs/Model_Delta_Trends.csv",
+      "existedBefore": true,
+      "written": true,
+      "overwritten": true
+    }
+  ]
+}

@@ -1,0 +1,6472 @@
+{
+  "timestamp": "2026-02-24T20:19:58.368Z",
+  "mode": "pre_event_training",
+  "eventId": "10",
+  "season": 2026,
+  "tournament": "Congnizant Classic",
+  "dryRun": true,
+  "preEventRanking": {
+    "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/congnizant_classic_pre_event_rankings.json",
+    "csvPath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/congnizant_classic_pre_event_rankings.csv",
+    "totalPlayers": 156,
+    "top25": [
+      {
+        "rank": 1,
+        "dgId": "22002",
+        "name": "Dumont De Chassart, Adrien",
+        "refinedWeightedScore": 1.4558861049183052,
+        "weightedScore": 1.581606893095357,
+        "compositeScore": 1.1838419622801921,
+        "war": 0.2557237903781408
+      },
+      {
+        "rank": 2,
+        "dgId": "18417",
+        "name": "Scheffler, Scottie",
+        "refinedWeightedScore": 1.0232089487311766,
+        "weightedScore": 1.0360010596700555,
+        "compositeScore": 0.8858805488971271,
+        "war": 0.5355993570936277
+      },
+      {
+        "rank": 3,
+        "dgId": "15310",
+        "name": "Li, Haotong",
+        "refinedWeightedScore": 0.5330234004461457,
+        "weightedScore": 0.550347636479372,
+        "compositeScore": 0.4695166082909901,
+        "war": 0.2809108758514325
+      },
+      {
+        "rank": 4,
+        "dgId": "17511",
+        "name": "Straka, Sepp",
+        "refinedWeightedScore": 0.48356674729321464,
+        "weightedScore": 0.4896122763959442,
+        "compositeScore": 0.4273651209255723,
+        "war": 0.2821217581613713
+      },
+      {
+        "rank": 5,
+        "dgId": "14578",
+        "name": "Henley, Russell",
+        "refinedWeightedScore": 0.4793015345930574,
+        "weightedScore": 0.4852937402039372,
+        "compositeScore": 0.422977157688296,
+        "war": 0.27757179848513347
+      },
+      {
+        "rank": 6,
+        "dgId": "19428",
+        "name": "Zalatoris, Will",
+        "refinedWeightedScore": 0.48114207929469205,
+        "weightedScore": 0.4871572953102799,
+        "compositeScore": 0.4161982597016223,
+        "war": 0.25062717661475464
+      },
+      {
+        "rank": 7,
+        "dgId": "29767",
+        "name": "Gerard, Ryan",
+        "refinedWeightedScore": 0.4301364765776921,
+        "weightedScore": 0.4355140229078561,
+        "compositeScore": 0.37731818949098916,
+        "war": 0.24152791151829975
+      },
+      {
+        "rank": 8,
+        "dgId": "17606",
+        "name": "Berger, Daniel",
+        "refinedWeightedScore": 0.32838467594164,
+        "weightedScore": 0.33249012596773914,
+        "compositeScore": 0.29304170597828183,
+        "war": 0.20099539266954827
+      },
+      {
+        "rank": 9,
+        "dgId": "15466",
+        "name": "Cantlay, Patrick",
+        "refinedWeightedScore": 0.34008068318539664,
+        "weightedScore": 0.3443323561529483,
+        "compositeScore": 0.29250803857602364,
+        "war": 0.17158463089653278
+      },
+      {
+        "rank": 10,
+        "dgId": "29925",
+        "name": "Yellamaraju, Sudarshan",
+        "refinedWeightedScore": 0.2871673581682788,
+        "weightedScore": 0.4076150512266178,
+        "compositeScore": 0.4546122104681028,
+        "war": 0.5642722486982346
+      },
+      {
+        "rank": 11,
+        "dgId": "28016",
+        "name": "Gonzalez, Emilio",
+        "refinedWeightedScore": 0.27636810964885844,
+        "weightedScore": 0.36597084049713724,
+        "compositeScore": 0.38694134217053544,
+        "war": 0.4358725127417981
+      },
+      {
+        "rank": 12,
+        "dgId": "21688",
+        "name": "Kim, S.H.",
+        "refinedWeightedScore": 0.26410440553082243,
+        "weightedScore": 0.30258832077832365,
+        "compositeScore": 0.2912190719818211,
+        "war": 0.26469082478998185
+      },
+      {
+        "rank": 13,
+        "dgId": "23816",
+        "name": "Valimaki, Sami",
+        "refinedWeightedScore": 0.2829414877226014,
+        "weightedScore": 0.2864788091119884,
+        "compositeScore": 0.2511372475182805,
+        "war": 0.1686736037996286
+      },
+      {
+        "rank": 14,
+        "dgId": "14609",
+        "name": "Kim, Si Woo",
+        "refinedWeightedScore": 0.26746272470990123,
+        "weightedScore": 0.2708065313202193,
+        "compositeScore": 0.22758281472910655,
+        "war": 0.12672747601651013
+      },
+      {
+        "rank": 15,
+        "dgId": "9771",
+        "name": "Day, Jason",
+        "refinedWeightedScore": 0.2677672507267226,
+        "weightedScore": 0.2711148645072142,
+        "compositeScore": 0.21656076576947883,
+        "war": 0.08926786871476289
+      },
+      {
+        "rank": 16,
+        "dgId": "22985",
+        "name": "Smotherman, Austin",
+        "refinedWeightedScore": 0.19034946753667592,
+        "weightedScore": 0.30773026727283526,
+        "compositeScore": 0.35514295646008776,
+        "war": 0.4657725645636769
+      },
+      {
+        "rank": 17,
+        "dgId": "20954",
+        "name": "Hirata, Kensei",
+        "refinedWeightedScore": 0.1853416302002079,
+        "weightedScore": 0.2996342996720157,
+        "compositeScore": 0.34760469901406044,
+        "war": 0.45953563081216486
+      },
+      {
+        "rank": 18,
+        "dgId": "30620",
+        "name": "Chatfield, Davis",
+        "refinedWeightedScore": 0.177335376623701,
+        "weightedScore": 0.286690914093709,
+        "compositeScore": 0.33216453264613277,
+        "war": 0.43826964260178836
+      },
+      {
+        "rank": 19,
+        "dgId": "21883",
+        "name": "Ewart, A.J.",
+        "refinedWeightedScore": 0.17427931424071502,
+        "weightedScore": 0.28175030193393225,
+        "compositeScore": 0.3243709919661404,
+        "war": 0.42381926870795944
+      },
+      {
+        "rank": 20,
+        "dgId": "21943",
+        "name": "Lebioda, Hank",
+        "refinedWeightedScore": 0.16998103268528486,
+        "weightedScore": 0.27480144439845444,
+        "compositeScore": 0.3143343128312439,
+        "war": 0.40657767250775284
+      },
+      {
+        "rank": 21,
+        "dgId": "12333",
+        "name": "Block, Michael",
+        "refinedWeightedScore": 0.18250127587087295,
+        "weightedScore": 0.2590484774715816,
+        "compositeScore": 0.27875300999253405,
+        "war": 0.32473025254142307
+      },
+      {
+        "rank": 22,
+        "dgId": "6169",
+        "name": "Kuchar, Matt",
+        "refinedWeightedScore": 0.2131986681997218,
+        "weightedScore": 0.21586406808604414,
+        "compositeScore": 0.18031888704433865,
+        "war": 0.09738013128035922
+      },
+      {
+        "rank": 23,
+        "dgId": "13126",
+        "name": "Taylor, Nick",
+        "refinedWeightedScore": 0.20346321344491855,
+        "weightedScore": 0.2060069011263014,
+        "compositeScore": 0.17992610025564468,
+        "war": 0.11907089822411233
+      },
+      {
+        "rank": 24,
+        "dgId": "25157",
+        "name": "Hodges, Lee",
+        "refinedWeightedScore": 0.19875305630132523,
+        "weightedScore": 0.20123785781601153,
+        "compositeScore": 0.17448528012145295,
+        "war": 0.11206259883414971
+      },
+      {
+        "rank": 25,
+        "dgId": "16162",
+        "name": "Lee, S.T.",
+        "refinedWeightedScore": 0.144122822280565,
+        "weightedScore": 0.23299752394615025,
+        "compositeScore": 0.26714958078668355,
+        "war": 0.3468377134145947
+      }
+    ]
+  },
+  "pastPerformanceWeighting": {
+    "enabled": true,
+    "courseNum": "928",
+    "computedWeight": null,
+    "usedWeight": 0.3,
+    "regression": null,
+    "source": "json",
+    "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression.json",
+    "courseContextUpdated": false,
+    "playerRamp": {
+      "weight": 0.4,
+      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/analysis/early_season_ramp_sg_total.json",
+      "players": 341,
+      "maxEvents": 6,
+      "baselineSeasons": 5
+    }
+  },
+  "courseContextUpdates": {
+    "source": "json",
+    "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression.json",
+    "updated": false,
+    "updatedCount": 0,
+    "updates": []
+  },
+  "apiSnapshots": {
+    "dataGolfRankings": {
+      "source": "csv_primary",
+      "path": null,
+      "lastUpdated": null,
+      "count": null
+    },
+    "dataGolfApproachSkill": {
+      "source": "csv_primary",
+      "path": null,
+      "lastUpdated": null,
+      "timePeriod": "l24",
+      "count": null
+    },
+    "dataGolfApproachSnapshotL24": {
+      "source": "csv_primary",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_snapshot/approach_l24.json",
+      "lastUpdated": null,
+      "timePeriod": "l24",
+      "count": null
+    },
+    "dataGolfApproachSnapshotL12": {
+      "source": "csv_primary",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_snapshot/approach_l12.json",
+      "lastUpdated": null,
+      "timePeriod": "l12",
+      "count": null
+    },
+    "dataGolfApproachSnapshotYtd": {
+      "source": "csv_primary",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_snapshot/approach_ytd_latest.json",
+      "archivePath": null,
+      "lastUpdated": null,
+      "timePeriod": "ytd",
+      "count": null
+    },
+    "dataGolfFieldUpdates": {
+      "source": "csv_primary",
+      "path": null,
+      "eventName": null,
+      "eventId": null,
+      "tour": "pga",
+      "fieldCount": null
+    },
+    "dataGolfPlayerDecompositions": {
+      "source": "cache",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/cache/datagolf_player_decompositions_pga_json.json",
+      "lastUpdated": "2026-02-23 18:47:04 UTC",
+      "eventName": "Cognizant Classic",
+      "tour": "pga",
+      "count": 123
+    },
+    "dataGolfSkillRatingsValue": {
+      "source": "cache",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/cache/datagolf_skill_ratings_value_json.json",
+      "lastUpdated": "2026-02-23 18:08:33 UTC",
+      "display": "value",
+      "count": 440
+    },
+    "dataGolfSkillRatingsRank": {
+      "source": "cache",
+      "path": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/cache/datagolf_skill_ratings_rank_json.json",
+      "lastUpdated": "2026-02-23 18:08:33 UTC",
+      "display": "rank",
+      "count": 440
+    },
+    "dataGolfHistoricalRounds": {
+      "source": "csv_primary",
+      "path": null,
+      "tour": "pga",
+      "eventId": "all",
+      "year": 2026,
+      "count": null
+    }
+  },
+  "trainingSource": "historical+similar-course",
+  "trainingMetrics": {
+    "included": [
+      "Driving Distance",
+      "Driving Accuracy",
+      "SG T2G",
+      "SG Approach",
+      "SG Around Green",
+      "SG OTT",
+      "SG Putting",
+      "Greens in Regulation",
+      "Scrambling",
+      "Great Shots",
+      "Poor Shots",
+      "Scoring Average",
+      "Birdies or Better",
+      "Fairway Proximity",
+      "Rough Proximity"
+    ],
+    "excluded": [
+      "Birdie Chances Created",
+      "SG Total"
+    ],
+    "derived": [
+      "Birdies or Better = birdies + eagles (from historical rounds when available)"
+    ]
+  },
+  "historicalMetricCorrelations": {
+    "perYear": {},
+    "average": {
+      "scoringAverage": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "eagles": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "birdies": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "birdiesOrBetter": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedTotal": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "drivingDistance": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "drivingAccuracy": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedT2G": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedApp": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedArg": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedOTT": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "strokesGainedPutt": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "greensInReg": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "scrambling": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "greatShots": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "poorShots": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "fairwayProx": {
+        "correlation": 0,
+        "samples": 0
+      },
+      "roughProx": {
+        "correlation": 0,
+        "samples": 0
+      }
+    }
+  },
+  "currentGeneratedMetricCorrelations": [],
+  "currentGeneratedTop20Correlations": [],
+  "currentGeneratedTop20Logistic": null,
+  "currentGeneratedTop20CvSummary": null,
+  "cvReliability": 0,
+  "approachDeltaPrior": {
+    "label": "approachDeltaPrior",
+    "weight": 0.15,
+    "mode": "rolling_average",
+    "sourcePath": null,
+    "filesUsed": [
+      "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_farmers_2026_01_28.json",
+      "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_wm_phoenix_open_2026_02_04.json",
+      "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_pebble_beach_2026_02_11.json",
+      "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_genesis_invitational_2026_02-18.json"
+    ],
+    "meta": {
+      "method": "rolling_average",
+      "filesUsed": [
+        "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_farmers_2026_01_28.json",
+        "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_wm_phoenix_open_2026_02_04.json",
+        "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_pebble_beach_2026_02_11.json",
+        "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_genesis_invitational_2026_02-18.json"
+      ],
+      "fileCount": 4,
+      "maxFiles": 4
+    },
+    "rowsTotal": 152,
+    "rowsUsed": 152,
+    "correlations": [],
+    "alignmentMap": [
+      {
+        "label": "Approach <100 GIR",
+        "correlation": 0.0021747526430882023
+      },
+      {
+        "label": "Approach <100 SG",
+        "correlation": 0.006382110913464719
+      },
+      {
+        "label": "Approach <100 Prox",
+        "correlation": 0.10029197204559188
+      },
+      {
+        "label": "Approach <150 FW GIR",
+        "correlation": -0.0010085669216278314
+      },
+      {
+        "label": "Approach <150 FW SG",
+        "correlation": 0.0009795573265666308
+      },
+      {
+        "label": "Approach <150 FW Prox",
+        "correlation": -0.1163458819524618
+      },
+      {
+        "label": "Approach <200 FW GIR",
+        "correlation": -0.0015677800163998372
+      },
+      {
+        "label": "Approach <200 FW SG",
+        "correlation": 0.000818811251238133
+      },
+      {
+        "label": "Approach <200 FW Prox",
+        "correlation": -0.14769020762932833
+      },
+      {
+        "label": "Approach <150 Rough GIR",
+        "correlation": 0.0032493029631121923
+      },
+      {
+        "label": "Approach <150 Rough SG",
+        "correlation": 0.00003689322112644721
+      },
+      {
+        "label": "Approach <150 Rough Prox",
+        "correlation": 0.5295742943956351
+      },
+      {
+        "label": "Approach >150 Rough GIR",
+        "correlation": 0.007040621663058397
+      },
+      {
+        "label": "Approach >150 Rough SG",
+        "correlation": -0.0006507183912122749
+      },
+      {
+        "label": "Approach >150 Rough Prox",
+        "correlation": 1
+      },
+      {
+        "label": "Approach >200 FW GIR",
+        "correlation": -0.004176640090142533
+      },
+      {
+        "label": "Approach >200 FW SG",
+        "correlation": -0.0006439839280578991
+      },
+      {
+        "label": "Approach >200 FW Prox",
+        "correlation": -0.4771969619762896
+      }
+    ],
+    "playerSummary": {
+      "totalPlayers": 152,
+      "trendWeightedAll": [
+        {
+          "dgId": "25319",
+          "playerName": "VanDerLaan, John",
+          "score": 4.609722869552294,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": 4.609722869552294
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "25475",
+          "playerName": "Nyholm, Pontus",
+          "score": 4.35119856596688,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": 4.35119856596688
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "16757",
+          "playerName": "Dou, Zecheng",
+          "score": 2.9672786683467205,
+          "usedMetrics": 6,
+          "bucketScores": {
+            "mid": 3.0334974551484666,
+            "long": 2.9322626135110386
+          },
+          "bucketUsedMetrics": {
+            "mid": 3,
+            "long": 3
+          }
+        },
+        {
+          "dgId": "15310",
+          "playerName": "Li, Haotong",
+          "score": 2.910659523740153,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.4645192733087539,
+            "mid": 0.662240737656276,
+            "long": 5.626174375791726,
+            "veryLong": -0.021845761732093946
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20954",
+          "playerName": "Hirata, Kensei",
+          "score": 2.1812616956915742,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "long": 2.1812616956915742
+          },
+          "bucketUsedMetrics": {
+            "long": 3
+          }
+        },
+        {
+          "dgId": "29925",
+          "playerName": "Yellamaraju, Sudarshan",
+          "score": 2.002163917797227,
+          "usedMetrics": 9,
+          "bucketScores": {
+            "mid": 2.4600865722064373,
+            "long": 0.015203143752906881
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 3
+          }
+        },
+        {
+          "dgId": "8480",
+          "playerName": "Streelman, Kevin",
+          "score": 1.6304257639139887,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0013049526939988875,
+            "mid": 1.6377142714541217,
+            "long": 2.3088657882820565,
+            "veryLong": 0.3594960101383714
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21074",
+          "playerName": "Nakajima, Keita",
+          "score": 1.5921485380769618,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "long": 2.7629849126949675,
+            "mid": 1.2000952397035105,
+            "veryLong": -0.786701053452827
+          },
+          "bucketUsedMetrics": {
+            "long": 6,
+            "mid": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32055",
+          "playerName": "Shipley, Neal",
+          "score": 1.3839579158333106,
+          "usedMetrics": 6,
+          "bucketScores": {
+            "long": -0.4434507821621314,
+            "mid": 1.8986360586492297
+          },
+          "bucketUsedMetrics": {
+            "long": 3,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "16715",
+          "playerName": "Ryder, Sam",
+          "score": 1.2747606006132195,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.2076895601060134,
+            "mid": 0.14288127868826875,
+            "long": 2.713230133480617,
+            "veryLong": -0.3164212504261364
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "31343",
+          "playerName": "Ford, David",
+          "score": 0.9905456206272141,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.15425083285212984,
+            "mid": 0.23378890593135548,
+            "long": 1.8540201244002352,
+            "veryLong": 0.19742580218317216
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19483",
+          "playerName": "Burns, Sam",
+          "score": 0.9668413448452019,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.02334217563185722,
+            "mid": 0.39421124699711646,
+            "long": 1.9192208925814438,
+            "veryLong": -0.3234866908605108
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28016",
+          "playerName": "Gonzalez, Emilio",
+          "score": 0.9499977118338173,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": 1.1197281126460255,
+            "long": 1.1581330343045797,
+            "mid": 0.4631021621950242
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "13997",
+          "playerName": "Svensson, Adam",
+          "score": 0.946163171550237,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1286880113712079,
+            "mid": 0.8817955412121108,
+            "long": 1.5336649907021074,
+            "veryLong": -0.1352885359862331
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "5768",
+          "playerName": "Hoffman, Charley",
+          "score": 0.9121965696938862,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08237941929847883,
+            "mid": 0.9648300039130986,
+            "long": 1.151393630994396,
+            "veryLong": 0.4539462588141447
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "11276",
+          "playerName": "Horschel, Billy",
+          "score": 0.9078663766111474,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.38596755356164514,
+            "mid": 1.5340096200499154,
+            "long": 0.9860385427525403,
+            "veryLong": -0.007947094246164388
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12577",
+          "playerName": "Woodland, Gary",
+          "score": 0.8490271966937853,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.13583017515805612,
+            "mid": 0.8774820568463555,
+            "long": 1.296452485254267,
+            "veryLong": -0.1030412339600413
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25094",
+          "playerName": "Fishburn, Patrick",
+          "score": 0.8177381278805751,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.10090183153437253,
+            "mid": 0.007608428844020255,
+            "long": 1.64372799252548,
+            "veryLong": 0.09011747521663836
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16841",
+          "playerName": "Lee, Min Woo",
+          "score": 0.8010027985979395,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.12488799582463446,
+            "mid": 1.0701596739736154,
+            "long": 1.0418130540888093,
+            "veryLong": 0.011650668311928025
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6169",
+          "playerName": "Kuchar, Matt",
+          "score": 0.798049575116245,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.4441273219917385,
+            "mid": 0.2779903306994851,
+            "long": 1.5076081355331383,
+            "veryLong": -0.1237436618332882
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19840",
+          "playerName": "Ramey, Chad",
+          "score": 0.7907444572458849,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.10198666844341828,
+            "mid": 0.38683181943427136,
+            "long": 1.5549419050415558,
+            "veryLong": -0.34358612024022844
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23950",
+          "playerName": "Aberg, Ludvig",
+          "score": 0.7191046072173075,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.3031661995291612,
+            "mid": 0.48857376066580527,
+            "long": 1.2748536385312121,
+            "veryLong": -0.21039196044902983
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17511",
+          "playerName": "Straka, Sepp",
+          "score": 0.7021738401193608,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1857502687336216,
+            "mid": 0.15447876151964782,
+            "long": 1.4976400013749276,
+            "veryLong": -0.26803941403202536
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "8820",
+          "playerName": "Snedeker, Brandt",
+          "score": 0.7005770674028375,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.4797947052813927,
+            "mid": 0.3727789261403267,
+            "long": 1.5737495144727933,
+            "veryLong": -0.9040095966884544
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24550",
+          "playerName": "Ghim, Doug",
+          "score": 0.6905489645015562,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.06448337997305287,
+            "mid": 0.09670093443455484,
+            "long": 1.6236273364992204,
+            "veryLong": -0.5778558974089496
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28270",
+          "playerName": "Dunlap, Nick",
+          "score": 0.678686249502291,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.19128354284191335,
+            "mid": 0.5854191182932833,
+            "long": 1.1572447700574906,
+            "veryLong": -0.2347068731800715
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14509",
+          "playerName": "Dahmen, Joel",
+          "score": 0.6584191816152571,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0306899894875554,
+            "mid": 0.4803543628922174,
+            "long": 1.154759776867251,
+            "veryLong": -0.1514369666541362
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6093",
+          "playerName": "Rose, Justin",
+          "score": 0.6572907483555509,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.31329449873406523,
+            "mid": 0.6636723869855496,
+            "long": 0.9430173156157943,
+            "veryLong": 0.04005764026162297
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25569",
+          "playerName": "Stevens, Sam",
+          "score": 0.6545977658978396,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02649538488873113,
+            "mid": 0.6473184259061038,
+            "long": 1.1362159923962858,
+            "veryLong": -0.35053933469966986
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17365",
+          "playerName": "Mitchell, Keith",
+          "score": 0.6511348257084623,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.15246690060557525,
+            "mid": 0.8293028990687209,
+            "long": 0.8282321115090998,
+            "veryLong": 0.0976690422580378
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24304",
+          "playerName": "Vilips, Karl",
+          "score": 0.6243984127245394,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.16219087934378648,
+            "mid": -0.10987240381146297,
+            "long": 1.5440114405783907,
+            "veryLong": -0.48808132391720566
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "10104",
+          "playerName": "Power, Seamus",
+          "score": 0.6243683627925306,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.19583315417758618,
+            "mid": 0.24720315742812377,
+            "long": 1.2941988935325632,
+            "veryLong": -0.37819875601477393
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17786",
+          "playerName": "Davis, Cam",
+          "score": 0.5969498456467325,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.32532093457113725,
+            "mid": 0.609406195476479,
+            "long": 0.9452104475247054,
+            "veryLong": -0.19503379928880515
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14578",
+          "playerName": "Henley, Russell",
+          "score": 0.5936831072745056,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.19239593123972862,
+            "mid": 0.85218249724873,
+            "long": 0.84170476378332,
+            "veryLong": -0.2606535849129055
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19872",
+          "playerName": "Riley, Davis",
+          "score": 0.5865190640972747,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1432736492989239,
+            "mid": 0.4669469288085471,
+            "long": 0.969318299826682,
+            "veryLong": -0.07130194534388169
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17538",
+          "playerName": "Homa, Max",
+          "score": 0.5838878648452978,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1877607426820054,
+            "mid": 0.45366076983037745,
+            "long": 1.1004733205438575,
+            "veryLong": -0.30672271472287344
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25157",
+          "playerName": "Hodges, Lee",
+          "score": 0.5732526449961431,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1276871703756345,
+            "mid": 0.30435342316411584,
+            "long": 1.213917908244976,
+            "veryLong": -0.5016808595787008
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15470",
+          "playerName": "Hossler, Beau",
+          "score": 0.567329782503715,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.03465362827403412,
+            "mid": 0.7180680475808625,
+            "long": 0.8656885624361281,
+            "veryLong": -0.23265978243733193
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14140",
+          "playerName": "Higgs, Harry",
+          "score": 0.5600061023230501,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1187928426538731,
+            "mid": 0.08063624951326803,
+            "long": 1.1068125669861728,
+            "veryLong": 0.04752351808508146
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20706",
+          "playerName": "Wallace, Matt",
+          "score": 0.514478378834095,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07800075808051667,
+            "mid": 0.24588232136552082,
+            "long": 1.0825932028193972,
+            "veryLong": -0.35342834486094704
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17646",
+          "playerName": "Fitzpatrick, Matt",
+          "score": 0.4935968524834868,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1981948185492822,
+            "mid": 0.6552826067220043,
+            "long": 0.799039907501368,
+            "veryLong": -0.3022670412972903
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16333",
+          "playerName": "Hubbard, Mark",
+          "score": 0.4929266840991998,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.023698180310635867,
+            "mid": 0.22966756993117482,
+            "long": 0.9651446139169348,
+            "veryLong": -0.16898271868443726
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25908",
+          "playerName": "Whaley, Vince",
+          "score": 0.47112181100664186,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.12085234605191095,
+            "mid": -0.07779556644926043,
+            "long": 0.8953669785045558,
+            "veryLong": 0.3273721492566691
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21944",
+          "playerName": "Moore, Taylor",
+          "score": 0.47034487400804315,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.23269117694961433,
+            "mid": 0.19716276175552222,
+            "long": 0.9700731382527626,
+            "veryLong": -0.30723349044845094
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13126",
+          "playerName": "Taylor, Nick",
+          "score": 0.43587216251733674,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0781480366899119,
+            "mid": 0.38226823909722113,
+            "long": 0.8205530040778941,
+            "veryLong": -0.3349021791637868
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18628",
+          "playerName": "Campbell, Brian",
+          "score": 0.4178169590880446,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.014210018655886877,
+            "mid": -0.09721663424541897,
+            "long": 0.8868255447882307,
+            "veryLong": 0.08465375722076166
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15575",
+          "playerName": "Hoge, Tom",
+          "score": 0.40776513219243554,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.21303290321147741,
+            "mid": 0.1874720015965196,
+            "long": 0.811253390927705,
+            "veryLong": -0.21979661761198627
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26653",
+          "playerName": "Eckroat, Austin",
+          "score": 0.39144073268559004,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.21427290602466698,
+            "mid": 0.1829443436470853,
+            "long": 0.8695941075743252,
+            "veryLong": -0.3385903445618079
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17032",
+          "playerName": "Tosti, Alejandro",
+          "score": 0.3846161694495886,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.3844480492752335,
+            "mid": 0.2500905871477106,
+            "long": 0.5268652935296642,
+            "veryLong": 0.3983554190567436
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15330",
+          "playerName": "Griffin, Lanto",
+          "score": 0.37961963814496064,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.12744639985786035,
+            "mid": 0.2703990639430069,
+            "long": 0.6440697512981628,
+            "veryLong": -0.05106862130809828
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19870",
+          "playerName": "McCarthy, Denny",
+          "score": 0.3765268060758235,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.21744782125882745,
+            "mid": 0.2359534509294518,
+            "long": 0.8961545529064577,
+            "veryLong": -0.6457435553830779
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17543",
+          "playerName": "Kim, Michael",
+          "score": 0.3692678596264586,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.007063616577088236,
+            "mid": -0.02396344276845348,
+            "long": 0.8877769135403853,
+            "veryLong": -0.2631109187596283
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17780",
+          "playerName": "Pendrith, Taylor",
+          "score": 0.3675330584933407,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07959726602407471,
+            "mid": 0.2578245885677569,
+            "long": 0.7583264334537589,
+            "veryLong": -0.32193753562376504
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17550",
+          "playerName": "Van Rooyen, Erik",
+          "score": 0.36169026092381124,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.39311274967056103,
+            "mid": -0.0504990676759868,
+            "long": 0.8573937385892338,
+            "veryLong": -0.2791879573821885
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15651",
+          "playerName": "Ventura, Kris",
+          "score": 0.35799371785630024,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.13845130369120007,
+            "mid": 0.18873009418524056,
+            "long": 0.8179512356819529,
+            "veryLong": -0.4685397834075121
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28469",
+          "playerName": "Highsmith, Joe",
+          "score": 0.3578982772734075,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.007262461688801929,
+            "mid": 0.2966210098077724,
+            "long": 0.7228626292905399,
+            "veryLong": -0.3534727763696723
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "22833",
+          "playerName": "Echavarria, Nico",
+          "score": 0.3554366554726137,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1719699196020074,
+            "mid": 0.05588960270461769,
+            "long": 0.5965104012488079,
+            "veryLong": 0.22250795951119165
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "30814",
+          "playerName": "Sargent, Gordon",
+          "score": 0.3551624678037975,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.3198845259775828,
+            "mid": 0.47622522192330935,
+            "long": 0.535948766755887,
+            "veryLong": -0.23465844641983644
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16283",
+          "playerName": "Rodgers, Patrick",
+          "score": 0.3531284058665739,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.024355587882557404,
+            "mid": -0.3678154153704353,
+            "long": 0.9991632667614624,
+            "veryLong": -0.1393748625579587
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21412",
+          "playerName": "Capan III, Frankie",
+          "score": 0.3238645003133313,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.19449698396482074,
+            "mid": 0.1911616309441721,
+            "long": 0.7908882372653399,
+            "veryLong": -0.5893974507196174
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17881",
+          "playerName": "Yu, Kevin",
+          "score": 0.30665684245081665,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1835583307422371,
+            "mid": -0.21748349883225926,
+            "long": 0.9794735325087923,
+            "veryLong": -0.5734962971496946
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15980",
+          "playerName": "Lipsky, David",
+          "score": 0.2941338862117461,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.34468021735589843,
+            "mid": 0.725088689549083,
+            "long": 0.33811870459663457,
+            "veryLong": -0.24946753807616182
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27183",
+          "playerName": "Salinda, Isaiah",
+          "score": 0.2915769171902159,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04735096758909736,
+            "mid": 0.013260497685414806,
+            "long": 0.800069971758266,
+            "veryLong": -0.49863331069582145
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "11676",
+          "playerName": "Finau, Tony",
+          "score": 0.28338870620665507,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.062273088881980306,
+            "mid": 0.16653218735975625,
+            "long": 0.8282382936384913,
+            "veryLong": -0.7893694295548916
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15004",
+          "playerName": "Kim, Chan",
+          "score": 0.280431580992473,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.11895029242363646,
+            "mid": 0.4460274672528888,
+            "long": 0.24255274911519137,
+            "veryLong": 0.18416294629923824
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24968",
+          "playerName": "Griffin, Ben",
+          "score": 0.28042449107894735,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0058682339092969325,
+            "mid": 0.13326021306452518,
+            "long": 0.7232852649986272,
+            "veryLong": -0.519826179272932
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24766",
+          "playerName": "Kim, Tom",
+          "score": 0.2792013208303021,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.08614974459201402,
+            "mid": 0.48541910543237393,
+            "long": 0.5266958856884096,
+            "veryLong": -0.5113531760228339
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12423",
+          "playerName": "Kirk, Chris",
+          "score": 0.27738084441696154,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07668632345755784,
+            "mid": 0.48710326024665435,
+            "long": 0.5364233555184557,
+            "veryLong": -0.5481937023247923
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "9171",
+          "playerName": "Villegas, Camilo",
+          "score": 0.2740127716530777,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.09402619227409306,
+            "mid": 0.313110592240513,
+            "long": 0.5288787115088771,
+            "veryLong": -0.30786503932594106
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13508",
+          "playerName": "Vegas, Jhonattan",
+          "score": 0.2627219668146149,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.3388503064895824,
+            "mid": 0.08896025581850076,
+            "long": 0.5667726843996177,
+            "veryLong": -0.09698922848526641
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25003",
+          "playerName": "Walker, Danny",
+          "score": 0.25834400440293015,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.24149354298997616,
+            "mid": 0.28223729751844084,
+            "long": 0.5072451382944065,
+            "veryLong": -0.3679709667161195
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23816",
+          "playerName": "Valimaki, Sami",
+          "score": 0.257340409689711,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.038640965220095136,
+            "mid": 0.33912622921286417,
+            "long": 0.5305987551611283,
+            "veryLong": -0.46010872878238523
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20722",
+          "playerName": "Schmid, Matti",
+          "score": 0.24988621096331792,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08117555190334452,
+            "mid": 0.8431434025234114,
+            "long": 0.20095385609093683,
+            "veryLong": -0.3959606359928372
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18103",
+          "playerName": "Bezuidenhout, Christiaan",
+          "score": 0.23465711508164266,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.11717477605531604,
+            "mid": 0.5523118158332833,
+            "long": 0.298704855680322,
+            "veryLong": -0.3217948037475868
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23475",
+          "playerName": "Novak, Andrew",
+          "score": 0.2251716853904741,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.032505292497668425,
+            "mid": 0.48510891738500894,
+            "long": 0.4549596675997411,
+            "veryLong": -0.6344222361011723
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23323",
+          "playerName": "MacIntyre, Robert",
+          "score": 0.22510705383868124,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.3720473526406966,
+            "mid": 0.4236979167594765,
+            "long": 0.40886346474478685,
+            "veryLong": -0.34970399279237685
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27819",
+          "playerName": "Castillo, Ricky",
+          "score": 0.20773350434856794,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.2867762655650812,
+            "mid": 0.09324986975127737,
+            "long": 0.33621399722344925,
+            "veryLong": 0.035948857411966934
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26649",
+          "playerName": "Thorbjornsen, Michael",
+          "score": 0.20655723936660994,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.3411834495624752,
+            "mid": 0.7361108252183959,
+            "long": 0.13083599827640396,
+            "veryLong": -0.20329047162832428
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32330",
+          "playerName": "Clanton, Luke",
+          "score": 0.20551085431698204,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.15634700839514956,
+            "mid": 0.23638334599659386,
+            "long": 0.38591195338679346,
+            "veryLong": -0.25840419885437826
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "9771",
+          "playerName": "Day, Jason",
+          "score": 0.20433984437146685,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.01008809576689048,
+            "mid": 0.2598190005015807,
+            "long": 0.35449433880569675,
+            "veryLong": -0.18740464705692245
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15556",
+          "playerName": "Hughes, Mackenzie",
+          "score": 0.1969658435083209,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.04633742282237033,
+            "mid": 0.6198553346428336,
+            "long": 0.18544426155523733,
+            "veryLong": -0.29173149551763783
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29433",
+          "playerName": "Bridgeman, Jacob",
+          "score": 0.19225481938032535,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.15019699729045516,
+            "mid": 0.568937273309063,
+            "long": 0.2020546624664599,
+            "veryLong": -0.33067535886521343
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "22760",
+          "playerName": "Hisatsune, Ryo",
+          "score": 0.18772801282287668,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.24136778750055538,
+            "mid": 0.08048570267797174,
+            "long": 0.47077971437620886,
+            "veryLong": -0.3593708363146125
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12909",
+          "playerName": "Campos, Rafael",
+          "score": 0.18752767135272722,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07135879417817832,
+            "mid": 0.28313949530235677,
+            "long": 0.22488272578780347,
+            "veryLong": 0.02709598305420496
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25002",
+          "playerName": "Wu, Dylan",
+          "score": 0.18027389530074334,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.08039741778824139,
+            "mid": -0.08106996515059656,
+            "long": 0.6248525638178878,
+            "veryLong": -0.47563488117327074
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26096",
+          "playerName": "Bhatia, Akshay",
+          "score": 0.16915901990977225,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.06855755785546142,
+            "mid": 0.2695435276607697,
+            "long": 0.26512497329128043,
+            "veryLong": -0.17424299500357768
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28635",
+          "playerName": "McCarty, Matt",
+          "score": 0.16768507197603208,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.05270948340958539,
+            "mid": 0.055986214214943854,
+            "long": 0.5104519777043255,
+            "veryLong": -0.45494206666343295
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23465",
+          "playerName": "Greyserman, Max",
+          "score": 0.1643056913906248,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0675046817394387,
+            "mid": 0.5499762199886902,
+            "long": 0.1834677799534072,
+            "veryLong": -0.3808924753513871
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23604",
+          "playerName": "Clark, Wyndham",
+          "score": 0.16306546532379787,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.018673579709501602,
+            "mid": 1.0876766498383472,
+            "long": -0.08125514591349546,
+            "veryLong": -0.46661738409391457
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17723",
+          "playerName": "Lower, Justin",
+          "score": 0.16190344063911027,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.031012730422422696,
+            "mid": 0.12511703472621002,
+            "long": 0.3317278544784019,
+            "veryLong": -0.15273962278896883
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27194",
+          "playerName": "Hall, Harry",
+          "score": 0.15903416613870366,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0030687802602936197,
+            "mid": 0.5153398814510457,
+            "long": 0.2137588593939596,
+            "veryLong": -0.4185509359196698
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27900",
+          "playerName": "Potgieter, Aldrich",
+          "score": 0.1585091039306462,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.15540777772842262,
+            "mid": -0.5474649501348009,
+            "long": 0.6509873649203838,
+            "veryLong": 0.0002581687060616883
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26850",
+          "playerName": "Svensson, Jesper",
+          "score": 0.1545395557548402,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.02387790165682032,
+            "mid": -0.015508003992294853,
+            "long": 0.4351971936666319,
+            "veryLong": -0.24955753364298222
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14577",
+          "playerName": "English, Harris",
+          "score": 0.13446882427069992,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.11458438013592209,
+            "mid": 0.1889505052672147,
+            "long": 0.42381850232019674,
+            "veryLong": -0.6296394182765586
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23838",
+          "playerName": "Hojgaard, Rasmus",
+          "score": 0.1243208011079646,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08891156813100586,
+            "mid": 0.6073964762653903,
+            "long": 0.1653141630300058,
+            "veryLong": -0.6187698789027813
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16394",
+          "playerName": "Jaeger, Stephan",
+          "score": 0.11706566464671501,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.14483311272005822,
+            "mid": 0.3298060339408404,
+            "long": 0.16774839053046917,
+            "veryLong": -0.29834792846546077
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19428",
+          "playerName": "Zalatoris, Will",
+          "score": 0.11062298450393385,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.25171328861842757,
+            "mid": 0.7785221463870241,
+            "long": 0.3871952358025192,
+            "veryLong": -1.3741753686343792
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "10419",
+          "playerName": "Noren, Alex",
+          "score": 0.09781871251656099,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.13837635144139,
+            "mid": 0.7828182067069094,
+            "long": -0.14226358590832927,
+            "veryLong": -0.2600995914131068
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19477",
+          "playerName": "Schenk, Adam",
+          "score": 0.09755719299134888,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.10669950399028638,
+            "mid": -0.13639670475407228,
+            "long": 0.3310109816510301,
+            "veryLong": -0.10098901541641717
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6430",
+          "playerName": "Scott, Adam",
+          "score": 0.09110588622887854,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05485204992670944,
+            "mid": 0.12255256270686078,
+            "long": 0.3480626939516338,
+            "veryLong": -0.5603809660962829
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29767",
+          "playerName": "Gerard, Ryan",
+          "score": 0.09049863858221054,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.03177738861990916,
+            "mid": 0.12990923846776967,
+            "long": 0.2817718964145021,
+            "veryLong": -0.39455512941785065
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14926",
+          "playerName": "Malnati, Peter",
+          "score": 0.0903022268259386,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.09978074297813055,
+            "mid": 0.2855513916937807,
+            "long": 0.49693262421244283,
+            "veryLong": -1.1072445161299005
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27164",
+          "playerName": "Phillips, Chandler",
+          "score": 0.059627322740988996,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04942738861990892,
+            "mid": 0.31983821097818216,
+            "long": 0.11796085349233476,
+            "veryLong": -0.4297206962113157
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28159",
+          "playerName": "Meissner, Mac",
+          "score": 0.04249317336358576,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07975543907964336,
+            "mid": -0.14847933066346114,
+            "long": 0.38039428190530483,
+            "veryLong": -0.4835131014605249
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12808",
+          "playerName": "Grillo, Emiliano",
+          "score": 0.038430550607438774,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.37727730940641724,
+            "mid": 0.2415000949469596,
+            "long": 0.00632301058480243,
+            "veryLong": -0.2353099971568365
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "8825",
+          "playerName": "Harman, Brian",
+          "score": 0.0327704098256426,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.011996060054190821,
+            "mid": 0.3338262859552052,
+            "long": -0.06242711740181767,
+            "veryLong": -0.14060086224669355
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19729",
+          "playerName": "Kanaya, Takumi",
+          "score": 0.026894672623511008,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.012173046684138504,
+            "mid": -0.23067242836114155,
+            "long": 0.013133999506286749,
+            "veryLong": 0.41123828340279617
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23504",
+          "playerName": "Hoey, Rico",
+          "score": 0.026400288945958805,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.14566221294363232,
+            "mid": -0.14899141838734287,
+            "long": 0.3221604296984202,
+            "veryLong": -0.47397372583142133
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14502",
+          "playerName": "Cauley, Bud",
+          "score": 0.021340785923692686,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.11624239328388047,
+            "mid": 0.6063794200195433,
+            "long": -0.023119005865366343,
+            "veryLong": -0.6311749081361657
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20766",
+          "playerName": "Brown, Dan",
+          "score": 0.010537117632598321,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.48514745258295067,
+            "mid": -0.297410173631049,
+            "long": 0.22533048578012357,
+            "veryLong": -0.19652611398796094
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23014",
+          "playerName": "Theegala, Sahith",
+          "score": -0.002837043679514931,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.21395647847910085,
+            "mid": 0.35576448676049877,
+            "long": 0.045820035732022764,
+            "veryLong": -0.5564949651746114
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18424",
+          "playerName": "Roy, Kevin",
+          "score": -0.010679391196326871,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.16459658567642402,
+            "mid": 0.06287840434796725,
+            "long": 0.029247794601810168,
+            "veryLong": -0.24553688297618606
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23505",
+          "playerName": "McGreevy, Max",
+          "score": -0.021857093730212464,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0014321880691151375,
+            "mid": 0.56971256746177,
+            "long": -0.21536154539017338,
+            "veryLong": -0.36088382408226904
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15466",
+          "playerName": "Cantlay, Patrick",
+          "score": -0.030882002640900828,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.03156219517612098,
+            "mid": 0.04850544523840615,
+            "long": 0.05613301067020188,
+            "veryLong": -0.3469821729586827
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21891",
+          "playerName": "Kitayama, Kurt",
+          "score": -0.035026996206705484,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.17553000488606618,
+            "mid": 0.3564398240332594,
+            "long": -0.10428881652048674,
+            "veryLong": -0.445075924600915
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19960",
+          "playerName": "Pavon, Matthieu",
+          "score": -0.03852368612849399,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.04095451813026558,
+            "mid": 0.08132425706117767,
+            "long": 0.05441654034576771,
+            "veryLong": -0.4231216058889861
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18417",
+          "playerName": "Scheffler, Scottie",
+          "score": -0.05452815205630897,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.19495350242082352,
+            "mid": 0.16161450060449692,
+            "long": -0.17290147487758642,
+            "veryLong": -0.11854621438128651
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12965",
+          "playerName": "Fowler, Rickie",
+          "score": -0.057545011772679566,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.1442906920445962,
+            "mid": -0.006201853156905356,
+            "long": 0.24370850643124659,
+            "veryLong": -0.8309067147511708
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17606",
+          "playerName": "Berger, Daniel",
+          "score": -0.06962821933915349,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.06287087016390576,
+            "mid": 0.14136124557404633,
+            "long": -0.11215328072864855,
+            "veryLong": -0.2824490620591257
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29279",
+          "playerName": "Suber, Jackson",
+          "score": -0.06967912060827038,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.5680353336590711,
+            "mid": 0.1339209880904844,
+            "long": -0.2234229024814615,
+            "veryLong": -0.11946588068683119
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21554",
+          "playerName": "Poston, J.T.",
+          "score": -0.0883270202962509,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1111819815217867,
+            "mid": -0.6489892142838287,
+            "long": 0.23197719217783427,
+            "veryLong": -0.14528386177777322
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26657",
+          "playerName": "Fisk, Steven",
+          "score": -0.10422530974545413,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.283316830275841,
+            "mid": 0.23123217309124408,
+            "long": -0.07889543589334154,
+            "veryLong": -0.5778185785258928
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13470",
+          "playerName": "Kizzire, Patton",
+          "score": -0.15607609819291413,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.259940840107197,
+            "mid": -0.5817481285941096,
+            "long": 0.09619808745388098,
+            "veryLong": -0.2808904034462915
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18474",
+          "playerName": "Smalley, Alex",
+          "score": -0.15832967635537323,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.023810882601162837,
+            "mid": -0.2394825495723375,
+            "long": -0.07508696689307125,
+            "veryLong": -0.2897672877160502
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29770",
+          "playerName": "Mouw, William",
+          "score": -0.1606950448757997,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.08230351944802247,
+            "mid": -0.042424557762069846,
+            "long": -0.3137274649646974,
+            "veryLong": 0.02939375325919503
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21756",
+          "playerName": "Cole, Eric",
+          "score": -0.16747435362329832,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.09567845837219975,
+            "mid": 0.4791595813039114,
+            "long": -0.4921039019963214,
+            "veryLong": -0.32075214079454784
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23656",
+          "playerName": "Young, Carson",
+          "score": -0.20252649137089124,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.05674116288366681,
+            "mid": 0.027339187382992843,
+            "long": -0.16837531971934414,
+            "veryLong": -0.6280191967455899
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6986",
+          "playerName": "Johnson, Zach",
+          "score": -0.21475315449779034,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.09175237714505692,
+            "mid": -0.6171469733362027,
+            "long": 0.05481046514019441,
+            "veryLong": -0.3878138529451014
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18586",
+          "playerName": "Smith, Jordan",
+          "score": -0.24578864774334283,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 1.2547785235197442,
+            "mid": -0.26598091234740856,
+            "long": -0.7069521198611399,
+            "veryLong": 0.5503119267353066
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32152",
+          "playerName": "Brown, Blades",
+          "score": -0.2596456973696601,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.5123100223574528,
+            "mid": -0.5377996750450423,
+            "long": -0.07465152356824564,
+            "veryLong": -0.502529993356969
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32457",
+          "playerName": "Keefer, Johnny",
+          "score": -0.299634252125525,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.9158077229452611,
+            "mid": 0.24887242260011222,
+            "long": -0.7271271025636855,
+            "veryLong": 0.1252938928571918
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14792",
+          "playerName": "Saddier, Adrien",
+          "score": -0.3170040341617238,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": 0.2495755430195883,
+            "long": 0.007313080098168282,
+            "mid": -1.1373980336926843
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "21688",
+          "playerName": "Kim, S.H.",
+          "score": -0.33349765604199966,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "mid": 0.7932848150723872,
+            "long": -0.4868233591276093,
+            "veryLong": -1.4874782295848026
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14704",
+          "playerName": "Putnam, Andrew",
+          "score": -0.4355395297708942,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.15873426612771863,
+            "mid": 0.13224407825482878,
+            "long": -0.8166091429543046,
+            "veryLong": -0.34981077936374955
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "7301",
+          "playerName": "Dufner, Jason",
+          "score": -0.5114380332459924,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "short": 0.31040731725373494,
+            "mid": -0.737205531074627,
+            "long": -0.12179682971236196,
+            "veryLong": -0.5133351877902953
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "11451",
+          "playerName": "Garnett, Brice",
+          "score": -0.5664143636571978,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.05448218362723747,
+            "mid": 0.1207981797077634,
+            "long": -1.2190487386437634,
+            "veryLong": -0.042850400401005864
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14609",
+          "playerName": "Kim, Si Woo",
+          "score": -0.5758781591524876,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.030922251587972006,
+            "mid": -0.271340339947723,
+            "long": -0.7269001467185717,
+            "veryLong": -0.7615859573646679
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13764",
+          "playerName": "Parry, John",
+          "score": -0.6038196374332369,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.007996735219650875,
+            "mid": 0.45273272203193016,
+            "long": -1.2086496058841787,
+            "veryLong": -0.7166033126227039
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29197",
+          "playerName": "Brennan, Michael",
+          "score": -0.6852716584652683,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "short": 0.6492214542708653,
+            "mid": -1.0386595356831736,
+            "long": 0.12071778275814045,
+            "veryLong": -0.7601529426745396
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28309",
+          "playerName": "Coody, Pierceson",
+          "score": -0.7184535350991337,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05391502465242316,
+            "mid": -0.7736344667003655,
+            "long": -1.1309752522725913,
+            "veryLong": 0.17252350359976945
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27364",
+          "playerName": "Thompson, Davis",
+          "score": -0.7375627541836706,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.006475272065028964,
+            "mid": 0.3844513450968294,
+            "long": -1.2645243475062728,
+            "veryLong": -1.1556755828822685
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "22002",
+          "playerName": "Dumont De Chassart, Adrien",
+          "score": -1.4271231696024194,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "mid": -0.09555849117036583,
+            "long": -2.1760707019535497
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 6
+          }
+        },
+        {
+          "dgId": "21883",
+          "playerName": "Ewart, A.J.",
+          "score": -1.6001654698632326,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": -0.9743267001288147,
+            "long": -0.44981267911948786,
+            "mid": -4.2274265556186
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "19846",
+          "playerName": "Bauchou, Zach",
+          "score": -1.765811078710722,
+          "usedMetrics": 9,
+          "bucketScores": {
+            "long": -0.8572817859992852,
+            "mid": -3.7398104406460253
+          },
+          "bucketUsedMetrics": {
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "24343",
+          "playerName": "Lamprecht, Christo",
+          "score": -4.203006981032665,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": -4.203006981032665
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        }
+      ],
+      "trendWeighted": {
+        "topMovers": [
+          {
+            "dgId": "25319",
+            "playerName": "VanDerLaan, John",
+            "score": 4.609722869552294,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": 4.609722869552294
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "25475",
+            "playerName": "Nyholm, Pontus",
+            "score": 4.35119856596688,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": 4.35119856596688
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "16757",
+            "playerName": "Dou, Zecheng",
+            "score": 2.9672786683467205,
+            "usedMetrics": 6,
+            "bucketScores": {
+              "mid": 3.0334974551484666,
+              "long": 2.9322626135110386
+            },
+            "bucketUsedMetrics": {
+              "mid": 3,
+              "long": 3
+            }
+          },
+          {
+            "dgId": "15310",
+            "playerName": "Li, Haotong",
+            "score": 2.910659523740153,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.4645192733087539,
+              "mid": 0.662240737656276,
+              "long": 5.626174375791726,
+              "veryLong": -0.021845761732093946
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "20954",
+            "playerName": "Hirata, Kensei",
+            "score": 2.1812616956915742,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "long": 2.1812616956915742
+            },
+            "bucketUsedMetrics": {
+              "long": 3
+            }
+          },
+          {
+            "dgId": "29925",
+            "playerName": "Yellamaraju, Sudarshan",
+            "score": 2.002163917797227,
+            "usedMetrics": 9,
+            "bucketScores": {
+              "mid": 2.4600865722064373,
+              "long": 0.015203143752906881
+            },
+            "bucketUsedMetrics": {
+              "mid": 6,
+              "long": 3
+            }
+          },
+          {
+            "dgId": "8480",
+            "playerName": "Streelman, Kevin",
+            "score": 1.6304257639139887,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": -0.0013049526939988875,
+              "mid": 1.6377142714541217,
+              "long": 2.3088657882820565,
+              "veryLong": 0.3594960101383714
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "21074",
+            "playerName": "Nakajima, Keita",
+            "score": 1.5921485380769618,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "long": 2.7629849126949675,
+              "mid": 1.2000952397035105,
+              "veryLong": -0.786701053452827
+            },
+            "bucketUsedMetrics": {
+              "long": 6,
+              "mid": 3,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "32055",
+            "playerName": "Shipley, Neal",
+            "score": 1.3839579158333106,
+            "usedMetrics": 6,
+            "bucketScores": {
+              "long": -0.4434507821621314,
+              "mid": 1.8986360586492297
+            },
+            "bucketUsedMetrics": {
+              "long": 3,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "16715",
+            "playerName": "Ryder, Sam",
+            "score": 1.2747606006132195,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": -0.2076895601060134,
+              "mid": 0.14288127868826875,
+              "long": 2.713230133480617,
+              "veryLong": -0.3164212504261364
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          }
+        ],
+        "bottomMovers": [
+          {
+            "dgId": "24343",
+            "playerName": "Lamprecht, Christo",
+            "score": -4.203006981032665,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": -4.203006981032665
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "19846",
+            "playerName": "Bauchou, Zach",
+            "score": -1.765811078710722,
+            "usedMetrics": 9,
+            "bucketScores": {
+              "long": -0.8572817859992852,
+              "mid": -3.7398104406460253
+            },
+            "bucketUsedMetrics": {
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "21883",
+            "playerName": "Ewart, A.J.",
+            "score": -1.6001654698632326,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "short": -0.9743267001288147,
+              "long": -0.44981267911948786,
+              "mid": -4.2274265556186
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "22002",
+            "playerName": "Dumont De Chassart, Adrien",
+            "score": -1.4271231696024194,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "mid": -0.09555849117036583,
+              "long": -2.1760707019535497
+            },
+            "bucketUsedMetrics": {
+              "mid": 6,
+              "long": 6
+            }
+          },
+          {
+            "dgId": "27364",
+            "playerName": "Thompson, Davis",
+            "score": -0.7375627541836706,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.006475272065028964,
+              "mid": 0.3844513450968294,
+              "long": -1.2645243475062728,
+              "veryLong": -1.1556755828822685
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "28309",
+            "playerName": "Coody, Pierceson",
+            "score": -0.7184535350991337,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.05391502465242316,
+              "mid": -0.7736344667003655,
+              "long": -1.1309752522725913,
+              "veryLong": 0.17252350359976945
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "29197",
+            "playerName": "Brennan, Michael",
+            "score": -0.6852716584652683,
+            "usedMetrics": 15,
+            "bucketScores": {
+              "short": 0.6492214542708653,
+              "mid": -1.0386595356831736,
+              "long": 0.12071778275814045,
+              "veryLong": -0.7601529426745396
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 3,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "13764",
+            "playerName": "Parry, John",
+            "score": -0.6038196374332369,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.007996735219650875,
+              "mid": 0.45273272203193016,
+              "long": -1.2086496058841787,
+              "veryLong": -0.7166033126227039
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "14609",
+            "playerName": "Kim, Si Woo",
+            "score": -0.5758781591524876,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.030922251587972006,
+              "mid": -0.271340339947723,
+              "long": -0.7269001467185717,
+              "veryLong": -0.7615859573646679
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "11451",
+            "playerName": "Garnett, Brice",
+            "score": -0.5664143636571978,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": -0.05448218362723747,
+              "mid": 0.1207981797077634,
+              "long": -1.2190487386437634,
+              "veryLong": -0.042850400401005864
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          }
+        ]
+      },
+      "predictiveWeightedAll": [
+        {
+          "dgId": "25319",
+          "playerName": "VanDerLaan, John",
+          "score": 2.3467864573256,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": 2.3467864573256
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "25475",
+          "playerName": "Nyholm, Pontus",
+          "score": 2.131138066411912,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": 2.131138066411912
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "16757",
+          "playerName": "Dou, Zecheng",
+          "score": 1.4485899732944028,
+          "usedMetrics": 6,
+          "bucketScores": {
+            "mid": 1.474929779810179,
+            "long": 1.4178968449713434
+          },
+          "bucketUsedMetrics": {
+            "mid": 3,
+            "long": 3
+          }
+        },
+        {
+          "dgId": "20954",
+          "playerName": "Hirata, Kensei",
+          "score": 1.1244533371575562,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "long": 1.1244533371575562
+          },
+          "bucketUsedMetrics": {
+            "long": 3
+          }
+        },
+        {
+          "dgId": "28016",
+          "playerName": "Gonzalez, Emilio",
+          "score": 0.4401974305030103,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": 0.2808800794366454,
+            "long": 0.53839665395678,
+            "mid": 0.232073720074649
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "15310",
+          "playerName": "Li, Haotong",
+          "score": 0.40926594893040746,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.135740658136005,
+            "mid": 0.31436734534270944,
+            "long": 0.6718202130367112,
+            "veryLong": -0.011933629558604265
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21074",
+          "playerName": "Nakajima, Keita",
+          "score": 0.3569934349291583,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "long": 0.49419276890015196,
+            "mid": 0.5961792316567981,
+            "veryLong": -0.28206708878995534
+          },
+          "bucketUsedMetrics": {
+            "long": 6,
+            "mid": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "8480",
+          "playerName": "Streelman, Kevin",
+          "score": 0.3242532315143378,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0015523206044790743,
+            "mid": 0.42805656848870294,
+            "long": 0.40448630337152836,
+            "veryLong": 0.13719399759673317
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29925",
+          "playerName": "Yellamaraju, Sudarshan",
+          "score": 0.24051431353470312,
+          "usedMetrics": 9,
+          "bucketScores": {
+            "mid": 0.5485695573572437,
+            "long": -0.004311894643438938
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 3
+          }
+        },
+        {
+          "dgId": "11276",
+          "playerName": "Horschel, Billy",
+          "score": 0.16461004592546744,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.10197209466343336,
+            "mid": 0.4242727081686364,
+            "long": 0.0760346524889874,
+            "veryLong": -0.003754873116502886
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "5768",
+          "playerName": "Hoffman, Charley",
+          "score": 0.16070211880071728,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02977616884069655,
+            "mid": 0.22048997248617072,
+            "long": 0.15381952092427384,
+            "veryLong": 0.1753956140883403
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12577",
+          "playerName": "Woodland, Gary",
+          "score": 0.14606512881705683,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04026040255831342,
+            "mid": 0.2609710815165372,
+            "long": 0.1630269596893524,
+            "veryLong": -0.041451794682588645
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16715",
+          "playerName": "Ryder, Sam",
+          "score": 0.14125947330060387,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.05199090246787797,
+            "mid": 0.03366297136622508,
+            "long": 0.3368439239298958,
+            "veryLong": -0.11012045264189936
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "10104",
+          "playerName": "Power, Seamus",
+          "score": 0.13115941733200126,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05849200529709226,
+            "mid": 0.06145960432636169,
+            "long": 0.2773809818733109,
+            "veryLong": -0.1367255255661859
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14509",
+          "playerName": "Dahmen, Joel",
+          "score": 0.12360515007014192,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.013597603044787972,
+            "mid": 0.1503101039107508,
+            "long": 0.19171740792646103,
+            "veryLong": -0.05225403790418124
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13997",
+          "playerName": "Svensson, Adam",
+          "score": 0.1227524685146887,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.03423093904982065,
+            "mid": 0.2431035573355534,
+            "long": 0.14433459824250128,
+            "veryLong": -0.047607707189771614
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16841",
+          "playerName": "Lee, Min Woo",
+          "score": 0.12160736361186693,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.03633825926150381,
+            "mid": 0.27379240523581777,
+            "long": 0.08770261381355485,
+            "veryLong": 0.006102424386990979
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17032",
+          "playerName": "Tosti, Alejandro",
+          "score": 0.10318702555404036,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.10340131689740985,
+            "mid": 0.04623150100036963,
+            "long": 0.1781248425535766,
+            "veryLong": 0.14655733044859334
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15470",
+          "playerName": "Hossler, Beau",
+          "score": 0.1026027363814342,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.008965860508795009,
+            "mid": 0.20337090740814684,
+            "long": 0.12473398603235263,
+            "veryLong": -0.08407121663374972
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19483",
+          "playerName": "Burns, Sam",
+          "score": 0.09958887734685329,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.003494884453507877,
+            "mid": 0.08385635818893508,
+            "long": 0.20428683281397403,
+            "veryLong": -0.11588617566544274
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6169",
+          "playerName": "Kuchar, Matt",
+          "score": 0.09815852962042758,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.11920228891553261,
+            "mid": 0.051663682419693394,
+            "long": 0.16598898079154997,
+            "veryLong": -0.04403387845930196
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21944",
+          "playerName": "Moore, Taylor",
+          "score": 0.08904142359828768,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.06120337039860408,
+            "mid": 0.02407068042909194,
+            "long": 0.19903659884391367,
+            "veryLong": -0.11047317019500494
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17786",
+          "playerName": "Davis, Cam",
+          "score": 0.08751073993486522,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08734326985503202,
+            "mid": 0.1774911478824245,
+            "long": 0.08223865057231969,
+            "veryLong": -0.06894329060737889
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24550",
+          "playerName": "Ghim, Doug",
+          "score": 0.08487551251919599,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.015712234843567405,
+            "mid": 0.08150248492542,
+            "long": 0.20602159645768262,
+            "veryLong": -0.2084338850654455
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "31343",
+          "playerName": "Ford, David",
+          "score": 0.08420674922787608,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0442900635814469,
+            "mid": 0.040633626342690916,
+            "long": 0.14726927250920588,
+            "veryLong": 0.07488191749922156
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28270",
+          "playerName": "Dunlap, Nick",
+          "score": 0.08301014483807304,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05590244249145702,
+            "mid": 0.16996982206254352,
+            "long": 0.09102609280061748,
+            "veryLong": -0.08738265806239813
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15575",
+          "playerName": "Hoge, Tom",
+          "score": 0.08187688138271755,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.059111033745834644,
+            "mid": 0.0701732411587317,
+            "long": 0.14590757413379946,
+            "veryLong": -0.07913752274942341
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32055",
+          "playerName": "Shipley, Neal",
+          "score": 0.08086601311868274,
+          "usedMetrics": 6,
+          "bucketScores": {
+            "long": -0.22718225275895634,
+            "mid": 0.9494909061999495
+          },
+          "bucketUsedMetrics": {
+            "long": 3,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "25094",
+          "playerName": "Fishburn, Patrick",
+          "score": 0.07696515632922148,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.027166244603324573,
+            "mid": -0.009690629211240536,
+            "long": 0.15630494343172524,
+            "veryLong": 0.034201909434410135
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14578",
+          "playerName": "Henley, Russell",
+          "score": 0.07443725454909668,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.055756975762499474,
+            "mid": 0.20879753414804722,
+            "long": 0.0511651943660314,
+            "veryLong": -0.09530724098998894
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19872",
+          "playerName": "Riley, Davis",
+          "score": 0.07161509261905075,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.039282394181472724,
+            "mid": 0.10864734621510358,
+            "long": 0.08892250772351531,
+            "veryLong": -0.02769406666637659
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15004",
+          "playerName": "Kim, Chan",
+          "score": 0.06762976700361208,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.03299368671267794,
+            "mid": 0.11690844118972214,
+            "long": 0.04655263939856566,
+            "veryLong": 0.06793853224269762
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17538",
+          "playerName": "Homa, Max",
+          "score": 0.06544585448368571,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.04691122290278547,
+            "mid": 0.10083820201273345,
+            "long": 0.13009007322429114,
+            "veryLong": -0.11424205991645327
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6093",
+          "playerName": "Rose, Justin",
+          "score": 0.06517295823360159,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08171591265379226,
+            "mid": 0.17181852334773215,
+            "long": 0.012382975177479012,
+            "veryLong": 0.012997116631109131
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25908",
+          "playerName": "Whaley, Vince",
+          "score": 0.06455405142362362,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.03244931812540039,
+            "mid": -0.021573088021429605,
+            "long": 0.12515000202735824,
+            "veryLong": 0.1189653084971426
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16333",
+          "playerName": "Hubbard, Mark",
+          "score": 0.06441836717937202,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.010620805639986583,
+            "mid": 0.07754207825837459,
+            "long": 0.11574543615193687,
+            "veryLong": -0.06111093710352735
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15330",
+          "playerName": "Griffin, Lanto",
+          "score": 0.06424339897171562,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.035773162891154155,
+            "mid": 0.08303467240915381,
+            "long": 0.08493018831408505,
+            "veryLong": -0.013810681340147969
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "8820",
+          "playerName": "Snedeker, Brandt",
+          "score": 0.06350585531178454,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.13008467535731258,
+            "mid": 0.0850421892372057,
+            "long": 0.15826144329332956,
+            "veryLong": -0.3323445195482454
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17646",
+          "playerName": "Fitzpatrick, Matt",
+          "score": 0.06285648685192265,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.051345644417362085,
+            "mid": 0.13730076738134622,
+            "long": 0.10260899563677445,
+            "veryLong": -0.11184216412555374
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23950",
+          "playerName": "Aberg, Ludvig",
+          "score": 0.06064256507961989,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08459656545407754,
+            "mid": 0.09492815073495821,
+            "long": 0.0766828203196007,
+            "veryLong": -0.07583114216761022
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17550",
+          "playerName": "Van Rooyen, Erik",
+          "score": 0.060253768776327814,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.10771359238148902,
+            "mid": 0.025581888791448248,
+            "long": 0.11982400686416994,
+            "veryLong": -0.10040356067268728
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23838",
+          "playerName": "Hojgaard, Rasmus",
+          "score": 0.058163329062271445,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.026989610387074862,
+            "mid": 0.16771962020223993,
+            "long": 0.08889034575797153,
+            "veryLong": -0.2241498439342538
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17365",
+          "playerName": "Mitchell, Keith",
+          "score": 0.05723470625287392,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.042269179056730666,
+            "mid": 0.1699518960481863,
+            "long": -0.0008140869264883615,
+            "veryLong": 0.03599249408860581
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24304",
+          "playerName": "Vilips, Karl",
+          "score": 0.05457826687204104,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04656197850277364,
+            "mid": -0.08695575048086453,
+            "long": 0.21588206199615786,
+            "veryLong": -0.17601545837811944
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17511",
+          "playerName": "Straka, Sepp",
+          "score": 0.0540102850204722,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.04551599295528363,
+            "mid": 0.01668111252024694,
+            "long": 0.15018694222023157,
+            "veryLong": -0.09589024019602471
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "30814",
+          "playerName": "Sargent, Gordon",
+          "score": 0.05372394505252771,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.08309854563255523,
+            "mid": 0.13254317257096823,
+            "long": 0.04218089608800872,
+            "veryLong": -0.08580654138799654
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25157",
+          "playerName": "Hodges, Lee",
+          "score": 0.04786070093500364,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04012248306174889,
+            "mid": 0.0973541413448911,
+            "long": 0.09322450151729912,
+            "veryLong": -0.18440055492983992
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "10419",
+          "playerName": "Noren, Alex",
+          "score": 0.0476763230698239,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.041613852141173975,
+            "mid": 0.1658006752169372,
+            "long": 0.021526810999712365,
+            "veryLong": -0.09212831079161604
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14140",
+          "playerName": "Higgs, Harry",
+          "score": 0.045170165530597495,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.02921960712453321,
+            "mid": 0.018927775975884284,
+            "long": 0.08926821980278336,
+            "veryLong": 0.017746050221239148
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23604",
+          "playerName": "Clark, Wyndham",
+          "score": 0.0433655004830949,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.007331082004246538,
+            "mid": 0.28638399919070284,
+            "long": -0.027402355958322983,
+            "veryLong": -0.17118225783987467
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17543",
+          "playerName": "Kim, Michael",
+          "score": 0.036659658552834734,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.004344388484009588,
+            "mid": -0.012183539125227462,
+            "long": 0.11664116265974835,
+            "veryLong": -0.09536794606686107
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20722",
+          "playerName": "Schmid, Matti",
+          "score": 0.035878565863232965,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02339834161943438,
+            "mid": 0.21703029079753236,
+            "long": -0.015490298905373094,
+            "veryLong": -0.14029064171850433
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25569",
+          "playerName": "Stevens, Sam",
+          "score": 0.03572081287724576,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.009057619997172717,
+            "mid": 0.17654280576299555,
+            "long": 0.009353569308364314,
+            "veryLong": -0.13009559537151993
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29433",
+          "playerName": "Bridgeman, Jacob",
+          "score": 0.03531523556394486,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04149026774268645,
+            "mid": 0.14458200040936986,
+            "long": 0.01617085794582602,
+            "veryLong": -0.11967156638664507
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20706",
+          "playerName": "Wallace, Matt",
+          "score": 0.0331441203982981,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.021683878433517437,
+            "mid": 0.09299585405911442,
+            "long": 0.061789959787674764,
+            "veryLong": -0.12736556059556775
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15556",
+          "playerName": "Hughes, Mackenzie",
+          "score": 0.03074230836741465,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.011838798224742932,
+            "mid": 0.16127994230419593,
+            "long": 0.005191114863689703,
+            "veryLong": -0.10471271415740376
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27194",
+          "playerName": "Hall, Harry",
+          "score": 0.030510334288851675,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.002177613099586006,
+            "mid": 0.11642663428834435,
+            "long": 0.043141549045815145,
+            "veryLong": -0.15144682417613653
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23816",
+          "playerName": "Valimaki, Sami",
+          "score": 0.02972715671947631,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.014358105426084036,
+            "mid": 0.0948316601235833,
+            "long": 0.055685459929475045,
+            "veryLong": -0.16497197305613645
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13126",
+          "playerName": "Taylor, Nick",
+          "score": 0.02903551943058227,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02397030631880342,
+            "mid": 0.1396172426727345,
+            "long": 0.01067029724324382,
+            "veryLong": -0.12166795569095085
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23323",
+          "playerName": "MacIntyre, Robert",
+          "score": 0.028726562276678042,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.10099190191751596,
+            "mid": 0.0795617468747748,
+            "long": 0.07989969656662048,
+            "veryLong": -0.12379697075404202
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17780",
+          "playerName": "Pendrith, Taylor",
+          "score": 0.026683638910640566,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.02153062112175451,
+            "mid": 0.05361193644307657,
+            "long": 0.06686069978593569,
+            "veryLong": -0.1123316758473145
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15651",
+          "playerName": "Ventura, Kris",
+          "score": 0.025253344694185244,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04089099815411623,
+            "mid": 0.03935862709885841,
+            "long": 0.07267183229018624,
+            "veryLong": -0.16465662791455316
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16283",
+          "playerName": "Rodgers, Patrick",
+          "score": 0.025088120203555546,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0074426463934776435,
+            "mid": -0.16439048291878633,
+            "long": 0.1732388181038133,
+            "veryLong": -0.05139318013109118
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24968",
+          "playerName": "Griffin, Ben",
+          "score": 0.024752197409157954,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.004309340407457908,
+            "mid": 0.035157855229169484,
+            "long": 0.09423847482750411,
+            "veryLong": -0.19087599991830392
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "22833",
+          "playerName": "Echavarria, Nico",
+          "score": 0.022935584307454016,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.048184032603317585,
+            "mid": 0.025590790069852834,
+            "long": -0.0034117142510912218,
+            "veryLong": 0.08024225356355372
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27819",
+          "playerName": "Castillo, Ricky",
+          "score": 0.022443268985232884,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0823799007412575,
+            "mid": 0.012204303043997035,
+            "long": 0.016384240195040794,
+            "veryLong": 0.011834659782117386
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15980",
+          "playerName": "Lipsky, David",
+          "score": 0.021852523097853526,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.09673741882389843,
+            "mid": 0.1842050967407881,
+            "long": -0.0112143276830617,
+            "veryLong": -0.08837519001066231
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18628",
+          "playerName": "Campbell, Brian",
+          "score": 0.02159769521115269,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.007121215745979893,
+            "mid": -0.034204012663310544,
+            "long": 0.060091908253380455,
+            "veryLong": 0.031101365885541372
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19870",
+          "playerName": "McCarthy, Denny",
+          "score": 0.021117383481410627,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0594364597478742,
+            "mid": 0.06217145188490197,
+            "long": 0.06625073806835549,
+            "veryLong": -0.23218044272363308
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26850",
+          "playerName": "Svensson, Jesper",
+          "score": 0.01976078247410984,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.005940251621162699,
+            "mid": -0.010736767414098614,
+            "long": 0.08083023853794999,
+            "veryLong": -0.09328676352209743
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "9771",
+          "playerName": "Day, Jason",
+          "score": 0.018564048161966634,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.005994444109886572,
+            "mid": 0.05179164977551515,
+            "long": 0.02937754693513926,
+            "veryLong": -0.0692103227063705
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13508",
+          "playerName": "Vegas, Jhonattan",
+          "score": 0.017267958774181982,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.09063210596245667,
+            "mid": 0.0023424037705005525,
+            "long": 0.07015244983469349,
+            "veryLong": -0.03205315273414618
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19840",
+          "playerName": "Ramey, Chad",
+          "score": 0.01691416021769841,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.028597502290556312,
+            "mid": 0.08045993861963142,
+            "long": 0.02048000370424837,
+            "veryLong": -0.12635097230238815
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32330",
+          "playerName": "Clanton, Luke",
+          "score": 0.013831871101649289,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.038785081941269665,
+            "mid": 0.07873440460795733,
+            "long": 0.001667534979050775,
+            "veryLong": -0.0932902229394953
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23475",
+          "playerName": "Novak, Andrew",
+          "score": 0.013093884137939224,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.004909791291666098,
+            "mid": 0.1267318667813453,
+            "long": 0.023559227216312366,
+            "veryLong": -0.23202567389066842
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12909",
+          "playerName": "Campos, Rafael",
+          "score": 0.011800115536743802,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.01938741646216163,
+            "mid": 0.07504313073799534,
+            "long": -0.018773045019917566,
+            "veryLong": 0.012382808607788573
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18103",
+          "playerName": "Bezuidenhout, Christiaan",
+          "score": 0.008229360823326842,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.03724519182206358,
+            "mid": 0.1209530620500692,
+            "long": -0.028204215779882698,
+            "veryLong": -0.1176311878715545
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23465",
+          "playerName": "Greyserman, Max",
+          "score": 0.007708722601431666,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.01845051351300105,
+            "mid": 0.1422550067986997,
+            "long": -0.03159751490491531,
+            "veryLong": -0.1360094244373745
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21891",
+          "playerName": "Kitayama, Kurt",
+          "score": 0.007256806434434572,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04916882535645522,
+            "mid": 0.07549615771479397,
+            "long": 0.009037570152664102,
+            "veryLong": -0.1643544759313709
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25003",
+          "playerName": "Walker, Danny",
+          "score": 0.006720714948949865,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.06300942908036435,
+            "mid": 0.07224409181475126,
+            "long": -0.004098279770576323,
+            "veryLong": -0.13171150452653133
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17881",
+          "playerName": "Yu, Kevin",
+          "score": 0.005324191842565313,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05309414770873087,
+            "mid": -0.04232258791239229,
+            "long": 0.08941241296278042,
+            "veryLong": -0.20808440326842534
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26653",
+          "playerName": "Eckroat, Austin",
+          "score": 0.004737688605910558,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.058082328552094054,
+            "mid": 0.008888385665677826,
+            "long": 0.058641471963878096,
+            "veryLong": -0.12174242073312622
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19729",
+          "playerName": "Kanaya, Takumi",
+          "score": 0.002122942843478261,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0031522604907591473,
+            "mid": -0.037513654821549676,
+            "long": -0.02112341530916633,
+            "veryLong": 0.1510507863300945
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28469",
+          "playerName": "Highsmith, Joe",
+          "score": 0.0014955917535645169,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.00609571557610473,
+            "mid": 0.050322817262728324,
+            "long": 0.015035991417302524,
+            "veryLong": -0.12904103122766963
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17723",
+          "playerName": "Lower, Justin",
+          "score": 0.001398938398333447,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.005027041564414199,
+            "mid": 0.04689163988610904,
+            "long": -0.008036883034987641,
+            "veryLong": -0.05107335936502674
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27164",
+          "playerName": "Phillips, Chandler",
+          "score": 0.0013576384563810538,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.01163707821383988,
+            "mid": 0.12740879264250285,
+            "long": -0.02807506967332876,
+            "veryLong": -0.15682271845827428
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18424",
+          "playerName": "Roy, Kevin",
+          "score": -0.0023158301416893482,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.046016873656231506,
+            "mid": 0.009901554350403699,
+            "long": 0.005112057196626573,
+            "veryLong": -0.08920450584023851
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29767",
+          "playerName": "Gerard, Ryan",
+          "score": -0.002346728262355559,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.005821318796670532,
+            "mid": 0.0044067049474197355,
+            "long": 0.039213392169599334,
+            "veryLong": -0.14381378695126668
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21412",
+          "playerName": "Capan III, Frankie",
+          "score": -0.005170586062807744,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.05175167870932929,
+            "mid": 0.069154073196702,
+            "long": 0.00034377081102428476,
+            "veryLong": -0.2126860952239708
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "25002",
+          "playerName": "Wu, Dylan",
+          "score": -0.007948824937780144,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.02003504196181996,
+            "mid": -0.033202489865417524,
+            "long": 0.06385223737303562,
+            "veryLong": -0.1762427203256037
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "8825",
+          "playerName": "Harman, Brian",
+          "score": -0.008370753562881354,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0013051811138822022,
+            "mid": 0.08419184393635537,
+            "long": -0.053734745580776434,
+            "veryLong": -0.05122919956363015
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "16394",
+          "playerName": "Jaeger, Stephan",
+          "score": -0.008594118548417707,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.039023846638688416,
+            "mid": 0.09651273506088774,
+            "long": -0.05372344707790465,
+            "veryLong": -0.10766360443207999
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26096",
+          "playerName": "Bhatia, Akshay",
+          "score": -0.01160533292820876,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.021487334088044697,
+            "mid": 0.08112876866877437,
+            "long": -0.06077213214319384,
+            "veryLong": -0.06210446662679215
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "9171",
+          "playerName": "Villegas, Camilo",
+          "score": -0.011850094498798876,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.021241875945826983,
+            "mid": 0.09530985504516275,
+            "long": -0.04406235645094618,
+            "veryLong": -0.10863695386496602
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "20766",
+          "playerName": "Brown, Dan",
+          "score": -0.012517373136238562,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.14317644809060498,
+            "mid": -0.24452769817987197,
+            "long": 0.10596178743547745,
+            "veryLong": -0.06869806302055767
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "11676",
+          "playerName": "Finau, Tony",
+          "score": -0.013926136410204149,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.01629460978937014,
+            "mid": -0.022725726034407468,
+            "long": 0.07900442136757073,
+            "veryLong": -0.28869216406025944
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "24766",
+          "playerName": "Kim, Tom",
+          "score": -0.013949540844250572,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.022211273322966595,
+            "mid": 0.11171450087943842,
+            "long": -0.034637330954950245,
+            "veryLong": -0.18371546501749128
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26649",
+          "playerName": "Thorbjornsen, Michael",
+          "score": -0.014177604596312739,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.09618245457059808,
+            "mid": 0.1722548952710815,
+            "long": -0.08766837289681258,
+            "veryLong": -0.0732250434968909
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "22760",
+          "playerName": "Hisatsune, Ryo",
+          "score": -0.016906266190046672,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.061717448642943915,
+            "mid": -0.008246838640536878,
+            "long": -0.00710881910377063,
+            "veryLong": -0.12943349556774283
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19477",
+          "playerName": "Schenk, Adam",
+          "score": -0.01889209199157613,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.030131582019140304,
+            "mid": -0.01695011554383937,
+            "long": -0.01151098942241042,
+            "veryLong": -0.03667907496440754
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12423",
+          "playerName": "Kirk, Chris",
+          "score": -0.019891934835069538,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.021606166376919936,
+            "mid": 0.09854676736348351,
+            "long": -0.03463909910642043,
+            "veryLong": -0.19992258288001238
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14704",
+          "playerName": "Putnam, Andrew",
+          "score": -0.020423191943823523,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.041482729895797904,
+            "mid": 0.09680934066882266,
+            "long": -0.052989876543563824,
+            "veryLong": -0.12585403807365847
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19428",
+          "playerName": "Zalatoris, Will",
+          "score": -0.02086863308384794,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07150399379814962,
+            "mid": 0.2357958432429601,
+            "long": -0.01383074786669281,
+            "veryLong": -0.4955088074562675
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18586",
+          "playerName": "Smith, Jordan",
+          "score": -0.022188582222935238,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.3261216793342022,
+            "mid": -0.044214640524852716,
+            "long": -0.16686837155301382,
+            "veryLong": 0.18992988619376935
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14502",
+          "playerName": "Cauley, Bud",
+          "score": -0.023828935001499282,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.028579664269764608,
+            "mid": 0.14243675474007284,
+            "long": -0.05887222733184543,
+            "veryLong": -0.22930502438217568
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "15466",
+          "playerName": "Cantlay, Patrick",
+          "score": -0.024802834153418843,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.007887823653700032,
+            "mid": -0.004338977828458224,
+            "long": -0.010417850637713229,
+            "veryLong": -0.12362307885009213
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28635",
+          "playerName": "McCarty, Matt",
+          "score": -0.024919410106970703,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.012429276086774061,
+            "mid": -0.0027271399465229706,
+            "long": 0.002585079890097736,
+            "veryLong": -0.16487358480498387
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18417",
+          "playerName": "Scheffler, Scottie",
+          "score": -0.025286451387467268,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.04680940998239691,
+            "mid": 0.03315954247915449,
+            "long": -0.07455928197534668,
+            "veryLong": -0.04162276698892149
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "18474",
+          "playerName": "Smalley, Alex",
+          "score": -0.02740663420440309,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.007434899141806714,
+            "mid": -0.09284820081781554,
+            "long": 0.02817337824131844,
+            "veryLong": -0.10579462462446576
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27183",
+          "playerName": "Salinda, Isaiah",
+          "score": -0.02800042390503222,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.015478210160710026,
+            "mid": -0.030374579512889792,
+            "long": 0.009908121234450593,
+            "veryLong": -0.17910750872431463
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14577",
+          "playerName": "English, Harris",
+          "score": -0.028486046735883924,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.032015594231706246,
+            "mid": 0.03233054738899362,
+            "long": -0.018697531264848667,
+            "veryLong": -0.22645334151936053
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23014",
+          "playerName": "Theegala, Sahith",
+          "score": -0.03253356787244494,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.06788622022751309,
+            "mid": 0.11426398312049316,
+            "long": -0.05805557722184844,
+            "veryLong": -0.2053545284979949
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23505",
+          "playerName": "McGreevy, Max",
+          "score": -0.033019816347087845,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.0005275094498222673,
+            "mid": 0.16548295324864698,
+            "long": -0.1315028579316054,
+            "veryLong": -0.13083394012895877
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29770",
+          "playerName": "Mouw, William",
+          "score": -0.035415422176541984,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.01652797960754755,
+            "mid": -0.016024722925538894,
+            "long": -0.06720786544395228,
+            "veryLong": 0.012125033862498056
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23504",
+          "playerName": "Hoey, Rico",
+          "score": -0.042680393836554795,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.040631872448484554,
+            "mid": -0.08166761218335344,
+            "long": -0.00009911670619745917,
+            "veryLong": -0.17093457801776363
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6430",
+          "playerName": "Scott, Adam",
+          "score": -0.04709019747246428,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.01590989140375941,
+            "mid": 0.025248361070738884,
+            "long": -0.05834539262686621,
+            "veryLong": -0.20280562949535927
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14926",
+          "playerName": "Malnati, Peter",
+          "score": -0.04870552610516232,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.031023907551172836,
+            "mid": 0.03949710945692855,
+            "long": 0.004918268294866295,
+            "veryLong": -0.4025818450600509
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29279",
+          "playerName": "Suber, Jackson",
+          "score": -0.04878000713359475,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.1571211258058122,
+            "mid": -0.009341149096848782,
+            "long": -0.12851760403469914,
+            "veryLong": -0.04268826311105343
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "26657",
+          "playerName": "Fisk, Steven",
+          "score": -0.051425576854354366,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.07586573192173734,
+            "mid": 0.06466031037989306,
+            "long": -0.0664550384378379,
+            "veryLong": -0.20727663604906832
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12808",
+          "playerName": "Grillo, Emiliano",
+          "score": -0.05190975855594619,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.10018115849597192,
+            "mid": 0.04526635647330584,
+            "long": -0.14029098979454804,
+            "veryLong": -0.08526031465937857
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "6986",
+          "playerName": "Johnson, Zach",
+          "score": -0.055757413174746605,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02411032665524592,
+            "mid": -0.17693188450442068,
+            "long": 0.024636749296345715,
+            "veryLong": -0.14241174059510894
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "17606",
+          "playerName": "Berger, Daniel",
+          "score": -0.05682046975773996,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.0186451063579416,
+            "mid": 0.025370245715601446,
+            "long": -0.11172870912319997,
+            "veryLong": -0.10384908340697281
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21756",
+          "playerName": "Cole, Eric",
+          "score": -0.057618051362899374,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.02318860164656966,
+            "mid": 0.12661899317202777,
+            "long": -0.1730079549270985,
+            "veryLong": -0.11441523787216445
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "12965",
+          "playerName": "Fowler, Rickie",
+          "score": -0.05855046577933713,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.030917164708790527,
+            "mid": -0.011081737519281184,
+            "long": -0.01812800078088096,
+            "veryLong": -0.30049305273607135
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32152",
+          "playerName": "Brown, Blades",
+          "score": -0.06062663875773423,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.14075333763548753,
+            "mid": -0.15099688718617238,
+            "long": -0.02094594128479416,
+            "veryLong": -0.17822932184022472
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19960",
+          "playerName": "Pavon, Matthieu",
+          "score": -0.07075244962019078,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.011404160629425333,
+            "mid": 0.03130675134102717,
+            "long": -0.12161268093965953,
+            "veryLong": -0.15552584698847166
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27900",
+          "playerName": "Potgieter, Aldrich",
+          "score": -0.07813651633167498,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.03760543750624839,
+            "mid": -0.22225537333160886,
+            "long": -0.025910211753480534,
+            "veryLong": 0.0008660837234086258
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "11451",
+          "playerName": "Garnett, Brice",
+          "score": -0.0828187586677181,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.018053994906876918,
+            "mid": 0.03142976454103699,
+            "long": -0.191680144974272,
+            "veryLong": -0.012246809714244463
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28159",
+          "playerName": "Meissner, Mac",
+          "score": -0.0852629150236768,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.019766506948579003,
+            "mid": -0.029532522376476644,
+            "long": -0.10728297620223667,
+            "veryLong": -0.17704326208436633
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "32457",
+          "playerName": "Keefer, Johnny",
+          "score": -0.09576627233147034,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.2642324758821836,
+            "mid": -0.04680267484410323,
+            "long": -0.12442280699800373,
+            "veryLong": 0.039559787867744334
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21554",
+          "playerName": "Poston, J.T.",
+          "score": -0.09972251320113938,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.025700145739686132,
+            "mid": -0.20056999077982404,
+            "long": -0.08611720491392194,
+            "veryLong": -0.052059755261601455
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "23656",
+          "playerName": "Young, Carson",
+          "score": -0.10048962853288317,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": -0.014939302195612835,
+            "mid": -0.05567952786476118,
+            "long": -0.10993587566625534,
+            "veryLong": -0.22752919312464442
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "29197",
+          "playerName": "Brennan, Michael",
+          "score": -0.10076126825298276,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "short": 0.18693621470665678,
+            "mid": -0.3297338404836494,
+            "long": 0.061644455258965676,
+            "veryLong": -0.2908065045475284
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "28309",
+          "playerName": "Coody, Pierceson",
+          "score": -0.10363456093185366,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.014443883115301372,
+            "mid": -0.2143259877513267,
+            "long": -0.11967442700387919,
+            "veryLong": 0.06272372163169089
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "13470",
+          "playerName": "Kizzire, Patton",
+          "score": -0.1042791422848308,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.06781953989762554,
+            "mid": -0.17278624090212413,
+            "long": -0.10749396215076204,
+            "veryLong": -0.10425875811145634
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "7301",
+          "playerName": "Dufner, Jason",
+          "score": -0.11931663840818248,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "short": 0.08057469073081522,
+            "mid": -0.2395904060706924,
+            "long": -0.06451360366325588,
+            "veryLong": -0.1854925230559185
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 3,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "21688",
+          "playerName": "Kim, S.H.",
+          "score": -0.12241035540327322,
+          "usedMetrics": 15,
+          "bucketScores": {
+            "mid": 0.2459828436348681,
+            "long": -0.20859916263636943,
+            "veryLong": -0.5593710676159842
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14609",
+          "playerName": "Kim, Si Woo",
+          "score": -0.13732637798118866,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.012044069333655405,
+            "mid": -0.06936570320752582,
+            "long": -0.17412166804214124,
+            "veryLong": -0.27519232931261517
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "27364",
+          "playerName": "Thompson, Davis",
+          "score": -0.15506790139014553,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.003113609802923097,
+            "mid": 0.06286088590155221,
+            "long": -0.24676035663318735,
+            "veryLong": -0.41548439397182874
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "14792",
+          "playerName": "Saddier, Adrien",
+          "score": -0.19648598095392866,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": 0.06603369351316606,
+            "long": -0.15912204292255364,
+            "mid": -0.586095077002275
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "13764",
+          "playerName": "Parry, John",
+          "score": -0.20267550566473636,
+          "usedMetrics": 18,
+          "bucketScores": {
+            "short": 0.004052742230591787,
+            "mid": 0.1535941892793966,
+            "long": -0.45371561573413804,
+            "veryLong": -0.26598422748364986
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "mid": 6,
+            "long": 6,
+            "veryLong": 3
+          }
+        },
+        {
+          "dgId": "19846",
+          "playerName": "Bauchou, Zach",
+          "score": -0.2108421453638434,
+          "usedMetrics": 9,
+          "bucketScores": {
+            "long": 0.2406080174159365,
+            "mid": -1.871246523660521
+          },
+          "bucketUsedMetrics": {
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "22002",
+          "playerName": "Dumont De Chassart, Adrien",
+          "score": -0.457595241046532,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "mid": -0.25328624253462156,
+            "long": -0.5820828835093856
+          },
+          "bucketUsedMetrics": {
+            "mid": 6,
+            "long": 6
+          }
+        },
+        {
+          "dgId": "21883",
+          "playerName": "Ewart, A.J.",
+          "score": -0.7244987797221661,
+          "usedMetrics": 12,
+          "bucketScores": {
+            "short": -0.24028816271260428,
+            "long": -0.46831275954842694,
+            "mid": -2.13188651852204
+          },
+          "bucketUsedMetrics": {
+            "short": 3,
+            "long": 6,
+            "mid": 3
+          }
+        },
+        {
+          "dgId": "24343",
+          "playerName": "Lamprecht, Christo",
+          "score": -2.104705339669492,
+          "usedMetrics": 3,
+          "bucketScores": {
+            "mid": -2.104705339669492
+          },
+          "bucketUsedMetrics": {
+            "mid": 3
+          }
+        }
+      ],
+      "predictiveWeighted": {
+        "topMovers": [
+          {
+            "dgId": "25319",
+            "playerName": "VanDerLaan, John",
+            "score": 2.3467864573256,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": 2.3467864573256
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "25475",
+            "playerName": "Nyholm, Pontus",
+            "score": 2.131138066411912,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": 2.131138066411912
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "16757",
+            "playerName": "Dou, Zecheng",
+            "score": 1.4485899732944028,
+            "usedMetrics": 6,
+            "bucketScores": {
+              "mid": 1.474929779810179,
+              "long": 1.4178968449713434
+            },
+            "bucketUsedMetrics": {
+              "mid": 3,
+              "long": 3
+            }
+          },
+          {
+            "dgId": "20954",
+            "playerName": "Hirata, Kensei",
+            "score": 1.1244533371575562,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "long": 1.1244533371575562
+            },
+            "bucketUsedMetrics": {
+              "long": 3
+            }
+          },
+          {
+            "dgId": "28016",
+            "playerName": "Gonzalez, Emilio",
+            "score": 0.4401974305030103,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "short": 0.2808800794366454,
+              "long": 0.53839665395678,
+              "mid": 0.232073720074649
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "15310",
+            "playerName": "Li, Haotong",
+            "score": 0.40926594893040746,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.135740658136005,
+              "mid": 0.31436734534270944,
+              "long": 0.6718202130367112,
+              "veryLong": -0.011933629558604265
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "21074",
+            "playerName": "Nakajima, Keita",
+            "score": 0.3569934349291583,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "long": 0.49419276890015196,
+              "mid": 0.5961792316567981,
+              "veryLong": -0.28206708878995534
+            },
+            "bucketUsedMetrics": {
+              "long": 6,
+              "mid": 3,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "8480",
+            "playerName": "Streelman, Kevin",
+            "score": 0.3242532315143378,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.0015523206044790743,
+              "mid": 0.42805656848870294,
+              "long": 0.40448630337152836,
+              "veryLong": 0.13719399759673317
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "29925",
+            "playerName": "Yellamaraju, Sudarshan",
+            "score": 0.24051431353470312,
+            "usedMetrics": 9,
+            "bucketScores": {
+              "mid": 0.5485695573572437,
+              "long": -0.004311894643438938
+            },
+            "bucketUsedMetrics": {
+              "mid": 6,
+              "long": 3
+            }
+          },
+          {
+            "dgId": "11276",
+            "playerName": "Horschel, Billy",
+            "score": 0.16461004592546744,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.10197209466343336,
+              "mid": 0.4242727081686364,
+              "long": 0.0760346524889874,
+              "veryLong": -0.003754873116502886
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          }
+        ],
+        "bottomMovers": [
+          {
+            "dgId": "24343",
+            "playerName": "Lamprecht, Christo",
+            "score": -2.104705339669492,
+            "usedMetrics": 3,
+            "bucketScores": {
+              "mid": -2.104705339669492
+            },
+            "bucketUsedMetrics": {
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "21883",
+            "playerName": "Ewart, A.J.",
+            "score": -0.7244987797221661,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "short": -0.24028816271260428,
+              "long": -0.46831275954842694,
+              "mid": -2.13188651852204
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "22002",
+            "playerName": "Dumont De Chassart, Adrien",
+            "score": -0.457595241046532,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "mid": -0.25328624253462156,
+              "long": -0.5820828835093856
+            },
+            "bucketUsedMetrics": {
+              "mid": 6,
+              "long": 6
+            }
+          },
+          {
+            "dgId": "19846",
+            "playerName": "Bauchou, Zach",
+            "score": -0.2108421453638434,
+            "usedMetrics": 9,
+            "bucketScores": {
+              "long": 0.2406080174159365,
+              "mid": -1.871246523660521
+            },
+            "bucketUsedMetrics": {
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "13764",
+            "playerName": "Parry, John",
+            "score": -0.20267550566473636,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.004052742230591787,
+              "mid": 0.1535941892793966,
+              "long": -0.45371561573413804,
+              "veryLong": -0.26598422748364986
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "14792",
+            "playerName": "Saddier, Adrien",
+            "score": -0.19648598095392866,
+            "usedMetrics": 12,
+            "bucketScores": {
+              "short": 0.06603369351316606,
+              "long": -0.15912204292255364,
+              "mid": -0.586095077002275
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "long": 6,
+              "mid": 3
+            }
+          },
+          {
+            "dgId": "27364",
+            "playerName": "Thompson, Davis",
+            "score": -0.15506790139014553,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.003113609802923097,
+              "mid": 0.06286088590155221,
+              "long": -0.24676035663318735,
+              "veryLong": -0.41548439397182874
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "14609",
+            "playerName": "Kim, Si Woo",
+            "score": -0.13732637798118866,
+            "usedMetrics": 18,
+            "bucketScores": {
+              "short": 0.012044069333655405,
+              "mid": -0.06936570320752582,
+              "long": -0.17412166804214124,
+              "veryLong": -0.27519232931261517
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "21688",
+            "playerName": "Kim, S.H.",
+            "score": -0.12241035540327322,
+            "usedMetrics": 15,
+            "bucketScores": {
+              "mid": 0.2459828436348681,
+              "long": -0.20859916263636943,
+              "veryLong": -0.5593710676159842
+            },
+            "bucketUsedMetrics": {
+              "mid": 6,
+              "long": 6,
+              "veryLong": 3
+            }
+          },
+          {
+            "dgId": "7301",
+            "playerName": "Dufner, Jason",
+            "score": -0.11931663840818248,
+            "usedMetrics": 15,
+            "bucketScores": {
+              "short": 0.08057469073081522,
+              "mid": -0.2395904060706924,
+              "long": -0.06451360366325588,
+              "veryLong": -0.1854925230559185
+            },
+            "bucketUsedMetrics": {
+              "short": 3,
+              "mid": 6,
+              "long": 3,
+              "veryLong": 3
+            }
+          }
+        ]
+      }
+    }
+  },
+  "blendSettings": {
+    "priorTemplate": "TECHNICAL",
+    "priorShare": 0.6,
+    "modelShare": 0.4
+  },
+  "suggestedTop20MetricWeights": {
+    "source": "none",
+    "weights": []
+  },
+  "suggestedTop20GroupWeights": {
+    "source": "none",
+    "weights": []
+  },
+  "conservativeSuggestedTop20GroupWeights": {
+    "source": "none",
+    "weights": [],
+    "cvReliability": 0,
+    "modelShare": 0,
+    "priorShare": 1
+  },
+  "filledGroupWeights": {
+    "Driving Performance": 0.07499999999999998,
+    "Approach - Short (<100)": 0.08299999999999999,
+    "Approach - Mid (100-150)": 0.13699999999999998,
+    "Approach - Long (150-200)": 0.15799999999999997,
+    "Approach - Very Long (>200)": 0.16199999999999998,
+    "Putting": 0.15499999999999997,
+    "Around the Green": 0.054999999999999986,
+    "Scoring": 0.11999999999999997,
+    "Course Management": 0.054999999999999986
+  },
+  "filledMetricWeights": {
+    "Driving Performance::Driving Distance": 0.05,
+    "Driving Performance::Driving Accuracy": 0.4,
+    "Driving Performance::SG OTT": 0.55,
+    "Approach - Short (<100)::Approach <100 GIR": 0.1,
+    "Approach - Short (<100)::Approach <100 SG": 0.4,
+    "Approach - Short (<100)::Approach <100 Prox": 0.5,
+    "Approach - Mid (100-150)::Approach <150 FW GIR": 0.1,
+    "Approach - Mid (100-150)::Approach <150 FW SG": 0.42,
+    "Approach - Mid (100-150)::Approach <150 FW Prox": 0.48,
+    "Approach - Mid (100-150)::Approach <150 Rough GIR": 0.1,
+    "Approach - Mid (100-150)::Approach <150 Rough SG": 0.42,
+    "Approach - Mid (100-150)::Approach <150 Rough Prox": 0.48,
+    "Approach - Long (150-200)::Approach <200 FW GIR": 0.1,
+    "Approach - Long (150-200)::Approach <200 FW SG": 0.35,
+    "Approach - Long (150-200)::Approach <200 FW Prox": 0.55,
+    "Approach - Long (150-200)::Approach >150 Rough GIR": 0.1,
+    "Approach - Long (150-200)::Approach >150 Rough SG": 0.35,
+    "Approach - Long (150-200)::Approach >150 Rough Prox": 0.55,
+    "Approach - Very Long (>200)::Approach >200 FW GIR": 0.09,
+    "Approach - Very Long (>200)::Approach >200 FW SG": 0.28,
+    "Approach - Very Long (>200)::Approach >200 FW Prox": 0.63,
+    "Putting::SG Putting": 1,
+    "Around the Green::SG Around Green": 1,
+    "Scoring::SG T2G": 0.22,
+    "Scoring::Scoring Average": 0.13,
+    "Scoring::Birdie Chances Created": 0.12,
+    "Scoring::Scoring: Approach <100 SG": 0.154,
+    "Scoring::Scoring: Approach <150 FW SG": 0.253,
+    "Scoring::Scoring: Approach <150 Rough SG": 0.253,
+    "Scoring::Scoring: Approach <200 FW SG": 0.293,
+    "Scoring::Scoring: Approach >200 FW SG": 0.3,
+    "Scoring::Scoring: Approach >150 Rough SG": 0.3,
+    "Course Management::Scrambling": 0.1,
+    "Course Management::Great Shots": 0.08,
+    "Course Management::Poor Shots": 0.08,
+    "Course Management::Course Management: Approach <100 Prox": 0.114,
+    "Course Management::Course Management: Approach <150 FW Prox": 0.094,
+    "Course Management::Course Management: Approach <150 Rough Prox": 0.094,
+    "Course Management::Course Management: Approach >150 Rough Prox": 0.217,
+    "Course Management::Course Management: Approach <200 FW Prox": 0.111,
+    "Course Management::Course Management: Approach >200 FW Prox": 0.111
+  },
+  "blendedGroupWeights": {
+    "Driving Performance": 0.06689985451018429,
+    "Approach - Short (<100)": 0.07287325412221145,
+    "Approach - Mid (100-150)": 0.15103241998060135,
+    "Approach - Long (150-200)": 0.1644518186226964,
+    "Approach - Very Long (>200)": 0.11687626091173617,
+    "Putting": 0.0772582444228904,
+    "Around the Green": 0.024655189136760423,
+    "Scoring": 0.15352558195926286,
+    "Course Management": 0.17242737633365665
+  },
+  "blendedMetricWeights": {
+    "Driving Performance::Driving Distance": 0.08884589726484322,
+    "Driving Performance::Driving Accuracy": 0.3324349566377585,
+    "Driving Performance::SG OTT": 0.5787191460973983,
+    "Approach - Short (<100)::Approach <100 GIR": 0.11733066017471001,
+    "Approach - Short (<100)::Approach <100 SG": 0.21610769010453962,
+    "Approach - Short (<100)::Approach <100 Prox": 0.6665616497207504,
+    "Approach - Mid (100-150)::Approach <150 FW GIR": 0.07886012292791955,
+    "Approach - Mid (100-150)::Approach <150 FW SG": 0.20286459303408458,
+    "Approach - Mid (100-150)::Approach <150 FW Prox": 0.43256099832371026,
+    "Approach - Mid (100-150)::Approach <150 Rough GIR": 0.028571428571428577,
+    "Approach - Mid (100-150)::Approach <150 Rough SG": 0.12000000000000001,
+    "Approach - Mid (100-150)::Approach <150 Rough Prox": 0.13714285714285715,
+    "Approach - Long (150-200)::Approach <200 FW GIR": 0.07329435605972374,
+    "Approach - Long (150-200)::Approach <200 FW SG": 0.24045794414292707,
+    "Approach - Long (150-200)::Approach <200 FW Prox": 0.40053341408306353,
+    "Approach - Long (150-200)::Approach >150 Rough GIR": 0.028571428571428577,
+    "Approach - Long (150-200)::Approach >150 Rough SG": 0.09999999999999999,
+    "Approach - Long (150-200)::Approach >150 Rough Prox": 0.15714285714285717,
+    "Approach - Very Long (>200)::Approach >200 FW GIR": 0.09236449037106623,
+    "Approach - Very Long (>200)::Approach >200 FW SG": 0.20253546265852512,
+    "Approach - Very Long (>200)::Approach >200 FW Prox": 0.7051000469704086,
+    "Putting::SG Putting": 1,
+    "Around the Green::SG Around Green": 1,
+    "Scoring::SG T2G": 0.2339375546190183,
+    "Scoring::Scoring Average": 0.11588139875753026,
+    "Scoring::Birdie Chances Created": 0.11228072760614691,
+    "Scoring::Scoring: Approach <100 SG": 0.0720087229100943,
+    "Scoring::Scoring: Approach <150 FW SG": 0.1335504745308568,
+    "Scoring::Scoring: Approach <150 Rough SG": 0.07886397142023643,
+    "Scoring::Scoring: Approach <200 FW SG": 0.08316775475447061,
+    "Scoring::Scoring: Approach >200 FW SG": 0.08515469770082315,
+    "Scoring::Scoring: Approach >150 Rough SG": 0.08515469770082315,
+    "Course Management::Scrambling": 0.11163727179211913,
+    "Course Management::Great Shots": 0.09113486706110381,
+    "Course Management::Poor Shots": 0.07574969870205003,
+    "Course Management::Course Management: Approach <100 Prox": 0.10157891633724098,
+    "Course Management::Course Management: Approach <150 FW Prox": 0.10624698771756809,
+    "Course Management::Course Management: Approach <150 Rough Prox": 0.12023903486103335,
+    "Course Management::Course Management: Approach >150 Rough Prox": 0.2262152561880462,
+    "Course Management::Course Management: Approach <200 FW Prox": 0.09268620994022404,
+    "Course Management::Course Management: Approach >200 FW Prox": 0.07451175740061426
+  },
+  "blendedMetricWeightsAdjusted": {
+    "Driving Performance::Driving Distance": 0.08884589726484322,
+    "Driving Performance::Driving Accuracy": 0.3324349566377585,
+    "Driving Performance::SG OTT": 0.5787191460973983,
+    "Approach - Short (<100)::Approach <100 GIR": 0.11733066017471001,
+    "Approach - Short (<100)::Approach <100 SG": 0.21610769010453962,
+    "Approach - Short (<100)::Approach <100 Prox": 0.6665616497207504,
+    "Approach - Mid (100-150)::Approach <150 FW GIR": 0.07886012292791955,
+    "Approach - Mid (100-150)::Approach <150 FW SG": 0.20286459303408458,
+    "Approach - Mid (100-150)::Approach <150 FW Prox": 0.43256099832371026,
+    "Approach - Mid (100-150)::Approach <150 Rough GIR": 0.028571428571428577,
+    "Approach - Mid (100-150)::Approach <150 Rough SG": 0.12000000000000001,
+    "Approach - Mid (100-150)::Approach <150 Rough Prox": 0.13714285714285715,
+    "Approach - Long (150-200)::Approach <200 FW GIR": 0.07329435605972374,
+    "Approach - Long (150-200)::Approach <200 FW SG": 0.24045794414292707,
+    "Approach - Long (150-200)::Approach <200 FW Prox": 0.40053341408306353,
+    "Approach - Long (150-200)::Approach >150 Rough GIR": 0.028571428571428577,
+    "Approach - Long (150-200)::Approach >150 Rough SG": 0.09999999999999999,
+    "Approach - Long (150-200)::Approach >150 Rough Prox": 0.15714285714285717,
+    "Approach - Very Long (>200)::Approach >200 FW GIR": 0.09236449037106623,
+    "Approach - Very Long (>200)::Approach >200 FW SG": 0.20253546265852512,
+    "Approach - Very Long (>200)::Approach >200 FW Prox": 0.7051000469704086,
+    "Putting::SG Putting": 1,
+    "Around the Green::SG Around Green": 1,
+    "Scoring::SG T2G": 0.2339375546190183,
+    "Scoring::Scoring Average": 0.11588139875753026,
+    "Scoring::Birdie Chances Created": 0.11228072760614691,
+    "Scoring::Scoring: Approach <100 SG": 0.035501421055142104,
+    "Scoring::Scoring: Approach <150 FW SG": 0.07691974561947455,
+    "Scoring::Scoring: Approach <150 Rough SG": 0.07691974561947455,
+    "Scoring::Scoring: Approach <200 FW SG": 0.22000123047807757,
+    "Scoring::Scoring: Approach >200 FW SG": 0.0642790881225679,
+    "Scoring::Scoring: Approach >150 Rough SG": 0.0642790881225679,
+    "Course Management::Scrambling": 0.11163727179211913,
+    "Course Management::Great Shots": 0.09113486706110381,
+    "Course Management::Poor Shots": 0.07574969870205003,
+    "Course Management::Course Management: Approach <100 Prox": 0.04761755872135199,
+    "Course Management::Course Management: Approach <150 FW Prox": 0.10317137722959596,
+    "Course Management::Course Management: Approach <150 Rough Prox": 0.10317137722959596,
+    "Course Management::Course Management: Approach >150 Rough Prox": 0.08621664041214487,
+    "Course Management::Course Management: Approach <200 FW Prox": 0.29508456843989334,
+    "Course Management::Course Management: Approach >200 FW Prox": 0.08621664041214487
+  }
+}

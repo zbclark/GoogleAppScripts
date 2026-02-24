@@ -1,0 +1,101 @@
+{
+  "tournaments": [
+    {
+      "name": "Cognizant Classic",
+      "topFinishers": [
+        {
+          "name": "Highsmith, Joe",
+          "dgId": "28469",
+          "actualFinish": 1,
+          "predictedRank": 122,
+          "missScore": 121,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Bridgeman, Jacob",
+          "dgId": "29433",
+          "actualFinish": 2,
+          "predictedRank": 65,
+          "missScore": 63,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Spaun, J.J.",
+          "dgId": "17536",
+          "actualFinish": 2,
+          "predictedRank": 56,
+          "missScore": 54,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "McGreevy, Max",
+          "dgId": "23505",
+          "actualFinish": 4,
+          "predictedRank": 108,
+          "missScore": 104,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Griffin, Ben",
+          "dgId": "24968",
+          "actualFinish": 4,
+          "predictedRank": 37,
+          "missScore": 33,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Henley, Russell",
+          "dgId": "14578",
+          "actualFinish": 6,
+          "predictedRank": 110,
+          "missScore": 104,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Knapp, Jake",
+          "dgId": "19396",
+          "actualFinish": 6,
+          "predictedRank": 121,
+          "missScore": 115,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Kim, Michael",
+          "dgId": "17543",
+          "actualFinish": 6,
+          "predictedRank": 69,
+          "missScore": 63,
+          "inTopXPredicted": "Outside Top 50"
+        },
+        {
+          "name": "Van Rooyen, Erik",
+          "dgId": "17550",
+          "actualFinish": 9,
+          "predictedRank": 47,
+          "missScore": 38,
+          "inTopXPredicted": "Top 50"
+        },
+        {
+          "name": "Spieth, Jordan",
+          "dgId": "14636",
+          "actualFinish": 9,
+          "predictedRank": 39,
+          "missScore": 30,
+          "inTopXPredicted": "Top 50"
+        }
+      ],
+      "accuracyMetrics": {
+        "top5Predicted": 0,
+        "top10Predicted": 0,
+        "top20Predicted": 3,
+        "avgMissTop5": 75,
+        "avgMissTop10": 72.5
+      }
+    }
+  ],
+  "totalTop5": 5,
+  "predictedTop5InTop20": 0,
+  "totalTop10": 10,
+  "predictedTop10InTop30": 0,
+  "generatedAt": "2026-02-24T15:34:59.887Z"
+}

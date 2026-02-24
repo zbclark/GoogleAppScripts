@@ -1,3 +1,5 @@
+
+
 /**
  * Adaptive Weight Optimizer v2
  * 
@@ -7,13 +9,13 @@
  * Step 3: Weight Optimization (using 2026 approach metrics against 2026 results)
  * Step 4: Multi-Year Validation (test 2026 weights on past years with current metrics)
  */
-
 const fs = require('fs');
 const path = require('path');
 const crypto = require('crypto');
 const { parse } = require('csv-parse/sync');
 require('dotenv').config({ path: path.resolve(__dirname, '..', '..', '..', '.env') });
 
+const { setupLogging } = require('../utilities/logging');
 const { loadCsv } = require('../utilities/csvLoader');
 const { buildPlayerData } = require('../utilities/dataPrep');
 const { generatePlayerRankings, cleanMetricValue } = require('./modelCore');
@@ -30,6 +32,9 @@ const {
   getDataGolfSkillRatings,
   getDataGolfHistoricalRounds
 } = require('../utilities/dataGolfClient');
+const buildRecentYears = require('../utilities/buildRecentYears');
+const collectRecords = require('../utilities/collectRecords');
+const { extractHistoricalRowsFromSnapshotPayload } = require('../utilities/extractHistoricalRows');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 let DATA_ROOT_DIR = path.resolve(ROOT_DIR, 'data');
@@ -274,7 +279,6 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '--excludeCurrentEventRounds' || args[i] === '--exclude-current-event-rounds') {
     INCLUDE_CURRENT_EVENT_ROUNDS = false;
   }
-}
 
 const loggingEnv = String(process.env.LOGGING_ENABLED || '').trim().toLowerCase();
 if (loggingEnv === '1' || loggingEnv === 'true' || loggingEnv === 'yes') {
@@ -291,12 +295,6 @@ if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesE
   WRITE_TEMPLATES = true;
   DRY_RUN = false;
 }
-
-if (FORCE_PRE_FLAG && FORCE_POST_FLAG) {
-  console.error('\n❌ Invalid flags: --pre and --post cannot both be set.');
-  process.exit(1);
-}
-
 
 if (OVERRIDE_DIR) {
   const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
@@ -325,8 +323,33 @@ if (OVERRIDE_OUTPUT_DIR) {
   OUTPUT_DIR = path.resolve(OVERRIDE_OUTPUT_DIR);
 }
 
+if (!OVERRIDE_OUTPUT_DIR) {
+  if (FORCE_PRE_FLAG && !OUTPUT_DIR.endsWith('pre_event')) {
+    OUTPUT_DIR = path.join(OUTPUT_DIR, 'pre_event');
+    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  } else if (FORCE_POST_FLAG && !OUTPUT_DIR.endsWith('post_event')) {
+    OUTPUT_DIR = path.join(OUTPUT_DIR, 'post_event');
+    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+}
+
+
 if (typeof OVERRIDE_ROLLING_DELTAS === 'number' && OVERRIDE_ROLLING_DELTAS >= 0) {
   APPROACH_DELTA_ROLLING_EVENTS = OVERRIDE_ROLLING_DELTAS;
+}
+
+// --- Determine context for logging (pre/post/other) ---
+let runContext = 'run';
+if (FORCE_PRE_FLAG) runContext = 'pre_event';
+else if (FORCE_POST_FLAG) runContext = 'post_event';
+
+// --- Setup logging if enabled ---
+if (LOGGING_ENABLED) {
+  setupLogging(
+    typeof OVERRIDE_OUTPUT_DIR === 'string' && OVERRIDE_OUTPUT_DIR.length > 0 ? OVERRIDE_OUTPUT_DIR : OUTPUT_DIR,
+    TOURNAMENT_NAME || OVERRIDE_EVENT_ID || 'event',
+    runContext
+  );
 }
 
 if (!LOGGING_ENABLED) {
@@ -336,7 +359,7 @@ if (!LOGGING_ENABLED) {
 }
 
 console.log('---');
-console.log('ADAPTIVE WEIGHT OPTIMIZER v2');
+console.log('MODEL OPTIMIZER');
 console.log('---');
 if (OPT_SEED_RAW) {
   console.log(`OPT_SEED: ${OPT_SEED_RAW}`);
@@ -3718,56 +3741,6 @@ function normalizeFieldRow(row) {
   };
 }
 
-function extractHistoricalRowsFromSnapshotPayload(payload) {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload.rows)) return payload.rows;
-  if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.rounds)) return payload.rounds;
-  if (typeof payload === 'object') {
-    const nested = Object.values(payload).flatMap(value => Array.isArray(value) ? value : []);
-    if (nested.length > 0) return nested;
-
-    const expanded = [];
-    Object.entries(payload).forEach(([eventKey, eventEntry]) => {
-      if (!eventEntry || typeof eventEntry !== 'object') return;
-      const scores = Array.isArray(eventEntry.scores) ? eventEntry.scores : [];
-      if (scores.length === 0) return;
-      const eventId = eventEntry.event_id || eventEntry.eventId || eventKey;
-      const eventCompleted = eventEntry.event_completed || eventEntry.eventCompleted || null;
-      const year = eventCompleted ? String(eventCompleted).slice(0, 4) : null;
-
-      scores.forEach(playerEntry => {
-        if (!playerEntry) return;
-        const base = {
-          event_id: eventId,
-          event_name: eventEntry.event_name || eventEntry.eventName || null,
-          event_completed: eventCompleted,
-          year: year || null,
-          season: year || null,
-          dg_id: playerEntry.dg_id || playerEntry.dgId || playerEntry.player_id || playerEntry.playerId,
-          player_name: playerEntry.player_name || playerEntry.playerName || null,
-          fin_text: playerEntry.fin_text || playerEntry.finish || playerEntry.finishPosition || null
-        };
-
-        [1, 2, 3, 4].forEach(roundNum => {
-          const roundKey = `round_${roundNum}`;
-          const roundData = playerEntry[roundKey];
-          if (!roundData || typeof roundData !== 'object') return;
-          expanded.push({
-            ...base,
-            round_num: roundNum,
-            ...roundData
-          });
-        });
-      });
-    });
-
-    if (expanded.length > 0) return expanded;
-  }
-  return [];
-}
-
 function normalizeHistoricalRoundRow(row) {
   if (!row || typeof row !== 'object') return null;
   const dgId = row.dg_id || row.dgId || row.player_id || row.playerId || row.id;
@@ -3790,55 +3763,7 @@ function normalizeHistoricalRoundRow(row) {
   };
 }
 
-function extractApproachRowsFromSnapshotPayload(payload) {
-  if (!payload) return [];
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.players)) return payload.players;
-  if (Array.isArray(payload.rows)) return payload.rows;
-  return [];
-}
 
-function loadApproachSnapshotFromDisk(filePath) {
-  if (!filePath || !fs.existsSync(filePath)) {
-    return { source: 'missing', path: filePath || null, payload: null };
-  }
-  return { source: 'snapshot', path: filePath, payload: readJsonFile(filePath) };
-}
-
-function listApproachSnapshotArchives() {
-  if (!fs.existsSync(APPROACH_SNAPSHOT_DIR)) return [];
-  return fs.readdirSync(APPROACH_SNAPSHOT_DIR)
-    .filter(name => /^approach_(ytd|l24|l12)_\d{4}-\d{2}-\d{2}\.json$/i.test(name))
-    .map(name => {
-      const match = name.match(/^approach_(ytd|l24|l12)_(\d{4}-\d{2}-\d{2})\.json$/i);
-      const period = match ? match[1].toLowerCase() : null;
-      const dateStr = match ? match[2] : null;
-      const time = dateStr ? Date.parse(`${dateStr}T00:00:00Z`) : NaN;
-      return {
-        name,
-        period,
-        dateStr,
-        time,
-        path: path.resolve(APPROACH_SNAPSHOT_DIR, name)
-      };
-    })
-    .filter(entry => entry.period && !Number.isNaN(entry.time))
-    .sort((a, b) => b.time - a.time);
-}
-
-function resolveLatestApproachArchiveYear(period) {
-  const archives = listApproachSnapshotArchives().filter(entry => entry.period === period);
-  if (archives.length === 0) return null;
-  const latest = archives[0];
-  if (!latest?.dateStr) return null;
-  const year = parseInt(latest.dateStr.slice(0, 4), 10);
-  return Number.isNaN(year) ? null : year;
-}
-
-function pruneApproachSnapshotArchives() {
-  const archives = listApproachSnapshotArchives();
-  if (archives.length === 0) return { removed: 0, kept: 0 };
   const byPeriod = archives.reduce((acc, entry) => {
     if (!acc[entry.period]) acc[entry.period] = [];
     acc[entry.period].push(entry);
@@ -4924,9 +4849,9 @@ async function runAdaptiveOptimizer() {
   const missingCoreCsv = missingFiles.filter(file => ['Tournament Field', 'Historical Data', 'Approach Skill'].includes(file.name));
   const missingConfigCsv = missingFiles.filter(file => file.name === 'Configuration Sheet');
   if (missingFiles.length > 0) {
-    console.warn('\n⚠️  Missing input CSVs (API fallback will be used where possible):');
+    console.log('\n⚠️  Missing input CSVs (API fallback will be used where possible):');
     missingFiles.forEach(file => {
-      console.warn(`   - ${file.name}: ${path.basename(file.path)}`);
+      console.log(`   - ${file.name}: ${path.basename(file.path)}`);
     });
     console.warn('\nExpected locations:');
     console.warn(`   - ${tournamentInputsDir}`);
@@ -4941,7 +4866,7 @@ async function runAdaptiveOptimizer() {
     ? !['false', '0', 'no', 'off'].includes(optionalApiFlag)
     : true;
   if (!shouldFetchApi) {
-    console.log('ℹ️  CSV inputs present; skipping DataGolf core fetches (API fallback mode).');
+    console.log('ℹ️  CSV inputs present: ; skipping DataGolf core fetches (API fallback mode).');
   }
   if (!shouldFetchOptionalApi) {
     console.log('ℹ️  Optional DataGolf snapshots disabled (skill ratings / decompositions).');
@@ -5580,23 +5505,30 @@ async function runAdaptiveOptimizer() {
       .filter(Boolean)
   );
   
-  const historyCsvRows = fs.existsSync(HISTORY_PATH)
-    ? loadCsv(HISTORY_PATH, { skipFirstColumn: true })
-    : [];
-  const historyApiRows = historyCsvRows.length === 0
-    ? extractHistoricalRowsFromSnapshotPayload(historicalRoundsSnapshot?.payload)
-        .map(normalizeHistoricalRoundRow)
-        .filter(Boolean)
-    : [];
-  const historyData = historyCsvRows.length > 0 ? historyCsvRows : historyApiRows;
-  if (historyCsvRows.length > 0) {
-    console.log(`✓ Loaded history (CSV): ${historyData.length} rounds`);
-  } else if (historyApiRows.length > 0) {
-    console.log(`✓ Loaded history (API fallback): ${historyData.length} rounds`);
+
+  // Use robust, merged-source loader for historical rounds
+  const lastFiveYears = buildRecentYears(effectiveSeason, 5);
+  // Dynamically determine tours from course context (event-specific or default)
+  const context = loadCourseContext(COURSE_CONTEXT_PATH);
+  const contextEntry = resolveCourseContextEntry(context, CURRENT_EVENT_ID);
+  // Robustly determine tours: check event, then course, then default
+  let tours = [];
+  if (contextEntry && Array.isArray(contextEntry.tours) && contextEntry.tours.length > 0) {
+    tours = contextEntry.tours.map(t => t.toLowerCase());
+  } else if (contextEntry && contextEntry.courseNum && context.byCourseNum && context.byCourseNum[contextEntry.courseNum] && Array.isArray(context.byCourseNum[contextEntry.courseNum].tours) && context.byCourseNum[contextEntry.courseNum].tours.length > 0) {
+    tours = context.byCourseNum[contextEntry.courseNum].tours.map(t => t.toLowerCase());
+  } else if (Array.isArray(context.defaultTours) && context.defaultTours.length > 0) {
+    tours = context.defaultTours.map(t => t.toLowerCase());
   } else {
-    console.error('❌ Unable to load historical rounds (CSV missing and API fallback empty).');
+    tours = ['pga'];
+  }
+  let historyData = await collectRecords({ years: lastFiveYears, tours });
+  historyData = extractHistoricalRowsFromSnapshotPayload(historyData);
+  if (!historyData || historyData.length === 0) {
+    console.error('❌ Unable to load historical rounds (no data found in JSON, CSV, or API).');
     process.exit(1);
   }
+  console.log(`✓ Loaded history (robust merged-source): ${historyData.length} rounds`);
 
   const eventIdStr = String(CURRENT_EVENT_ID);
   const seasonStr = String(effectiveSeason);
@@ -6846,8 +6778,8 @@ async function runAdaptiveOptimizer() {
       .replace(/\s+/g, '_')
       .replace(/[^a-z0-9_\-]/g, '');
 
-    const preEventRankingPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_rankings.json`);
-    const preEventRankingCsvPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_rankings.csv`);
+    const preEventRankingPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_rankings.json`);
+    const preEventRankingCsvPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_rankings.csv`);
     fs.writeFileSync(preEventRankingPath, JSON.stringify({
       timestamp: new Date().toISOString(),
       eventId: CURRENT_EVENT_ID,
@@ -7015,7 +6947,7 @@ async function runAdaptiveOptimizer() {
       }
     };
 
-    const outputPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.json`);
+    const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_results.json`);
     const backupJsonPath = backupIfExists(outputPath);
     if (backupJsonPath) {
       console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
@@ -7024,7 +6956,7 @@ async function runAdaptiveOptimizer() {
 
     const textLines = [];
     textLines.push('='.repeat(100));
-    textLines.push('ADAPTIVE WEIGHT OPTIMIZER - PRE-EVENT TRAINING');
+    textLines.push('MODEL OPTIMIZER - PRE-EVENT TRAINING');
     textLines.push('='.repeat(100));
     textLines.push(`DRY RUN: ${DRY_RUN ? 'ON (template files not modified)' : 'OFF (templates written)'}`);
     textLines.push('');
@@ -7202,7 +7134,7 @@ async function runAdaptiveOptimizer() {
     textLines.push(`  Players ranked: ${preEventRankingPlayers.length}`);
     textLines.push('');
 
-    const textOutputPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.txt`);
+    const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_results.txt`);
     const backupTextPath = backupIfExists(textOutputPath);
     if (backupTextPath) {
       console.log(`🗄️  Backed up previous text results to: ${backupTextPath}`);
@@ -7211,8 +7143,8 @@ async function runAdaptiveOptimizer() {
     fs.writeFileSync(textOutputPath, textLines.join('\n'));
 
     console.log('✅ Pre-event training output saved (rankings generated).');
-    console.log(`✅ JSON results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.json`)}`);
-    console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_pre_event_results.txt`)}\n`);
+    console.log(`✅ JSON results saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_results.json`)}`);
+    console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_results.txt`)}\n`);
 
     if (WRITE_TEMPLATES) {
       const preEventTemplateName = courseTemplateKey || String(CURRENT_EVENT_ID);
@@ -8559,7 +8491,7 @@ async function runAdaptiveOptimizer() {
 
   const outputBaseName = `${baseName}${seedSuffix}${outputTagSuffix}`;
 
-  const outputPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.json`);
+  const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.json`);
   const backupJsonPath = backupIfExists(outputPath);
   if (backupJsonPath) {
     console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
@@ -9207,7 +9139,7 @@ async function runAdaptiveOptimizer() {
   }
   textLines.push('');
   textLines.push('---');
-  const textOutputPath = path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.txt`);
+  const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.txt`);
   const backupTextPath = backupIfExists(textOutputPath);
   if (backupTextPath) {
     console.log(`🗄️  Backed up previous text results to: ${backupTextPath}`);
@@ -9342,8 +9274,8 @@ async function runAdaptiveOptimizer() {
     console.log('   Standard templates: no updates');
   }
 
-  console.log(`✅ JSON results also saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.json`)}`);
-  console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `optimizer_${outputBaseName}_post_tournament_results.txt`)}\n`);
+  console.log(`✅ JSON results also saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.json`)}`);
+  console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.txt`)}\n`);
 
   try {
     const { runValidation } = require('./validationRunner');

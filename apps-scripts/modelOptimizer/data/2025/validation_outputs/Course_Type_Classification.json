@@ -1,0 +1,19 @@
+{
+  "generatedAt": "2026-02-24T15:34:59.941Z",
+  "entries": [
+    {
+      "tournament": "cognizant-classic",
+      "displayName": "Cognizant Classic (2025)",
+      "eventId": "10",
+      "courseType": "TECHNICAL",
+      "source": "none"
+    },
+    {
+      "tournament": "cognizant_classic",
+      "displayName": "Cognizant Classic (2025)",
+      "eventId": "10",
+      "courseType": "TECHNICAL",
+      "source": "none"
+    }
+  ]
+}
