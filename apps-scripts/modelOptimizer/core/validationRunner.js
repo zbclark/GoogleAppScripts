@@ -429,11 +429,6 @@ const resolveInputCsvPath = ({ inputsDir, season, suffix }) => {
 const resolveRankingPath = (dir, candidates, suffix) => {
   const direct = resolveExistingPath(dir, candidates, suffix);
   if (direct) return direct;
-  if (!dir || !suffix) return null;
-  for (const candidate of candidates || []) {
-    const optimizerPath = path.resolve(dir, `optimizer_${candidate}${suffix}`);
-    if (fs.existsSync(optimizerPath)) return optimizerPath;
-  }
   return null;
 };
 

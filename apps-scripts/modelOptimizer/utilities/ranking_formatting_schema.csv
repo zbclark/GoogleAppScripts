@@ -1,0 +1,88 @@
+key,value
+sheetName,"Player Ranking Model"
+headerRow,5
+medianRow,6
+dataStartRow,7
+conditionalFormattingStartRow,7
+notesColumn,1
+notesColumnHeader,"Expected Peformance Notes"
+tableStartColumn,2
+notesColumnWidth,350
+defaultWidth,110
+
+columnIndex,name,group,format,width,trend,direction,zScoreColoring,zeroAsNoData
+2,"Rank","base","0",70,false,higher_better,false,false
+3,"DG ID","base","0",70,false,higher_better,false,false
+4,"Player Name","base","text",140,false,higher_better,false,false
+5,"Top 5","base","0",70,false,higher_better,false,false
+6,"Top 10","base","0",70,false,higher_better,false,false
+7,"Weighted Score","base","0.00",110,false,higher_better,false,false
+8,"Past Perf. Mult.","base","0.000",110,false,higher_better,false,false
+9,"SG Total","historical","0.000",110,false,higher_better,true,false
+10,"SG Total Trend","historical_trend","0.000",110,true,higher_better,false,false
+11,"Driving Distance","historical","0.000",110,false,higher_better,true,false
+12,"Driving Distance Trend","historical_trend","0.000",110,true,higher_better,false,false
+13,"Driving Accuracy","historical","0.00%",110,false,higher_better,true,false
+14,"Driving Accuracy Trend","historical_trend","0.000",110,true,higher_better,false,false
+15,"SG T2G","historical","0.000",110,false,higher_better,true,false
+16,"SG T2G Trend","historical_trend","0.000",110,true,higher_better,false,false
+17,"SG Approach","historical","0.000",110,false,higher_better,true,false
+18,"SG Approach Trend","historical_trend","0.000",110,true,higher_better,false,false
+19,"SG Around Green","historical","0.000",110,false,higher_better,true,false
+20,"SG Around Green Trend","historical_trend","0.000",110,true,higher_better,false,false
+21,"SG OTT","historical","0.000",110,false,higher_better,true,false
+22,"SG OTT Trend","historical_trend","0.000",110,true,higher_better,false,false
+23,"SG Putting","historical","0.000",110,false,higher_better,true,false
+24,"SG Putting Trend","historical_trend","0.000",110,true,higher_better,false,false
+25,"Greens in Regulation","historical","0.00%",110,false,higher_better,true,false
+26,"Greens in Regulation Trend","historical_trend","0.000",110,true,higher_better,false,false
+27,"Scrambling","historical","0.00%",110,false,higher_better,true,false
+28,"Scrambling Trend","historical_trend","0.000",110,true,higher_better,false,false
+29,"Great Shots","historical","0.000",110,false,higher_better,true,false
+30,"Great Shots Trend","historical_trend","0.000",110,true,higher_better,false,false
+31,"Poor Shots","historical","0.000",110,false,lower_better,true,false
+32,"Poor Shots Trend","historical_trend","0.000",110,true,lower_better,false,false
+33,"Scoring Average","historical","0.000",110,false,lower_better,true,false
+34,"Scoring Average Trend","historical_trend","0.000",110,true,lower_better,false,false
+35,"Birdies or Better","historical","0.000",110,false,higher_better,true,false
+36,"Birdies or Better Trend","historical_trend","0.000",110,true,higher_better,false,false
+37,"Birdie Chances Created","historical","0.000",110,false,higher_better,true,false
+38,"Birdie Chances Created Trend","historical_trend","0.000",110,true,higher_better,false,false
+39,"Fairway Proximity","historical","0.000",110,false,lower_better,true,false
+40,"Fairway Proximity Trend","historical_trend","0.000",110,true,lower_better,false,false
+41,"Rough Proximity","historical","0.000",110,false,lower_better,true,false
+42,"Rough Proximity Trend","historical_trend","0.000",110,true,lower_better,false,false
+43,"Approach <100 GIR","approach","0.00%",110,false,higher_better,true,true
+44,"Approach <100 SG","approach","0.000",110,false,higher_better,true,true
+45,"Approach <100 Prox","approach","0.000",110,false,lower_better,true,true
+46,"Approach <150 FW GIR","approach","0.00%",110,false,higher_better,true,true
+47,"Approach <150 FW SG","approach","0.000",110,false,higher_better,true,true
+48,"Approach <150 FW Prox","approach","0.000",110,false,lower_better,true,true
+49,"Approach <150 Rough GIR","approach","0.00%",110,false,higher_better,true,true
+50,"Approach <150 Rough SG","approach","0.000",110,false,higher_better,true,true
+51,"Approach <150 Rough Prox","approach","0.000",110,false,lower_better,true,true
+52,"Approach >150 Rough GIR","approach","0.00%",110,false,higher_better,true,true
+53,"Approach >150 Rough SG","approach","0.000",110,false,higher_better,true,true
+54,"Approach >150 Rough Prox","approach","0.000",110,false,lower_better,true,true
+55,"Approach <200 FW GIR","approach","0.00%",110,false,higher_better,true,true
+56,"Approach <200 FW SG","approach","0.000",110,false,higher_better,true,true
+57,"Approach <200 FW Prox","approach","0.000",110,false,lower_better,true,true
+58,"Approach >200 FW GIR","approach","0.00%",110,false,higher_better,true,true
+59,"Approach >200 FW SG","approach","0.000",110,false,higher_better,true,true
+60,"Approach >200 FW Prox","approach","0.000",110,false,lower_better,true,true
+61,"Refined Weighted Score","base","0.00",90,false,higher_better,false,false
+62,"WAR","base","0.00",75,false,higher_better,false,false
+63,"Delta Trend Score","base","0.000",110,false,higher_better,true,false
+64,"Delta Predictive Score","base","0.000",130,false,higher_better,true,false
+
+zScore.thresholds,[0.5,1,2]
+zScore.positivePalette,["#a1d99b","#31a354","#006837"]
+zScore.negativePalette,["#fb6a4a","#de2d26","#a50f15"]
+zScore.zeroAsNoData,true
+zScore.zeroColor,"#D3D3D3"
+
+trend.backgroundGood,"#E6F4EA"
+trend.backgroundBad,"#FCE8E8"
+trend.textGood,"#137333"
+trend.textBad,"#A50E0E"
+trend.thresholdsByMetricIndex,{"0":0.01,"1":0.05,"2":0.02,"3":0.01,"4":0.01,"5":0.01,"6":0.01,"7":0.01,"8":0.02,"9":0.02,"10":0.02,"11":0.02,"12":0.01,"13":0.02,"14":0.02,"15":0.01,"16":0.01}

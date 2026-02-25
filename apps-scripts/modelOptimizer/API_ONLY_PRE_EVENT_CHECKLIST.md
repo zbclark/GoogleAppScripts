@@ -7,6 +7,7 @@ Use this checklist when **no CSV inputs are available** (no config sheet, histor
 ---
 
 ## 1) Event Context (course_context.json)
+
 - [ ] Confirm `eventId` exists in `utilities/course_context.json`.
 - [ ] Confirm `courseNameKey`, `courseNum`, and `templateKey` are set.
 - [ ] Confirm `courseType` is set (POWER / BALANCED / TECHNICAL).
@@ -18,22 +19,28 @@ Use this checklist when **no CSV inputs are available** (no config sheet, histor
 - [ ] If `sourcePath` is null (API-only), keep it null.
 
 ## 2) Environment (.env)
+
 - [ ] `DATAGOLF_API_KEY` present and valid (required for API-only run).
 - [ ] `DATAGOLF_*_TTL_HOURS` values acceptable (default 8760 is fine).
 - [ ] Optional: set `DATAGOLF_*_TOUR` overrides if needed (default `pga`).
 - [ ] Optional: set `DATAGOLF_HISTORICAL_YEAR` or `DATAGOLF_HISTORICAL_EVENT_ID` if scoping is required.
 
 ## 3) Cache Readiness
+
 - [ ] `data/cache/` exists and is writable.
 - [ ] If running for the first time, allow API to populate cache.
 - [ ] If running offline, ensure cache is already primed.
 
 ## 4) Output Folders
+
 - [ ] Create event folder under `apps-scripts/modelOptimizer/data/<season>/<tournament>/`.
 - [ ] Create `inputs/` subfolder (even if empty, for structure consistency).
-- [ ] Decide output directory for run results (e.g., `output/` or `data/.../pre_event/`).
+- [ ] Confirm output directory for run results is:
+  - `data/<season>/<tournament>/pre_event/` (pre-event), or
+  - `data/<season>/<tournament>/post_event/` (post-event)
 
 ## 5) Run Mode Decisions
+
 - [ ] **Pre-event** mode (no `--post`).
 - [ ] Choose whether to include **approach skills** (API):
   - [ ] Include approach (default if API available).
@@ -42,15 +49,19 @@ Use this checklist when **no CSV inputs are available** (no config sheet, histor
 - [ ] Decide whether to write templates (`--writeTemplates`) or dry-run only.
 
 ## 6) Expected Outputs (Pre-event)
-- [ ] `output/optimizer_<tournament>_pre_event_results.json`
-- [ ] `output/optimizer_<tournament>_pre_event_results.txt`
+
+- [ ] `data/<season>/<tournament>/pre_event/<tournament-slug>_pre_event_results.json`
+- [ ] `data/<season>/<tournament>/pre_event/<tournament-slug>_pre_event_results.txt`
+- [ ] `data/<season>/<tournament>/pre_event/<tournament-slug>_pre_event_rankings.json`
+- [ ] `data/<season>/<tournament>/pre_event/<tournament-slug>_pre_event_rankings.csv`
 - [ ] Optional: dry-run template outputs (if enabled)
-  - [ ] `output/dryrun_weightTemplates.js`
-  - [ ] `output/dryrun_deltaPlayerScores.node.js`
+  - [ ] `data/<season>/<tournament>/pre_event/dryrun/dryrun_weightTemplates.js`
+  - [ ] `data/<season>/<tournament>/pre_event/dryrun/dryrun_deltaPlayerScores.node.js`
   
 ---
 
 ## Notes
+
 - If **course context is incomplete**, fill missing fields before running.
 - If **approach skills are unavailable**, consider disabling approach to avoid partial blends.
 - If **similar/putting lists are unknown**, start with a conservative default and revise after first validation pass.

@@ -19,7 +19,7 @@ Primary evaluation target: **predicted rank vs actual finish**.
 
 ## 2. What We’re Doing Now (Validation & Optimization)
 
-### 2.1 Optimizer (modelOptemizer)
+### 2.1 Optimizer (modelOptimizer)
 
 - Uses historical data and current field data to optimize group/metric weights.
 - Computes correlations between metrics and finish positions across historical samples.
@@ -35,7 +35,7 @@ Primary evaluation target: **predicted rank vs actual finish**.
 
 **Where the logic lives:**
 
-- `apps-scripts/modelOptemizer/core/optimizer.js`
+- `apps-scripts/modelOptimizer/core/optimizer.js`
 
 ### 2.2 Validation Library (Golf_Algo_Validation_Library)
 
@@ -134,11 +134,11 @@ Primary evaluation target: **predicted rank vs actual finish**.
 
 ## 6. Files Touched Recently
 
-- `apps-scripts/modelOptemizer/core/optimizer.js`
+- `apps-scripts/modelOptimizer/core/optimizer.js`
   - Pre‑event rankings now exported in sheet‑like CSV/TXT/JSON format.
-- `apps-scripts/modelOptemizer/MODEL_VALIDATION_AND OPTIMIZATION.md`
+- `apps-scripts/modelOptimizer/MODEL_VALIDATION_AND OPTIMIZATION.md`
   - Pre‑tournament workflow, delta inputs/outputs, and writebacks expanded.
-- `apps-scripts/modelOptemizer/core/modelCore.js`
+- `apps-scripts/modelOptimizer/core/modelCore.js`
   - Added course‑setup bucket signal notes to delta summaries.
 - `MODEL_VALIDATION_STATUS.md`
   - Added the pre‑tournament readiness checklist and updated status items.
@@ -171,17 +171,17 @@ Use this before running the optimizer sanity check. This is the **single source 
   - Env: `DATAGOLF_API_KEY`
 - **Historical rounds snapshots** (5‑year event history, similar/putting scope)
   - Source: API via `utilities/dataGolfClient.js`
-  - Cache: `apps-scripts/modelOptemizer/data/cache/`
+  - Cache: `apps-scripts/modelOptimizer/data/cache/`
 - **Approach snapshots**
-  - L24 → `apps-scripts/modelOptemizer/data/approach_snapshot/approach_l24.json`
-  - L12 → `apps-scripts/modelOptemizer/data/approach_snapshot/approach_l12.json`
-  - YTD (latest) → `apps-scripts/modelOptemizer/data/approach_snapshot/approach_ytd_latest.json`
+  - L24 → `apps-scripts/modelOptimizer/data/approach_snapshot/approach_l24.json`
+  - L12 → `apps-scripts/modelOptimizer/data/approach_snapshot/approach_l12.json`
+  - YTD (latest) → `apps-scripts/modelOptimizer/data/approach_snapshot/approach_ytd_latest.json`
 - **Field updates**
   - Source: API via `utilities/dataGolfClient.js`
-  - Cache: `apps-scripts/modelOptemizer/data/cache/`
+  - Cache: `apps-scripts/modelOptimizer/data/cache/`
 - **Rankings / skill ratings / decompositions**
   - Source: API via `utilities/dataGolfClient.js`
-  - Cache: `apps-scripts/modelOptemizer/data/cache/`
+  - Cache: `apps-scripts/modelOptimizer/data/cache/`
 
 ### 8.2 Approach Delta Inputs (API‑first)
 
@@ -192,46 +192,47 @@ Use this before running the optimizer sanity check. This is the **single source 
 ### 8.3 CSV Inputs (Still Required Where API Not Wired)
 
 - **Course‑history regression** (past performance)
-  - Script: `apps-scripts/modelOptemizer/scripts/analyze_course_history_impact.js`
+  - Script: `apps-scripts/modelOptimizer/scripts/analyze_course_history_impact.js`
   - Inputs (CSV):
     - `* - Historical Data.csv`
     - `* - Configuration Sheet.csv`
   - Output utilities (when templates enabled):
-    - `apps-scripts/modelOptemizer/utilities/courseHistoryRegression.js`
+    - `apps-scripts/modelOptimizer/utilities/courseHistoryRegression.js`
     - `apps-scripts/Golf_Algorithm_Library/utilities/courseHistoryRegression.js`
 
 ### 8.4 Required Config Files (Event 7)
 
 - **Course context**
-  - File: `apps-scripts/modelOptemizer/utilities/course_context.json`
+  - File: `apps-scripts/modelOptimizer/utilities/course_context.json`
   - Verify event `"7"` entry exists with:
     - `templateKey`, `courseNum`, `courseNums`, `shotDistribution`, `similarCourseIds`, `puttingCourseIds`, `pastPerformance`
     - `sourcePath` pointing to the event’s configuration sheet
 - **Weight templates**
-  - File: `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
+  - File: `apps-scripts/modelOptimizer/utilities/weightTemplates.js`
   - Ensure `BALANCED` (or event‑specific) template exists and is up‑to‑date
 
 ### 8.5 Pre‑Tournament Outputs / Writebacks
 
 - **Optimizer outputs**
-  - `apps-scripts/modelOptemizer/output/optimizer_<tournament>_pre_event_results.json`
-  - `apps-scripts/modelOptemizer/output/optimizer_<tournament>_pre_event_results.txt`
+  - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/<tournament>_pre_event_results.json`
+  - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/<tournament>_pre_event_results.txt`
 - **Template writebacks (when `--writeTemplates`)**
-  - `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
+  - `apps-scripts/modelOptimizer/utilities/weightTemplates.js`
   - `apps-scripts/Golf_Algorithm_Library/utilities/templateLoader.js`
 - **Delta player scores writebacks**
-  - `apps-scripts/modelOptemizer/utilities/deltaPlayerScores.js`
+  - `apps-scripts/modelOptimizer/utilities/deltaPlayerScores.js`
   - `apps-scripts/Golf_Algorithm_Library/utilities/deltaPlayerScores.js`
 - **Dry‑run outputs**
-  - `apps-scripts/modelOptemizer/output/dryrun_weightTemplates.js`
-  - `apps-scripts/modelOptemizer/output/dryrun_templateLoader.js`
-  - `apps-scripts/modelOptemizer/output/dryrun_deltaPlayerScores.node.js`
-  - `apps-scripts/modelOptemizer/output/dryrun_deltaPlayerScores.gas.js`
+  - Written under the run's output directory (typically `.../pre_event/`):
+    - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/dryrun_weightTemplates.js`
+    - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/dryrun_templateLoader.js`
+    - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/dryrun_deltaPlayerScores.node.js`
+    - `apps-scripts/modelOptimizer/data/<season>/<tournament-slug>/pre_event/dryrun_deltaPlayerScores.gas.js`
 
 ### 8.6 Approach Delta Outputs
 
 - **JSON only** (CSV not required)
-  - `apps-scripts/modelOptemizer/data/approach_deltas/approach_deltas_<YYYY-MM-DD>.json`
+  - `apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_<tournament>_<date>.json`
 
 ### 8.7 Sanity‑Check Gate
 

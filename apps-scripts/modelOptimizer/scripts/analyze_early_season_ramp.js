@@ -7,6 +7,7 @@ const { loadCsv } = require('../utilities/csvLoader');
 const { parsePosition } = require('../utilities/dataPrep');
 const { parseEventDate } = require('../utilities/dataPrep');
 const { getDataGolfHistoricalRounds } = require('../utilities/dataGolfClient');
+const { extractHistoricalRowsFromSnapshotPayload } = require('../utilities/extractHistoricalRows');
 
 const args = process.argv.slice(2);
 let OVERRIDE_DIR = null;
@@ -62,12 +63,13 @@ for (let i = 0; i < args.length; i++) {
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 let DATA_DIR = path.resolve(ROOT_DIR, 'data');
-let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
+// Legacy default was `.../output/`; keep everything under `data/` by default.
+let OUTPUT_DIR = path.resolve(ROOT_DIR, 'data', 'analysis');
 
 if (OVERRIDE_DIR) {
   const normalized = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
   DATA_DIR = path.resolve(ROOT_DIR, 'data', normalized);
-  OUTPUT_DIR = path.resolve(ROOT_DIR, 'output', normalized);
+  OUTPUT_DIR = path.resolve(DATA_DIR, 'analysis');
 }
 if (OVERRIDE_DATA_DIR) {
   DATA_DIR = path.resolve(OVERRIDE_DATA_DIR);
@@ -127,58 +129,6 @@ const parseYearSpec = spec => {
   return raw.split(',')
     .map(value => parseInt(value.trim(), 10))
     .filter(year => Number.isFinite(year));
-};
-
-const extractHistoricalRowsFromSnapshotPayload = payload => {
-  if (!payload) return [];
-  if (payload && typeof payload === 'object' && Array.isArray(payload.scores)) {
-    const meta = {
-      event_name: payload.event_name || null,
-      event_id: payload.event_id || null,
-      tour: payload.tour || null,
-      event_completed: payload.event_completed || null,
-      year: payload.year || null,
-      season: payload.season || payload.year || null
-    };
-    const rows = [];
-    payload.scores.forEach(entry => {
-      if (!entry || typeof entry !== 'object') return;
-      const dgId = entry.dg_id ?? entry.dgId ?? entry.player_id ?? entry.playerId ?? entry.id;
-      if (!dgId) return;
-      const playerName = entry.player_name || entry.playerName || entry.name || null;
-      const finText = entry.fin_text || entry.finish || entry.finishPosition || entry.fin || null;
-      Object.keys(entry).forEach(key => {
-        if (!key.startsWith('round_')) return;
-        const roundData = entry[key];
-        if (!roundData || typeof roundData !== 'object') return;
-        const roundNum = parseInt(key.replace('round_', ''), 10);
-        rows.push({
-          ...meta,
-          dg_id: dgId,
-          player_name: playerName,
-          fin_text: finText,
-          round_num: Number.isNaN(roundNum) ? null : roundNum,
-          ...roundData
-        });
-      });
-    });
-    return rows;
-  }
-  if (Array.isArray(payload)) return payload;
-  if (Array.isArray(payload.rows)) return payload.rows;
-  if (Array.isArray(payload.data)) return payload.data;
-  if (Array.isArray(payload.rounds)) return payload.rounds;
-  if (typeof payload === 'object') {
-    const values = Object.values(payload);
-    const nested = values.flatMap(value => Array.isArray(value) ? value : []);
-    if (nested.length > 0) return nested;
-    const extracted = values.flatMap(value => {
-      if (!value || typeof value !== 'object' || Array.isArray(value)) return [];
-      return extractHistoricalRowsFromSnapshotPayload(value);
-    });
-    if (extracted.length > 0) return extracted;
-  }
-  return [];
 };
 
 const normalizeHistoricalRoundRow = row => {

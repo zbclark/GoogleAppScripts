@@ -87,21 +87,21 @@ const WEIGHT_TEMPLATES = {
     eventId: "10",
     description: "Cognizant Classic 2026 Pre-Event Blended",
     groupWeights: {
-      "Driving Performance": 0.13061830677707797,
+      "Driving Performance": 0.13061830677706968,
       "Approach - Short (<100)": 0.03967325412221145,
       "Approach - Mid (100-150)": 0.09623241998060136,
       "Approach - Long (150-200)": 0.1012518186226964,
       "Approach - Very Long (>200)": 0.05207626091173617,
-      "Putting": 0.11215650484655773,
-      "Around the Green": 0.048760895885740924,
-      "Scoring": 0.20959345461956147,
-      "Course Management": 0.20963708423381655
+      "Putting": 0.11215650484656241,
+      "Around the Green": 0.048760895885741555,
+      "Scoring": 0.20959345461956788,
+      "Course Management": 0.20963708423381314
     },
     metricWeights: {
       "Driving Performance": {
-        "Driving Distance": { weight: 0.25237268940929486 },
-        "Driving Accuracy": { weight: 0.304009618146435 },
-        "SG OTT": { weight: 0.44361769244427024 }
+        "Driving Distance": { weight: 0.2523726894092997 },
+        "Driving Accuracy": { weight: 0.30400961814640753 },
+        "SG OTT": { weight: 0.4436176924442928 }
       },
       "Approach - Short (<100)": {
         "Approach <100 GIR": { weight: 0.12888443362451668 },
@@ -136,8 +136,8 @@ const WEIGHT_TEMPLATES = {
         "SG Around Green": { weight: 1 }
       },
       "Scoring": {
-        "SG T2G": { weight: 0.7450259295034015 },
-        "Scoring Average": { weight: 0.007938939594830831 },
+        "SG T2G": { weight: 0.7450259295033682 },
+        "Scoring Average": { weight: 0.007938939594864166 },
         "Birdie Chances Created": { weight: 0.11022600134258224 },
         "Scoring: Approach <100 SG": { weight: 0.009029402550906245 },
         "Scoring: Approach <150 FW SG": { weight: 0.01956370552696353 },
@@ -147,9 +147,9 @@ const WEIGHT_TEMPLATES = {
         "Scoring: Approach >150 Rough SG": { weight: 0.01634869098232267 }
       },
       "Course Management": {
-        "Scrambling": { weight: 0.3290337844464574 },
-        "Great Shots": { weight: 0.07335495663317117 },
-        "Poor Shot Avoidance": { weight: 0.1356130122344005 },
+        "Scrambling": { weight: 0.32903378444648157 },
+        "Great Shots": { weight: 0.07335495663315027 },
+        "Poor Shot Avoidance": { weight: 0.13561301223439726 },
         "Course Management: Approach <100 Prox": { weight: 0.03049188428127408 },
         "Course Management: Approach <150 FW Prox": { weight: 0.06606574927609384 },
         "Course Management: Approach <150 Rough Prox": { weight: 0.06606574927609384 },
@@ -308,83 +308,6 @@ const WEIGHT_TEMPLATES = {
         "Course Management: Approach >150 Rough Prox": { weight: 0.18 },
         "Course Management: Approach <200 FW Prox": { weight: 0.11 },
         "Course Management: Approach >200 FW Prox": { weight: 0.03 }
-      }
-    }
-  },
-  ROYAL_PORTRUSH: {
-    name: "ROYAL_PORTRUSH",
-    eventId: "100",
-    description: "Royal Portrush template based on long-iron emphasis and links setup",
-    groupWeights: {
-      "Driving Performance": 0.10,
-      "Approach - Short (<100)": 0.05,
-      "Approach - Mid (100-150)": 0.16,
-      "Approach - Long (150-200)": 0.25,
-      "Approach - Very Long (>200)": 0.22,
-      "Putting": 0.12,
-      "Around the Green": 0.06,
-      "Scoring": 0.02,
-      "Course Management": 0.02
-    },
-    metricWeights: {
-      "Driving Performance": {
-        "Driving Distance": { weight: 0.2 },
-        "Driving Accuracy": { weight: 0.35 },
-        "SG OTT": { weight: 0.45 }
-      },
-      "Approach - Short (<100)": {
-        "Approach <100 GIR": { weight: 0.4 },
-        "Approach <100 SG": { weight: 0.4 },
-        "Approach <100 Prox": { weight: 0.2 }
-      },
-      "Approach - Mid (100-150)": {
-        "Approach <150 FW GIR": { weight: 0.2 },
-        "Approach <150 FW SG": { weight: 0.2 },
-        "Approach <150 FW Prox": { weight: 0.1 },
-        "Approach <150 Rough GIR": { weight: 0.2 },
-        "Approach <150 Rough SG": { weight: 0.2 },
-        "Approach <150 Rough Prox": { weight: 0.1 }
-      },
-      "Approach - Long (150-200)": {
-        "Approach <200 FW GIR": { weight: 0.2 },
-        "Approach <200 FW SG": { weight: 0.2 },
-        "Approach <200 FW Prox": { weight: 0.1 },
-        "Approach >150 Rough GIR": { weight: 0.2 },
-        "Approach >150 Rough SG": { weight: 0.2 },
-        "Approach >150 Rough Prox": { weight: 0.1 }
-      },
-      "Approach - Very Long (>200)": {
-        "Approach >200 FW GIR": { weight: 0.4 },
-        "Approach >200 FW SG": { weight: 0.4 },
-        "Approach >200 FW Prox": { weight: 0.2 }
-      },
-      "Putting": {
-        "SG Putting": { weight: 1.0 }
-      },
-      "Around the Green": {
-        "SG Around Green": { weight: 1.0 }
-      },
-      "Scoring": {
-        "SG T2G": { weight: 0.0 },
-        "Scoring Average": { weight: 0.25 },
-        "Birdie Chances Created": { weight: 0.2 },
-        "Scoring: Approach <100 SG": { weight: 0.1 },
-        "Scoring: Approach <150 FW SG": { weight: 0.15 },
-        "Scoring: Approach <150 Rough SG": { weight: 0.1 },
-        "Scoring: Approach >150 Rough SG": { weight: 0.1 },
-        "Scoring: Approach <200 FW SG": { weight: 0.05 },
-        "Scoring: Approach >200 FW SG": { weight: 0.05 }
-      },
-      "Course Management": {
-        "Scrambling": { weight: 0.15 },
-        "Great Shots": { weight: 0.15 },
-        "Poor Shot Avoidance": { weight: 0.2 },
-        "Course Management: Approach <100 Prox": { weight: 0.1 },
-        "Course Management: Approach <150 FW Prox": { weight: 0.1 },
-        "Course Management: Approach <150 Rough Prox": { weight: 0.1 },
-        "Course Management: Approach >150 Rough Prox": { weight: 0.1 },
-        "Course Management: Approach <200 FW Prox": { weight: 0.05 },
-        "Course Management: Approach >200 FW Prox": { weight: 0.05 }
       }
     }
   },

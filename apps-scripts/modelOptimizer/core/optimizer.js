@@ -47,7 +47,11 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 let DATA_ROOT_DIR = path.resolve(ROOT_DIR, 'data');
 let DATA_DIR = DATA_ROOT_DIR;
 let DEFAULT_DATA_DIR = DATA_ROOT_DIR;
-let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
+// Legacy note: this repo historically used a sibling `output/` folder. The Node-only
+// workflow now writes artifacts under `data/<season>/<tournament-slug>/...`.
+// Keep OUTPUT_DIR defined for internal helpers/overrides, but default it to `data/`
+// so we don't implicitly create/use a generic `output/` directory.
+let OUTPUT_DIR = path.resolve(ROOT_DIR, 'data');
 let TOURNAMENT_INPUT_DIRS = [];
 let VALIDATION_OUTPUT_DIRS = [];
 const APPROACH_DELTA_DIR = path.resolve(ROOT_DIR, 'data', 'approach_deltas');
@@ -77,6 +81,7 @@ const DATAGOLF_CACHE_DIR = path.resolve(ROOT_DIR, 'data', 'cache');
 const TRACE_PLAYER = String(process.env.TRACE_PLAYER || '').trim();
 let LOGGING_ENABLED = false;
 let LOGGING_INITIALIZED = false;
+let LOGGING_HANDLE = null;
 const OPT_SEED_RAW = String(process.env.OPT_SEED || '').trim();
 const OPT_TESTS_RAW = String(process.env.OPT_TESTS || '').trim();
 const DATAGOLF_API_KEY = String(process.env.DATAGOLF_API_KEY || '').trim();
@@ -325,17 +330,15 @@ if (writeTemplatesEnv === '1' || writeTemplatesEnv === 'true' || writeTemplatesE
 if (OVERRIDE_DIR) {
   const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
   const dataFolder = path.resolve(ROOT_DIR, 'data', normalizedDir);
-  const outputFolder = path.resolve(ROOT_DIR, 'output', normalizedDir);
   if (!fs.existsSync(dataFolder)) {
     fs.mkdirSync(dataFolder, { recursive: true });
-  }
-  if (!fs.existsSync(outputFolder)) {
-    fs.mkdirSync(outputFolder, { recursive: true });
   }
   DATA_ROOT_DIR = dataFolder;
   DATA_DIR = dataFolder;
   DEFAULT_DATA_DIR = dataFolder;
-  OUTPUT_DIR = outputFolder;
+  // Treat `--dir <name>` as a data-root override only.
+  // Artifact writes should remain under `data/...` rather than `output/...`.
+  OUTPUT_DIR = dataFolder;
 }
 
 if (OVERRIDE_DATA_DIR) {
@@ -347,16 +350,6 @@ if (OVERRIDE_DATA_DIR) {
 
 if (OVERRIDE_OUTPUT_DIR) {
   OUTPUT_DIR = path.resolve(OVERRIDE_OUTPUT_DIR);
-}
-
-if (!OVERRIDE_OUTPUT_DIR) {
-  if (FORCE_PRE_FLAG && !OUTPUT_DIR.endsWith('pre_event')) {
-    OUTPUT_DIR = path.join(OUTPUT_DIR, 'pre_event');
-    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  } else if (FORCE_POST_FLAG && !OUTPUT_DIR.endsWith('post_event')) {
-    OUTPUT_DIR = path.join(OUTPUT_DIR, 'post_event');
-    if (!fs.existsSync(OUTPUT_DIR)) fs.mkdirSync(OUTPUT_DIR, { recursive: true });
-  }
 }
 
 
@@ -1728,6 +1721,56 @@ function buildSheetLikeRankingCsv(ranking, groups) {
   const blankRow = Array(headers.length).fill('');
   rows.push(blankRow, blankRow, blankRow, blankRow);
   rows.push(headers);
+
+  // Add a dedicated median row for quick filtering/benchmarking in Sheets.
+  // NOTE: Leave DG ID blank so downstream parsers (validationRunner) skip this row.
+  const medianHistoricalMetrics = metricLabels.slice(0, 17).map((_, idx) => {
+    const median = computeMedian(players.map(player => player.metrics?.[idx]));
+    return median === null ? '' : formatSheetMetricValue(median, idx);
+  });
+
+  // Historical trends align with the same mapping used in the player rows.
+  // idx === 14 is a reserved/blank trend slot in the existing export logic.
+  const medianHistoricalTrends = metricLabels.slice(0, 17).map((_, idx) => {
+    if (idx === 14) return '0.000';
+    const trendIdx = idx < 14 ? idx : idx - 1;
+    const median = computeMedian(players.map(player => player.trends?.[trendIdx]));
+    return median === null ? '' : Number(median.toFixed(3)).toFixed(3);
+  });
+
+  const medianApproach = metricLabels.slice(17).map((_, idx) => {
+    const metricIdx = idx + 17;
+    const median = computeMedian(players.map(player => player.metrics?.[metricIdx]));
+    return median === null ? '' : formatSheetMetricValue(median, metricIdx);
+  });
+
+  const refinedWeightedScoreMedian = computeMedian(players.map(player => player.refinedWeightedScore));
+  const warMedian = computeMedian(players.map(player => player.war));
+  const deltaTrendMedianValue = computeMedian(players.map(player => player.deltaTrendScore));
+  const deltaPredMedianValue = computeMedian(players.map(player => player.deltaPredictiveScore));
+
+  const medianTrailingValues = [
+    refinedWeightedScoreMedian === null ? '' : Number(refinedWeightedScoreMedian.toFixed(2)).toFixed(2),
+    warMedian === null ? '' : Number(warMedian.toFixed(2)).toFixed(2),
+    deltaTrendMedianValue === null ? '' : Number(deltaTrendMedianValue.toFixed(3)).toFixed(3),
+    deltaPredMedianValue === null ? '' : Number(deltaPredMedianValue.toFixed(3)).toFixed(3)
+  ];
+
+  const medianRow = [
+    'MEDIAN',
+    '', // Rank
+    '', // DG ID (blank so parsers skip)
+    '', // Player Name
+    '', // Top 5
+    '', // Top 10
+    '', // Weighted Score
+    '', // Past Perf. Mult.
+    ...medianHistoricalMetrics.flatMap((metricVal, idx) => [metricVal, medianHistoricalTrends[idx]]),
+    ...medianApproach,
+    ...medianTrailingValues
+  ];
+
+  rows.push(medianRow);
 
   players.forEach(player => {
     if (!player.metrics) player.metrics = Array(35).fill(0);
@@ -3652,10 +3695,13 @@ function loadCourseHistoryRegressionMap(options = {}) {
   }
 
   try {
-    const { COURSE_HISTORY_REGRESSION } = require('../utilities/courseHistoryRegression');
-    if (COURSE_HISTORY_REGRESSION && typeof COURSE_HISTORY_REGRESSION === 'object') {
+    const regressionUtil = require('../utilities/courseHistoryRegression');
+    const fallbackMap = typeof regressionUtil.getCourseHistoryRegressionMap === 'function'
+      ? regressionUtil.getCourseHistoryRegressionMap()
+      : regressionUtil.COURSE_HISTORY_REGRESSION;
+    if (fallbackMap && typeof fallbackMap === 'object') {
       return {
-        map: COURSE_HISTORY_REGRESSION,
+        map: fallbackMap,
         source: 'utility',
         path: path.resolve(ROOT_DIR, 'utilities', 'courseHistoryRegression.js')
       };
@@ -4525,12 +4571,16 @@ function resolveDataFile(fileName) {
 }
 
 function normalizeTournamentSlug(value) {
-  return String(value || '')
+  const normalized = String(value || '')
     .trim()
     .toLowerCase()
     .replace(/&/g, 'and')
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '');
+
+  // Defensive cleanup: some historical runs accidentally carried an `optimizer_` prefix.
+  // We never want that to leak into folder names or artifact names.
+  return normalized.replace(/^optimizer-+/, '');
 }
 
 function listSeasonInputDirs(season) {
@@ -5117,7 +5167,7 @@ async function runAdaptiveOptimizer() {
   const missingCoreCsv = missingFiles.filter(file => ['Tournament Field', 'Historical Data', 'Approach Skill'].includes(file.name));
   const missingConfigCsv = missingFiles.filter(file => file.name === 'Configuration Sheet');
   if (missingFiles.length > 0) {
-    console.log('\n⚠️  Missing input CSVs (API fallback will be used where possible):');
+    console.log('\n⚠️  Missing input CSVs (these were migration-only; API/cache is primary):');
     missingFiles.forEach(file => {
       console.log(`   - ${file.name}: ${path.basename(file.path)}`);
     });
@@ -5143,18 +5193,29 @@ async function runAdaptiveOptimizer() {
   const fallbackDirName = CONFIG_PATH ? path.basename(path.dirname(CONFIG_PATH)) : null;
   const outputDir = OUTPUT_DIR
     || preEventOutputDir
-    || (fallbackDirName ? path.resolve(ROOT_DIR, 'output', fallbackDirName) : null);
+    || (fallbackDirName ? path.resolve(ROOT_DIR, 'data', fallbackDirName) : null);
   if (LOGGING_ENABLED && !LOGGING_INITIALIZED) {
     const loggingDir = typeof OVERRIDE_OUTPUT_DIR === 'string' && OVERRIDE_OUTPUT_DIR.length > 0
       ? OVERRIDE_OUTPUT_DIR
       : outputDir;
     if (loggingDir) {
-      setupLogging(
+      LOGGING_HANDLE = setupLogging(
         loggingDir,
         TOURNAMENT_NAME || OVERRIDE_EVENT_ID || 'event',
         runContext
       );
       LOGGING_INITIALIZED = true;
+
+      // Ensure we always restore stdio overrides even if the script exits early.
+      if (LOGGING_HANDLE && typeof LOGGING_HANDLE.teardown === 'function') {
+        process.once('exit', () => {
+          try {
+            LOGGING_HANDLE.teardown();
+          } catch (error) {
+            // Ignore
+          }
+        });
+      }
     }
   }
   const isSeedRunDir = outputDir && path.basename(outputDir) === 'seed_runs';
@@ -5283,10 +5344,19 @@ async function runAdaptiveOptimizer() {
   const courseContextEntry = resolveCourseContextEntry(courseContext, {
     eventId: CURRENT_EVENT_ID
   });
-  if (courseContextEntry?.sourcePath && fs.existsSync(courseContextEntry.sourcePath)) {
+  // NOTE: We do not rely on configuration-sheet CSVs going forward.
+  // `course_context.json.sourcePath` is treated as metadata only unless explicitly enabled.
+  const allowCourseContextSourcePath = ['1', 'true', 'yes', 'on'].includes(
+    String(process.env.ALLOW_COURSE_CONTEXT_SOURCEPATH || '').trim().toLowerCase()
+  );
+  if (
+    allowCourseContextSourcePath
+    && courseContextEntry?.sourcePath
+    && fs.existsSync(courseContextEntry.sourcePath)
+  ) {
     CONFIG_PATH = courseContextEntry.sourcePath;
     requiredFiles[0].path = CONFIG_PATH;
-    console.log(`ℹ️  Using course-context configuration sheet: ${path.basename(CONFIG_PATH)}`);
+    console.log(`ℹ️  Using course-context configuration sheet (ALLOW_COURSE_CONTEXT_SOURCEPATH): ${path.basename(CONFIG_PATH)}`);
   }
 
   let sharedConfig = null;
@@ -5389,20 +5459,31 @@ async function runAdaptiveOptimizer() {
   }
 
   if (!templateConfigs[CURRENT_EVENT_ID]) {
-    const groupWeights = {};
-    const metricWeights = {};
-    baseMetricConfig.groups.forEach(group => {
-      groupWeights[group.name] = group.weight;
-      group.metrics.forEach(metric => {
-        metricWeights[`${group.name}::${metric.name}`] = metric.weight;
+    // Prefer course_context-derived defaults rather than zeroed baseMetricConfig weights.
+    const templateKeyRaw = courseContextEntry?.templateKey || courseContextEntry?.courseType || null;
+    const templateKey = templateKeyRaw ? String(templateKeyRaw).trim() : null;
+    const fallbackTemplateKey = templateKey && templateConfigs[templateKey]
+      ? templateKey
+      : (templateConfigs.BALANCED ? 'BALANCED' : (templateConfigs.POWER ? 'POWER' : (templateConfigs.TECHNICAL ? 'TECHNICAL' : null)));
+
+    if (fallbackTemplateKey) {
+      templateConfigs[CURRENT_EVENT_ID] = {
+        groupWeights: { ...templateConfigs[fallbackTemplateKey].groupWeights },
+        metricWeights: { ...templateConfigs[fallbackTemplateKey].metricWeights }
+      };
+      console.log(`✓ Loaded event-specific weights (eventId: ${CURRENT_EVENT_ID}) from template: ${fallbackTemplateKey}`);
+    } else {
+      const groupWeights = {};
+      const metricWeights = {};
+      baseMetricConfig.groups.forEach(group => {
+        groupWeights[group.name] = group.weight;
+        group.metrics.forEach(metric => {
+          metricWeights[`${group.name}::${metric.name}`] = metric.weight;
+        });
       });
-    });
-    templateConfigs[CURRENT_EVENT_ID] = { groupWeights, metricWeights };
-    const configSheetAvailable = CONFIG_PATH && fs.existsSync(CONFIG_PATH);
-    const sourceLabel = configSheetAvailable
-      ? `Configuration Sheet (${path.basename(CONFIG_PATH)})`
-      : 'course_context defaults';
-    console.log(`✓ Loaded event-specific weights (eventId: ${CURRENT_EVENT_ID}) from ${sourceLabel}`);
+      templateConfigs[CURRENT_EVENT_ID] = { groupWeights, metricWeights };
+      console.warn(`⚠️  Loaded event-specific weights (eventId: ${CURRENT_EVENT_ID}) from base metric config (no templateKey/courseType found in course_context).`);
+    }
   }
 
   const metricConfig = baseMetricConfig;
@@ -7178,10 +7259,18 @@ async function runAdaptiveOptimizer() {
       };
     }
 
-    const outputBaseName = (TOURNAMENT_NAME || `event_${CURRENT_EVENT_ID}`)
+    const fallbackOutputBaseName = (`event_${CURRENT_EVENT_ID}`)
       .toLowerCase()
       .replace(/\s+/g, '_')
       .replace(/[^a-z0-9_\-]/g, '');
+
+    let outputBaseName = (TOURNAMENT_NAME || `event_${CURRENT_EVENT_ID}`)
+      .toLowerCase()
+      .replace(/\s+/g, '_')
+      .replace(/[^a-z0-9_\-]/g, '')
+      .replace(/^optimizer[_-]+/, '');
+
+    if (!outputBaseName) outputBaseName = fallbackOutputBaseName;
 
     const preEventRankingPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_rankings.json`);
     const preEventRankingCsvPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_pre_event_rankings.csv`);
@@ -8892,10 +8981,18 @@ async function runAdaptiveOptimizer() {
     }
   };
 
-  const baseName = (TOURNAMENT_NAME || `event_${CURRENT_EVENT_ID}`)
+  const fallbackBaseName = (`event_${CURRENT_EVENT_ID}`)
     .toLowerCase()
     .replace(/\s+/g, '_')
     .replace(/[^a-z0-9_\-]/g, '');
+
+  let baseName = (TOURNAMENT_NAME || `event_${CURRENT_EVENT_ID}`)
+    .toLowerCase()
+    .replace(/\s+/g, '_')
+    .replace(/[^a-z0-9_\-]/g, '')
+    .replace(/^optimizer[_-]+/, '');
+
+  if (!baseName) baseName = fallbackBaseName;
 
   const seedSuffix = OPT_SEED_RAW
     ? `_seed-${String(OPT_SEED_RAW).toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_\-]/g, '')}`
@@ -8908,7 +9005,7 @@ async function runAdaptiveOptimizer() {
 
   const outputBaseName = `${baseName}${seedSuffix}${outputTagSuffix}`;
 
-  const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.json`);
+  const outputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_event_results.json`);
   const backupJsonPath = backupIfExists(outputPath);
   if (backupJsonPath) {
     console.log(`🗄️  Backed up previous JSON results to: ${backupJsonPath}`);
@@ -9556,7 +9653,7 @@ async function runAdaptiveOptimizer() {
   }
   textLines.push('');
   textLines.push('---');
-  const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.txt`);
+  const textOutputPath = path.resolve(OUTPUT_DIR, `${outputBaseName}_post_event_results.txt`);
   const backupTextPath = backupIfExists(textOutputPath);
   if (backupTextPath) {
     console.log(`🗄️  Backed up previous text results to: ${backupTextPath}`);
@@ -9691,8 +9788,8 @@ async function runAdaptiveOptimizer() {
     console.log('   Standard templates: no updates');
   }
 
-  console.log(`✅ JSON results also saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.json`)}`);
-  console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_tournament_results.txt`)}\n`);
+  console.log(`✅ JSON results also saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_event_results.json`)}`);
+  console.log(`✅ Text results saved to: ${path.resolve(OUTPUT_DIR, `${outputBaseName}_post_event_results.txt`)}\n`);
 
   try {
     const { runValidation } = require('./validationRunner');

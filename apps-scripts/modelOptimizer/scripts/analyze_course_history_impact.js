@@ -9,7 +9,8 @@ const { extractHistoricalRowsFromSnapshotPayload } = require('../utilities/extra
 const DATA_DIR = path.resolve(__dirname, '..', 'data');
 const OUTPUT_DIR = process.env.PRE_TOURNAMENT_OUTPUT_DIR
   ? path.resolve(process.env.PRE_TOURNAMENT_OUTPUT_DIR)
-  : path.resolve(__dirname, '..', 'output');
+  // Legacy default was `.../output/`; keep everything under `data/` by default.
+  : path.resolve(__dirname, '..', 'data', 'course_history_regression');
 const SHOULD_WRITE_TEMPLATES = String(process.env.WRITE_TEMPLATES || '').trim().toLowerCase() === 'true';
 const DATAGOLF_API_KEY = String(process.env.DATAGOLF_API_KEY || '').trim();
 const DATAGOLF_CACHE_DIR = path.resolve(__dirname, '..', 'data', 'cache');

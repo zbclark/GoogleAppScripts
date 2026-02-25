@@ -4,16 +4,18 @@ const path = require('path');
 const { loadCsv } = require('../utilities/csvLoader');
 const { buildPlayerData } = require('../utilities/dataPrep');
 const { getSharedConfig } = require('../utilities/configParser');
-const { buildMetricGroupsFromConfig } = require('../core/metricConfigBuilder');
+const { buildMetricGroupsFromConfig } = require('../utilities/metricConfigBuilder');
 const { aggregatePlayerData, calculatePlayerMetrics, prepareRankingOutput } = require('../core/modelCore');
 const { getDeltaPlayerScoresForEvent } = require('../utilities/deltaPlayerScores');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
 let DATA_DIR = path.resolve(ROOT_DIR, 'data');
-let OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
+// Legacy default was `.../output/`; keep parity artifacts under `data/` by default.
+let OUTPUT_DIR = path.resolve(ROOT_DIR, 'data', 'parity_outputs');
 
 const args = process.argv.slice(2);
 let OVERRIDE_DIR = null;
+let OVERRIDE_OUTPUT_DIR = null;
 let TOURNAMENT_NAME = null;
 let SEASON = null;
 let INCLUDE_CURRENT_EVENT_ROUNDS = false;
@@ -43,6 +45,9 @@ for (let i = 0; i < args.length; i++) {
   if ((args[i] === '--dir' || args[i] === '--folder') && args[i + 1]) {
     OVERRIDE_DIR = String(args[i + 1]).trim();
   }
+  if ((args[i] === '--outputDir' || args[i] === '--output-dir') && args[i + 1]) {
+    OVERRIDE_OUTPUT_DIR = String(args[i + 1]).trim();
+  }
   if ((args[i] === '--tournament' || args[i] === '--name') && args[i + 1]) {
     TOURNAMENT_NAME = String(args[i + 1]).trim();
   }
@@ -58,11 +63,15 @@ for (let i = 0; i < args.length; i++) {
 if (OVERRIDE_DIR) {
   const normalizedDir = OVERRIDE_DIR.replace(/^[\/]+|[\/]+$/g, '');
   const dataFolder = path.resolve(ROOT_DIR, 'data', normalizedDir);
-  const outputFolder = path.resolve(ROOT_DIR, 'output', normalizedDir);
   if (!fs.existsSync(dataFolder)) fs.mkdirSync(dataFolder, { recursive: true });
-  if (!fs.existsSync(outputFolder)) fs.mkdirSync(outputFolder, { recursive: true });
   DATA_DIR = dataFolder;
-  OUTPUT_DIR = outputFolder;
+  OUTPUT_DIR = path.resolve(dataFolder, 'parity_outputs');
+}
+
+if (OVERRIDE_OUTPUT_DIR) {
+  OUTPUT_DIR = path.isAbsolute(OVERRIDE_OUTPUT_DIR)
+    ? OVERRIDE_OUTPUT_DIR
+    : path.resolve(ROOT_DIR, OVERRIDE_OUTPUT_DIR);
 }
 
 const resolveTournamentFile = (suffix, tournamentName, season, fallbackName) => {

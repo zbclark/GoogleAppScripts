@@ -2,13 +2,90 @@ const fs = require('fs');
 const path = require('path');
 
 const ROOT_DIR = path.resolve(__dirname, '..');
-const DEFAULT_INPUT = path.resolve(ROOT_DIR, 'output', 'adaptive_optimizer_v2_results.json');
+// NOTE: We intentionally do NOT default to ROOT_DIR/output anymore.
+// If you don't pass --input, we try to use PRE_TOURNAMENT_OUTPUT_DIR set by core/optimizer.js.
+
+function resolveDefaultInputPath() {
+  const envDirRaw = String(process.env.PRE_TOURNAMENT_OUTPUT_DIR || '').trim();
+  if (!envDirRaw) return null;
+  const envDir = path.resolve(envDirRaw);
+
+  const candidateDirs = [envDir];
+  // Sometimes PRE_TOURNAMENT_OUTPUT_DIR points to a subfolder like course_history_regression/.
+  try {
+    const parent = path.dirname(envDir);
+    if (parent && parent !== envDir) candidateDirs.push(parent);
+  } catch (_) {
+    // Ignore
+  }
+
+  // Real-world artifact names are typically slug-based, e.g.
+  //   <tournamentSlug>_pre_event_results.json
+  //   <tournamentSlug>_post_event_results.json
+  // so we support suffix matching as a fallback.
+  const candidateSuffixes = [
+    // Prefer optimizer's post-event payload if available.
+    '_post_event_results.json',
+    // Back-compat: older runs used this suffix.
+    '_post_tournament_results.json',
+    // Pre-event payload.
+    '_pre_event_results.json',
+    // Post-event convention used elsewhere: <tournamentSlug>_results.json
+    '_results.json'
+  ];
+
+  function resolveBySuffix(dir, suffixes) {
+    try {
+      const entries = fs.readdirSync(dir, { withFileTypes: true });
+      const allFiles = entries
+        .filter(e => e.isFile())
+        .map(e => e.name);
+
+      // Prefer earlier suffixes if multiple patterns exist in the same directory.
+      for (const suffix of suffixes) {
+        const matches = allFiles.filter(name => name.endsWith(suffix));
+        if (!matches.length) continue;
+
+        // Prefer non-legacy naming when both exist.
+        const nonLegacy = matches.filter(name => !/^optimizer[_-]/.test(name));
+        const candidates = nonLegacy.length > 0 ? nonLegacy : matches;
+
+        const scored = candidates
+          .map(name => {
+            const fullPath = path.resolve(dir, name);
+            let mtimeMs = 0;
+            try {
+              mtimeMs = fs.statSync(fullPath).mtimeMs || 0;
+            } catch (_) {
+              // Ignore
+            }
+            return { name, fullPath, mtimeMs };
+          })
+          .sort((a, b) => (b.mtimeMs - a.mtimeMs) || a.name.localeCompare(b.name));
+
+        return scored[0]?.fullPath || null;
+      }
+
+      return null;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  for (const dir of candidateDirs) {
+    const bySuffix = resolveBySuffix(dir, candidateSuffixes);
+    if (bySuffix && fs.existsSync(bySuffix)) return bySuffix;
+  }
+
+  return null;
+}
 
 const args = process.argv.slice(2);
 let INPUT_PATH = null;
 let OVERRIDE_EVENT_ID = null;
 let OVERRIDE_SEASON = null;
 let DRY_RUN = false;
+let VERIFY = true;
 
 for (let i = 0; i < args.length; i++) {
   if ((args[i] === '--input' || args[i] === '--file') && args[i + 1]) {
@@ -24,11 +101,16 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '--dryRun' || args[i] === '--dry-run') {
     DRY_RUN = true;
   }
+  if (args[i] === '--no-verify') {
+    VERIFY = false;
+  }
 }
 
-const inputPath = INPUT_PATH ? path.resolve(INPUT_PATH) : DEFAULT_INPUT;
-if (!fs.existsSync(inputPath)) {
-  console.error(`❌ Input file not found: ${inputPath}`);
+const inputPath = INPUT_PATH ? path.resolve(INPUT_PATH) : resolveDefaultInputPath();
+if (!inputPath || !fs.existsSync(inputPath)) {
+  const fallbackText = inputPath ? `: ${inputPath}` : '.';
+  console.error(`❌ Input file not found${fallbackText}`);
+  console.error('Provide --input <path> or run from core/optimizer.js so PRE_TOURNAMENT_OUTPUT_DIR is set.');
   process.exit(1);
 }
 
@@ -95,7 +177,7 @@ function buildDeltaPlayerScoresEntry(eventIdValue, seasonValue, summary) {
 }
 
 function buildDeltaPlayerScoresFileContent(deltaScoresByEvent, options = {}) {
-  const { includeModuleExports = false } = options;
+  const { includeModuleExports = true } = options;
   const content = `const DELTA_PLAYER_SCORES = ${JSON.stringify(deltaScoresByEvent, null, 2)};\n\n`;
   let output = `${content}` +
     `function getDeltaPlayerScoresForEvent(eventId, season) {\n` +
@@ -127,23 +209,82 @@ if (!deltaScoresByEvent) {
 }
 
 const nodeTarget = path.resolve(ROOT_DIR, 'utilities', 'deltaPlayerScores.js');
-const targets = [nodeTarget, gasTarget];
-
-const outputDir = path.resolve(ROOT_DIR, 'output');
+const targets = [nodeTarget];
 const outputs = [];
 
+function ensureDir(dirPath) {
+  if (!dirPath) return;
+  if (fs.existsSync(dirPath)) return;
+  fs.mkdirSync(dirPath, { recursive: true });
+}
+
+function resolveDryRunOutputDir(resolvedInputPath) {
+  const envDirRaw = String(process.env.PRE_TOURNAMENT_OUTPUT_DIR || '').trim();
+  if (envDirRaw) {
+    return path.resolve(envDirRaw, 'dryrun');
+  }
+  // Fall back to writing next to the input file (keeps artifacts co-located with the run).
+  return path.resolve(path.dirname(resolvedInputPath), 'dryrun');
+}
+
+function verifyDeltaScoresModule(modulePath) {
+  // Best-effort verification that the generated Node file is importable and exports the expected API.
+  try {
+    const resolved = require.resolve(modulePath);
+    delete require.cache[resolved];
+  } catch (_) {
+    // Ignore
+  }
+  const loaded = require(modulePath);
+  if (!loaded || typeof loaded !== 'object') {
+    throw new Error('Generated module did not export an object');
+  }
+  if (typeof loaded.getDeltaPlayerScoresForEvent !== 'function') {
+    throw new Error('Generated module missing getDeltaPlayerScoresForEvent export');
+  }
+  if (typeof loaded.getDeltaPlayerScores !== 'function') {
+    throw new Error('Generated module missing getDeltaPlayerScores export');
+  }
+  if (!loaded.DELTA_PLAYER_SCORES || typeof loaded.DELTA_PLAYER_SCORES !== 'object') {
+    throw new Error('Generated module missing DELTA_PLAYER_SCORES export');
+  }
+}
+
 targets.forEach(filePath => {
-  const includeModuleExports = filePath === nodeTarget;
+  // Node-only workflow: always emit module.exports so downstream consumers can require this file.
+  const includeModuleExports = true;
   const content = buildDeltaPlayerScoresFileContent(deltaScoresByEvent, { includeModuleExports });
+  if (includeModuleExports && !content.includes('module.exports')) {
+    console.error('❌ Internal error: expected generated output to include module.exports');
+    process.exit(1);
+  }
   if (DRY_RUN) {
-    const suffix = includeModuleExports ? 'node' : 'gas';
+    const suffix = includeModuleExports ? 'node' : 'js';
     const baseName = path.basename(filePath, path.extname(filePath));
     const dryRunName = `dryrun_${baseName}.${suffix}${path.extname(filePath) || '.js'}`;
-    const dryRunPath = path.resolve(outputDir, dryRunName);
+    const dryRunDir = resolveDryRunOutputDir(inputPath);
+    ensureDir(dryRunDir);
+    const dryRunPath = path.resolve(dryRunDir, dryRunName);
     fs.writeFileSync(dryRunPath, content, 'utf8');
+    if (VERIFY && includeModuleExports) {
+      try {
+        verifyDeltaScoresModule(dryRunPath);
+      } catch (error) {
+        console.error(`❌ Verification failed for ${dryRunPath}: ${error?.message || error}`);
+        process.exit(1);
+      }
+    }
     outputs.push({ action: 'dryRun', target: dryRunPath });
   } else {
     fs.writeFileSync(filePath, content, 'utf8');
+    if (VERIFY && includeModuleExports) {
+      try {
+        verifyDeltaScoresModule(filePath);
+      } catch (error) {
+        console.error(`❌ Verification failed for ${filePath}: ${error?.message || error}`);
+        process.exit(1);
+      }
+    }
     outputs.push({ action: 'write', target: filePath });
   }
 });

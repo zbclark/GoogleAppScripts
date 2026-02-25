@@ -1,0 +1,498 @@
+{
+  "sheetName": "Player Ranking Model",
+  "headerRow": 5,
+  "medianRow": 6,
+  "dataStartRow": 7,
+  "conditionalFormattingStartRow": 7,
+  "notesColumn": 1,
+  "notesColumnHeader": "Expected Peformance Notes",
+  "tableStartColumn": 2,
+  "notesColumnWidth": 350,
+  "columnDefaults": {
+    "width": 110,
+    "format": "0.000"
+  },
+  "columns": [
+    {
+      "name": "Rank",
+      "format": "0",
+      "width": 70
+    },
+    {
+      "name": "DG ID",
+      "format": "0",
+      "width": 70
+    },
+    {
+      "name": "Player Name",
+      "format": "text",
+      "width": 140
+    },
+    {
+      "name": "Top 5",
+      "format": "0",
+      "width": 70
+    },
+    {
+      "name": "Top 10",
+      "format": "0",
+      "width": 70
+    },
+    {
+      "name": "Weighted Score",
+      "format": "0.00"
+    },
+    {
+      "name": "Past Perf. Mult.",
+      "format": "0.000"
+    },
+    {
+      "name": "SG Total",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG Total Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Driving Distance",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Driving Distance Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Driving Accuracy",
+      "group": "historical",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Driving Accuracy Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "SG T2G",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG T2G Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "SG Approach",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG Approach Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "SG Around Green",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG Around Green Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "SG OTT",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG OTT Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "SG Putting",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "SG Putting Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Greens in Regulation",
+      "group": "historical",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Greens in Regulation Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Scrambling",
+      "group": "historical",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Scrambling Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Great Shots",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Great Shots Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Poor Shots",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Poor Shots Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "lower_better",
+      "trend": true
+    },
+    {
+      "name": "Scoring Average",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Scoring Average Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "lower_better",
+      "trend": true
+    },
+    {
+      "name": "Birdies or Better",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Birdies or Better Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Birdie Chances Created",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Birdie Chances Created Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "higher_better",
+      "trend": true
+    },
+    {
+      "name": "Fairway Proximity",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Fairway Proximity Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "lower_better",
+      "trend": true
+    },
+    {
+      "name": "Rough Proximity",
+      "group": "historical",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true
+    },
+    {
+      "name": "Rough Proximity Trend",
+      "group": "historical_trend",
+      "format": "0.000",
+      "direction": "lower_better",
+      "trend": true
+    },
+    {
+      "name": "Approach <100 GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <100 SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <100 Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 FW GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 FW SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 FW Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 Rough GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 Rough SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <150 Rough Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >150 Rough GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >150 Rough SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >150 Rough Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <200 FW GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <200 FW SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach <200 FW Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >200 FW GIR",
+      "group": "approach",
+      "format": "0.00%",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >200 FW SG",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "higher_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Approach >200 FW Prox",
+      "group": "approach",
+      "format": "0.000",
+      "direction": "lower_better",
+      "zScoreColoring": true,
+      "zeroAsNoData": true
+    },
+    {
+      "name": "Refined Weighted Score",
+      "format": "0.00",
+      "width": 90
+    },
+    {
+      "name": "WAR",
+      "format": "0.00",
+      "width": 75
+    },
+    {
+      "name": "Delta Trend Score",
+      "format": "0.000",
+      "width": 110,
+      "zScoreColoring": true
+    },
+    {
+      "name": "Delta Predictive Score",
+      "format": "0.000",
+      "width": 130,
+      "zScoreColoring": true
+    }
+  ],
+  "zScoreColoring": {
+    "thresholds": [
+      0.5,
+      1,
+      2
+    ],
+    "positivePalette": [
+      "#a1d99b",
+      "#31a354",
+      "#006837"
+    ],
+    "negativePalette": [
+      "#fb6a4a",
+      "#de2d26",
+      "#a50f15"
+    ],
+    "zeroAsNoData": true,
+    "zeroColor": "#D3D3D3"
+  },
+  "trendFormatting": {
+    "backgroundGood": "#E6F4EA",
+    "backgroundBad": "#FCE8E8",
+    "textGood": "#137333",
+    "textBad": "#A50E0E",
+    "thresholdsByMetricIndex": {
+      "0": 0.01,
+      "1": 0.05,
+      "2": 0.02,
+      "3": 0.01,
+      "4": 0.01,
+      "5": 0.01,
+      "6": 0.01,
+      "7": 0.01,
+      "8": 0.02,
+      "9": 0.02,
+      "10": 0.02,
+      "11": 0.02,
+      "12": 0.01,
+      "13": 0.02,
+      "14": 0.02,
+      "15": 0.01,
+      "16": 0.01
+    }
+  }
+}

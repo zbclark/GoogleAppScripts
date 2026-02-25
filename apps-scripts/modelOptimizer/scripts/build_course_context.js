@@ -7,6 +7,23 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const DATA_DIR = path.resolve(ROOT_DIR, 'data');
 const OUTPUT_PATH = path.resolve(ROOT_DIR, 'utilities', 'course_context.json');
 
+const args = process.argv.slice(2);
+const includeSourcePath = args.includes('--includeSourcePath')
+  || ['1', 'true', 'yes', 'on'].includes(String(process.env.INCLUDE_COURSE_CONTEXT_SOURCEPATH || '').trim().toLowerCase());
+
+// ROOT_DIR = <repo>/apps-scripts/modelOptimizer
+// repoRoot = <repo>
+const repoRoot = path.resolve(ROOT_DIR, '..', '..', '..');
+
+const toRepoRelativePath = value => {
+  if (!value) return null;
+  const resolved = path.resolve(String(value));
+  const rel = path.relative(repoRoot, resolved);
+  // If it's outside the repo, treat as non-portable metadata.
+  if (rel.startsWith('..')) return null;
+  return rel;
+};
+
 const isConfigSheet = name => name.toLowerCase().includes('configuration sheet') && name.toLowerCase().endsWith('.csv');
 
 const collectConfigFiles = dirPath => {
@@ -38,7 +55,8 @@ const buildContextEntry = (config, sourcePath) => {
   };
 
   return {
-    sourcePath,
+    // Migration-only metadata. We default to null for portability; enable via --includeSourcePath.
+    sourcePath: includeSourcePath ? toRepoRelativePath(sourcePath) : null,
     eventId: config.currentEventId ? String(config.currentEventId) : null,
     templateKey: config.courseType ? String(config.courseType) : (config.currentEventId ? String(config.currentEventId) : null),
     courseNum,
@@ -76,7 +94,8 @@ configFiles.forEach(filePath => {
 
 const payload = {
   updatedAt: new Date().toISOString(),
-  sourceDir: DATA_DIR,
+  // Portability: store repo-relative directory for debugging only.
+  sourceDir: toRepoRelativePath(DATA_DIR),
   byEventId,
   byCourseNum
 };

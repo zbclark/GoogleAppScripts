@@ -1,7 +1,7 @@
 // Utility to collect historical records (shared)
 const fs = require('fs');
 const path = require('path');
-const { loadCsv } = require('../utilities/csvLoader');
+const { loadCsv } = require('./csvLoader');
 const { extractHistoricalRowsFromSnapshotPayload } = require('./extractHistoricalRows');
 
 // Helper functions (minimal, for shared use)

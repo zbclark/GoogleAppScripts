@@ -1,6 +1,43 @@
 // Utility to extract historical rows from DataGolf JSON or similar payloads
 function extractHistoricalRowsFromSnapshotPayload(payload) {
   if (!payload) return [];
+  // Single-event payload shape: { event_id, ..., scores: [ { dg_id, ..., round_1: {...}, ... } ] }
+  if (payload && typeof payload === 'object' && Array.isArray(payload.scores)) {
+    const meta = {
+      event_name: payload.event_name || payload.eventName || null,
+      event_id: payload.event_id || payload.eventId || null,
+      tour: payload.tour || null,
+      event_completed: payload.event_completed || payload.eventCompleted || null,
+      year: payload.year || null,
+      season: payload.season || payload.year || null
+    };
+
+    const rows = [];
+    payload.scores.forEach(entry => {
+      if (!entry || typeof entry !== 'object') return;
+      const dgId = entry.dg_id ?? entry.dgId ?? entry.player_id ?? entry.playerId ?? entry.id;
+      if (!dgId) return;
+      const playerName = entry.player_name || entry.playerName || entry.name || null;
+      const finText = entry.fin_text || entry.finish || entry.finishPosition || entry.fin || null;
+
+      Object.keys(entry).forEach(key => {
+        if (!key.startsWith('round_')) return;
+        const roundData = entry[key];
+        if (!roundData || typeof roundData !== 'object') return;
+        const roundNum = parseInt(key.replace('round_', ''), 10);
+        rows.push({
+          ...meta,
+          dg_id: dgId,
+          player_name: playerName,
+          fin_text: finText,
+          round_num: Number.isNaN(roundNum) ? null : roundNum,
+          ...roundData
+        });
+      });
+    });
+
+    return rows;
+  }
   if (Array.isArray(payload)) return payload;
   if (Array.isArray(payload.rows)) return payload.rows;
   if (Array.isArray(payload.data)) return payload.data;

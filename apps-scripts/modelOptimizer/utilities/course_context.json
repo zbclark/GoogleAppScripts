@@ -1,12 +1,12 @@
 {
   "updatedAt": "2026-02-25T02:46:26.705Z",
-  "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data",
+  "sourceDir": "apps-scripts/modelOptimizer/data",
   "defaultTours": [
     "pga"
   ],
   "byEventId": {
     "3": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/wm-phoenix-open/inputs/WM Phoenix Open (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "3",
       "templateKey": "POWER",
       "courseNum": "510",
@@ -63,7 +63,7 @@
       "pastPerformanceWeight": 0.1
     },
     "5": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/pebble-beach/inputs/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "5",
       "templateKey": "TECHNICAL",
       "courseNum": "5",
@@ -108,7 +108,7 @@
       "pastPerformanceWeight": 0.1
     },
     "7": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "7",
       "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseNum": "500",
@@ -815,7 +815,7 @@
   },
   "byCourseNum": {
     "5": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/pebble-beach/inputs/AT&T - Pebble Beach (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "5",
       "templateKey": "TECHNICAL",
       "courseNum": "5",
@@ -1125,7 +1125,7 @@
       }
     },
     "500": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "7",
       "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseNum": "500",
@@ -1199,7 +1199,7 @@
       "pastPerformanceWeight": 0.1
     },
     "510": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/wm-phoenix-open/inputs/WM Phoenix Open (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "3",
       "templateKey": "POWER",
       "courseNum": "510",
@@ -1617,7 +1617,7 @@
       "shotDistribution": null
     },
     "939": {
-      "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/genesis-invitational/inputs/Genesis Invitational (2026) - Configuration Sheet.csv",
+      "sourcePath": null,
       "eventId": "7",
       "templateKey": "THE_RIVIERA_COUNTRY_CLUB",
       "courseNum": "500",

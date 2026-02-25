@@ -2,13 +2,22 @@ const fs = require('fs');
 const path = require('path');
 const { parse } = require('csv-parse/sync');
 
-const DEFAULT_NODE_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'parity_modelcore.json');
-const DEFAULT_GAS_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'Genesis Invitational (2026) - Player Ranking Model.csv');
+const ensureDirectory = dirPath => {
+  if (!dirPath) return;
+  if (!fs.existsSync(dirPath)) {
+    fs.mkdirSync(dirPath, { recursive: true });
+  }
+};
+
+// Defaults were historically hard-coded to `output/genesis/...`.
+// We now require explicit file paths to avoid coupling to any particular local folder.
+const DEFAULT_NODE_PATH = null;
+const DEFAULT_GAS_PATH = null;
 
 const args = process.argv.slice(2);
 let NODE_PATH = DEFAULT_NODE_PATH;
 let GAS_PATH = DEFAULT_GAS_PATH;
-let OUT_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'parity_compare.txt');
+let OUT_PATH = path.resolve(__dirname, '..', 'data', 'parity_compare.txt');
 const SCORE_TOLERANCE = 0.01;
 
 for (let i = 0; i < args.length; i++) {
@@ -17,12 +26,14 @@ for (let i = 0; i < args.length; i++) {
   if (args[i] === '--out' && args[i + 1]) OUT_PATH = args[i + 1];
 }
 
-if (!fs.existsSync(NODE_PATH)) {
+if (!NODE_PATH || !fs.existsSync(NODE_PATH)) {
   console.error(`Node output not found: ${NODE_PATH}`);
+  console.error('Provide: --node <parity_modelcore.json>');
   process.exit(1);
 }
-if (!fs.existsSync(GAS_PATH)) {
+if (!GAS_PATH || !fs.existsSync(GAS_PATH)) {
   console.error(`GAS output not found: ${GAS_PATH}`);
+  console.error('Provide: --gas <GAS Player Ranking Model.csv>');
   process.exit(1);
 }
 
@@ -206,5 +217,6 @@ diffs.slice(0, 50).forEach(entry => {
   });
 });
 
+ensureDirectory(path.dirname(OUT_PATH));
 fs.writeFileSync(OUT_PATH, lines.join('\n'));
 console.log(`✅ Comparison report saved to ${OUT_PATH}`);

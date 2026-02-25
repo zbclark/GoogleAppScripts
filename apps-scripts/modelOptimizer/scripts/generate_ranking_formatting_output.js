@@ -4,29 +4,10 @@ const path = require('path');
 
 const { getRankingFormattingSchema } = require('../utilities/rankingFormattingSchema');
 
-const ROOT_DIR = path.resolve(__dirname, '..');
-const DEFAULT_OUTPUT_DIR = path.resolve(ROOT_DIR, 'output');
 
-const args = process.argv.slice(2);
-let OUTPUT_DIR = DEFAULT_OUTPUT_DIR;
-let WRITE_JSON = true;
-let WRITE_CSV = true;
-
-for (let i = 0; i < args.length; i++) {
-  if ((args[i] === '--outputDir' || args[i] === '--output-dir') && args[i + 1]) {
-    OUTPUT_DIR = path.isAbsolute(args[i + 1])
-      ? path.resolve(args[i + 1])
-      : path.resolve(ROOT_DIR, args[i + 1]);
-  }
-  if (args[i] === '--json-only') {
-    WRITE_JSON = true;
-    WRITE_CSV = false;
-  }
-  if (args[i] === '--csv-only') {
-    WRITE_JSON = false;
-    WRITE_CSV = true;
-  }
-}
+const OUTPUT_DIR = path.resolve(__dirname, '../utilities');
+const WRITE_JSON = true;
+const WRITE_CSV = true;
 
 if (!fs.existsSync(OUTPUT_DIR)) {
   fs.mkdirSync(OUTPUT_DIR, { recursive: true });
@@ -47,7 +28,11 @@ const writeCsv = () => {
   lines.push('key,value');
   lines.push(`sheetName,${JSON.stringify(schema.sheetName)}`);
   lines.push(`headerRow,${schema.headerRow}`);
+  if (schema.medianRow !== undefined) lines.push(`medianRow,${schema.medianRow}`);
   lines.push(`dataStartRow,${schema.dataStartRow}`);
+  if (schema.conditionalFormattingStartRow !== undefined) {
+    lines.push(`conditionalFormattingStartRow,${schema.conditionalFormattingStartRow}`);
+  }
   lines.push(`notesColumn,${schema.notesColumn}`);
   lines.push(`notesColumnHeader,${JSON.stringify(schema.notesColumnHeader)}`);
   lines.push(`tableStartColumn,${schema.tableStartColumn}`);

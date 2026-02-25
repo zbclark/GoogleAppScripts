@@ -3,6 +3,8 @@
 const fs = require('fs');
 const path = require('path');
 
+let ACTIVE_HANDLE = null;
+
 /**
  * Sets up logging to a file in the specified output directory, with event and context in the filename.
  * Also mirrors output to the console.
@@ -10,8 +12,20 @@ const path = require('path');
  * @param {string} eventName - Event name for log file naming
  * @param {string} context - Context string (e.g., pre, post, run)
  */
-function setupLogging(outputDir, eventName, context) {
-  if (!outputDir) return;
+function teardownLogging() {
+  if (ACTIVE_HANDLE && typeof ACTIVE_HANDLE.teardown === 'function') {
+    try {
+      ACTIVE_HANDLE.teardown();
+    } catch (error) {
+      // Ignore
+    }
+  }
+  ACTIVE_HANDLE = null;
+}
+
+function setupLogging(outputDir, eventName, context, options = {}) {
+  if (!outputDir) return null;
+  if (ACTIVE_HANDLE) return ACTIVE_HANDLE;
   if (!fs.existsSync(outputDir)) {
     fs.mkdirSync(outputDir, { recursive: true });
   }
@@ -22,25 +36,64 @@ function setupLogging(outputDir, eventName, context) {
   } catch (error) {
     // Ignore
   }
-  const origStdoutWrite = process.stdout.write.bind(process.stdout);
-  const origStderrWrite = process.stderr.write.bind(process.stderr);
-  process.stdout.write = (chunk, ...args) => {
+  // IMPORTANT: keep the original function references so we can restore them exactly.
+  // Do not use .bind() here, otherwise teardown would restore a different function identity.
+  const origStdoutWrite = process.stdout.write;
+  const origStderrWrite = process.stderr.write;
+
+  let fileEnabled = true;
+  let tornDown = false;
+
+  const writeToFile = (chunk) => {
+    if (!fileEnabled) return;
     try {
       fs.appendFileSync(logFile, chunk);
     } catch (error) {
-      // Ignore
+      // If the log file cannot be written, stop trying.
+      fileEnabled = false;
     }
-    origStdoutWrite(chunk, ...args);
+  };
+
+  process.stdout.write = (chunk, ...args) => {
+    writeToFile(chunk);
+    return origStdoutWrite.call(process.stdout, chunk, ...args);
   };
   process.stderr.write = (chunk, ...args) => {
+    writeToFile(chunk);
+    return origStderrWrite.call(process.stderr, chunk, ...args);
+  };
+
+  const teardown = () => {
+    if (tornDown) return;
+    tornDown = true;
     try {
-      fs.appendFileSync(logFile, chunk);
+      process.stdout.write = origStdoutWrite;
     } catch (error) {
       // Ignore
     }
-    origStderrWrite(chunk, ...args);
+    try {
+      process.stderr.write = origStderrWrite;
+    } catch (error) {
+      // Ignore
+    }
+
+    // Allow future setupLogging(...) calls in the same process.
+    if (ACTIVE_HANDLE && ACTIVE_HANDLE.teardown === teardown) {
+      ACTIVE_HANDLE = null;
+    }
   };
+
+  const autoTeardown = options && Object.prototype.hasOwnProperty.call(options, 'autoTeardown')
+    ? !!options.autoTeardown
+    : true;
+  if (autoTeardown) {
+    // Best-effort restore on exit. (Note: exit handlers must be sync.)
+    process.once('exit', teardown);
+  }
+
+  ACTIVE_HANDLE = { logFile, teardown };
   console.log(`Logging to ${logFile}`);
+  return ACTIVE_HANDLE;
 }
 
-module.exports = { setupLogging };
+module.exports = { setupLogging, teardownLogging };

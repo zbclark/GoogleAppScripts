@@ -1,6 +1,6 @@
-# Model Validation and Optimization (modelOptemizer)
+# Model Validation and Optimization (modelOptimizer)
 
-This document provides a **detailed, review-friendly** guide to how `apps-scripts/modelOptemizer/core/optimizer.js` behaves in **pre‑tournament** and **post‑tournament** modes, including inputs, outputs, decisions, and validation logic. The goal is to make configuration intent explicit and auditable.
+This document provides a **detailed, review-friendly** guide to how `apps-scripts/modelOptimizer/core/optimizer.js` behaves in **pre‑tournament** and **post‑tournament** modes, including inputs, outputs, decisions, and validation logic. The goal is to make configuration intent explicit and auditable.
 
 > Scope: **Node-based optimizer** only. This is the source of truth for validation/optimization moving forward. Apps Script validation remains legacy and is slated for migration to Node.
 
@@ -8,7 +8,7 @@ This document provides a **detailed, review-friendly** guide to how `apps-script
 
 ## Data Directory Convention (Quick Reference)
 
-**Root:** `apps-scripts/modelOptemizer/data/`
+**Root:** `apps-scripts/modelOptimizer/data/`
 
 ### Naming conventions
 
@@ -16,7 +16,7 @@ This document provides a **detailed, review-friendly** guide to how `apps-script
 - **Tournament slug:** lowercase, hyphen‑separated, no year, no punctuation (e.g., `genesis-invitational`, `wm-phoenix-open`).
 - **Manifest:** `data/<season>/manifest.json` contains `{ eventId, season, tournamentSlug, tournamentName }` entries.
 - **Mode folders:** `pre_event` and `post_event` only (no other variations).
-- **Artifacts:** use stable filenames (`optimizer_results.json`, `rankings.csv`, `<tournament-slug>_results.json`) and never include dates in filenames (dates belong in file content).
+- **Artifacts:** use stable **suffixes** (e.g., `*_pre_event_results.json`, `*_pre_event_rankings.csv`, `<tournament-slug>_results.json`) and never include dates in filenames (dates belong in file content).
   - **Exception:** approach delta JSONs are date‑stamped: `approach_deltas_<tournament-slug>_YYYY_MM_DD.json`.
 
 ### Example directory tree
@@ -27,28 +27,27 @@ data/
     manifest.json
     genesis-invitational/
       inputs/
-        Genesis Invitational (2026) - Configuration Sheet.csv
-        Genesis Invitational (2026) - Tournament Field.csv
-        Genesis Invitational (2026) - Historical Data.csv
-        Genesis Invitational (2026) - Approach Skill.csv
+        Genesis Invitational (2026) - Configuration Sheet.csv (optional input)
+        Genesis Invitational (2026) - Tournament Field.csv (optional input)
+        Genesis Invitational (2026) - Historical Data.csv (optional input)
+        Genesis Invitational (2026) - Approach Skill.csv (optional input)
       pre_event/
-        optimizer_results.json
-        optimizer_results.txt
-        rankings.json
-        rankings.csv
-        rankings.txt
+        {tournament-slug}_pre_event_results.json
+        {tournament-slug}_pre_event_results.txt
+        {tournament-slug}_pre_event_rankings.json
+        {tournament-slug}_pre_event_rankings.csv
         course_history_regression/
           summary.csv
           details.csv
           summary_similar.csv
           details_similar.csv
-          course_history_regression.json
+          course_history_regression.json (required input; generated during optimizer.js runs)
         dryrun/
           dryrun_weightTemplates.js
           dryrun_deltaPlayerScores.node.js
       post_event/
-        optimizer_results.json
-        optimizer_results.txt
+        {tournament-slug}_post_event_results.json
+        {tournament-slug}_post_event_results.txt
         genesis-invitational_results.json
         genesis-invitational_results.csv
     validation_outputs/
@@ -164,8 +163,8 @@ When API snapshots are present, they are recorded in `apiSnapshots` within the J
 
 ### Outputs Created
 
-- `data/<season>/<tournament>/post_event/optimizer_results.json`
-- `data/<season>/<tournament>/post_event/optimizer_results.txt`
+- `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`
+- `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.txt`
 - `data/<season>/validation_outputs/validation_summary.csv`
 - `data/<season>/validation_outputs/validation_summary.json`
 - `data/<season>/validation_outputs/tournament_<name>.json`
@@ -175,8 +174,8 @@ When API snapshots are present, they are recorded in `apiSnapshots` within the J
 - `core/optimizer.js` — main pipeline
 - `utilities/dataPrep.js` — historical round parsing
 - `utilities/weightTemplates.js` — template sources
-- `scripts/compute_approach_deltas.js` — optional approach delta generation
-- `core/summarizeSeedResults.js` — compare seeded runs (optional)
+- `utilities/approachDelta.js` — approach delta computation helpers (used by optimizer)
+- `scripts/summarizeSeedResults.js` — compare seeded runs (optional)
 
 ---
 
@@ -261,7 +260,7 @@ Below is a step‑by‑step view of **exact data used**, **time windows**, and *
   - `data/<season>/<tournament>/pre_event/course_history_regression/summary_similar.csv`
   - `data/<season>/<tournament>/pre_event/course_history_regression/details_similar.csv`
   - `data/<season>/<tournament>/pre_event/course_history_regression/course_history_regression.json` (when templates enabled)
-  - `apps-scripts/modelOptemizer/utilities/courseHistoryRegression.js` (when templates enabled)
+  - `apps-scripts/modelOptimizer/utilities/courseHistoryRegression.js` (when templates enabled)
   - `apps-scripts/Golf_Algorithm_Library/utilities/courseHistoryRegression.js` (when templates enabled)
 
 #### Step 1 — Historical Metric Correlations
@@ -389,22 +388,20 @@ Below is a step‑by‑step view of **exact data used**, **time windows**, and *
   - Rolling mode defaults to last **4 events** (configurable)
   - Delta windows reflect **week‑to‑week** approach skill snapshots
 - **Utilities/Scripts:**
-  - `scripts/compute_approach_deltas.js` (delta generation)
-  - `core/optimizer.js` (rolling aggregation + alignment map)
+  - `core/optimizer.js` (delta auto-generation, rolling aggregation + alignment map)
+  - `utilities/approachDelta.js` (delta computation)
 
 **How deltas are created:**
 
-- **Script:** `scripts/compute_approach_deltas.js`
-- **Inputs (API‑first):**
-  - **Current:** API approach snapshot (current week)
-  - **Previous:** API approach snapshot from the **prior week’s YTD** snapshot
-  - Optional API field snapshot to filter deltas to the tournament field
-- **CSV fallback (pre‑tournament):** current + previous tournament `* - Approach Skill.csv` files when snapshots are missing.
+- **Generated inside the optimizer (Node-only):** `core/optimizer.js` will auto-generate a delta JSON in **pre-tournament mode** when no existing delta is found.
+- **Inputs (API-first):**
+  - **Current:** approach snapshot (usually the latest YTD snapshot)
+  - **Previous:** prior YTD archive snapshot
+  - Optional field snapshot to filter deltas to the tournament field
+- **CSV fallback:** if snapshots are missing, it can fall back to the most recent pair of `* - Approach Skill.csv` files.
 - **What it produces:**
   - JSON: `data/approach_deltas/approach_deltas_<tournament-slug>_YYYY_MM_DD.json`
-  - JSON includes `meta` (timestamps, field filter) and `rows` (per‑player delta metrics)
-- **Where the files go:**
-  - JSON → `apps-scripts/modelOptemizer/data/approach_deltas/`
+  - JSON includes `meta` (timestamps, sources) and `rows` (per-player delta metrics)
 
 **How delta scores are generated (inside optimizer):**
 
@@ -474,11 +471,10 @@ Below is a step‑by‑step view of **exact data used**, **time windows**, and *
 
 ### 3.3 Outputs (Pre‑Tournament)
 
-- `data/<season>/<tournament>/pre_event/optimizer_results.json`
-- `data/<season>/<tournament>/pre_event/optimizer_results.txt`
-- `data/<season>/<tournament>/pre_event/rankings.json`
-- `data/<season>/<tournament>/pre_event/rankings.csv`
-- `data/<season>/<tournament>/pre_event/rankings.txt`
+- `data/<season>/<tournament>/pre_event/{tournament-slug}_pre_event_results.json`
+- `data/<season>/<tournament>/pre_event/{tournament-slug}_pre_event_results.txt`
+- `data/<season>/<tournament>/pre_event/{tournament-slug}_pre_event_rankings.json`
+- `data/<season>/<tournament>/pre_event/{tournament-slug}_pre_event_rankings.csv`
 
 JSON includes:
 
@@ -505,9 +501,9 @@ JSON includes:
 If `--writeTemplates` is used:
 
 - Writes the blended pre‑event template into:
-  - `apps-scripts/modelOptemizer/utilities/weightTemplates.js`
+  - `apps-scripts/modelOptimizer/utilities/weightTemplates.js`
 - Writes **delta player scores** into:
-  - `apps-scripts/modelOptemizer/utilities/deltaPlayerScores.js`
+  - `apps-scripts/modelOptimizer/utilities/deltaPlayerScores.js`
 
 Dry‑run mode writes to:
 
@@ -787,7 +783,7 @@ Post‑tournament validation is being **ported to Node** so the optimizer can ru
 
 **Data directory convention (resolved):**
 
-- **Root:** `apps-scripts/modelOptemizer/data/`
+- **Root:** `apps-scripts/modelOptimizer/data/`
 - **Per‑tournament artifacts:** `data/<season>/<tournament>/...`
 - **Per‑tournament inputs (CSV fallback):** `data/<season>/<tournament>/inputs/`
 - **Pre‑tournament outputs:** `data/<season>/<tournament>/pre_event/` (rankings + run summary)
@@ -944,8 +940,8 @@ Post‑tournament validation is being **ported to Node** so the optimizer can ru
 
 ### 4.7 Post‑Tournament Outputs
 
-- `data/<season>/<tournament>/post_event/optimizer_results.json`
-- `data/<season>/<tournament>/post_event/optimizer_results.txt`
+- `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`
+- `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.txt`
 
 Includes:
 
@@ -956,7 +952,7 @@ Includes:
 
 **Node output depth (target behavior):**
 
-- **`data/<season>/<tournament>/post_event/optimizer_results.json`**
+- **`data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`**
   - **meta:** eventId, season, tournament name, run timestamp, CLI flags used
   - **apiSnapshots:** rounds/field/results snapshot timestamps + sources
   - **resultsCurrent:** normalized results for current season evaluation
@@ -977,7 +973,7 @@ Includes:
   - **writebacks:** whether templates/deltas were written (and where)
   - **recommendation:** suggested action + optimized weights
 
-- **`data/<season>/<tournament>/post_event/optimizer_results.txt`**
+- **`data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.txt`**
   - Human‑readable summary of baseline vs optimized
   - Top‑line metrics (Spearman/RMSE/Top‑N)
   - Short interpretation of K‑fold stability
@@ -1015,7 +1011,7 @@ If dry‑run, outputs are written under `data/<season>/<tournament>/<mode>/dryru
   - Current season only (completed tournaments for the target season).
 - **Sources:**
   - Node optimizer outputs (`data/<season>/<tournament>/pre_event/` and `data/<season>/<tournament>/post_event/`).
-  - Data cache/API (`apps-scripts/modelOptemizer/data/cache/`).
+  - Data cache/API (`apps-scripts/modelOptimizer/data/cache/`).
 - **Outputs (Node):**
   - `data/<season>/validation_outputs/validation_summary.csv`
   - `data/<season>/validation_outputs/validation_summary.json`
@@ -1030,7 +1026,7 @@ If dry‑run, outputs are written under `data/<season>/<tournament>/<mode>/dryru
   - Candidate templates from `utilities/weightTemplates.js` (event‑specific + fallback).
 - **Time window:** **Current season only** for event + similar + putting.
 - **Outputs (Node):**
-  - `step1_bestTemplate` block inside `data/<season>/<tournament>/post_event/optimizer_results.json`.
+  - `step1_bestTemplate` block inside `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`.
 
 #### Step 4.4 — Group Weight Tuning
 
@@ -1040,7 +1036,7 @@ If dry‑run, outputs are written under `data/<season>/<tournament>/<mode>/dryru
   - Baseline weights from Step 1c.3
 - **Time window:** Current season only.
 - **Outputs (Node):**
-  - `step2_groupTuning` block inside `data/<season>/<tournament>/post_event/optimizer_results.json`.
+  - `step2_groupTuning` block inside `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`.
 
 #### Step 4.5 — Weight Optimization
 
@@ -1051,7 +1047,7 @@ If dry‑run, outputs are written under `data/<season>/<tournament>/<mode>/dryru
   - Best group weights from Step 2
 - **Time window:** Current season only.
 - **Outputs (Node):**
-  - `step3_optimized` block inside `data/<season>/<tournament>/post_event/optimizer_results.json`.
+  - `step3_optimized` block inside `data/<season>/<tournament>/post_event/{tournament-slug}_post_event_results.json`.
 
 #### Step 4.6 Step 1 — Multi‑Year Validation (LOYO)
 

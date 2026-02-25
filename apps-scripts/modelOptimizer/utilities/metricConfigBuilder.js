@@ -25,16 +25,16 @@ const buildMetricGroupsFromConfig = ({ getCell, pastPerformanceEnabled, pastPerf
     app150fwGIR: cleanMetricValue(getCell(18, 7)),        // G18
     app150fwSG: cleanMetricValue(getCell(18, 8)),         // H18
     app150fwProx: cleanMetricValue(getCell(18, 9)),       // I18
-    app150roughGIR: cleanMetricValue(getCell(18, 7)),     // G18
-    app150roughSG: cleanMetricValue(getCell(18, 8)),      // H18
-    app150roughProx: cleanMetricValue(getCell(18, 9)),    // I18
+    app150roughGIR: cleanMetricValue(getCell(18, 10)),    // J18
+    app150roughSG: cleanMetricValue(getCell(18, 11)),     // K18
+    app150roughProx: cleanMetricValue(getCell(18, 12)),   // L18
 
     app200GIR: cleanMetricValue(getCell(19, 7)),          // G19
     app200SG: cleanMetricValue(getCell(19, 8)),           // H19
     app200Prox: cleanMetricValue(getCell(19, 9)),         // I19
-    app200roughGIR: cleanMetricValue(getCell(19, 7)),     // G19
-    app200roughSG: cleanMetricValue(getCell(19, 8)),      // H19
-    app200roughProx: cleanMetricValue(getCell(19, 9)),    // I19
+    app200roughGIR: cleanMetricValue(getCell(19, 10)),    // J19
+    app200roughSG: cleanMetricValue(getCell(19, 11)),     // K19
+    app200roughProx: cleanMetricValue(getCell(19, 12)),   // L19
 
     app200plusGIR: cleanMetricValue(getCell(20, 7)),      // G20
     app200plusSG: cleanMetricValue(getCell(20, 8)),       // H20
@@ -48,10 +48,10 @@ const buildMetricGroupsFromConfig = ({ getCell, pastPerformanceEnabled, pastPerf
     birdieChances: cleanMetricValue(getCell(23, 9)),      // I23
     scoring_app100SG: cleanMetricValue(getCell(17, 16)),  // P17
     scoring_app150fwSG: cleanMetricValue(getCell(18, 16)), // P18
-    scoring_app150roughSG: cleanMetricValue(getCell(18, 16)), // P18
+    scoring_app150roughSG: cleanMetricValue(getCell(23, 12)), // L23
     scoring_app200SG: cleanMetricValue(getCell(19, 16)),  // P19
     scoring_app200plusSG: cleanMetricValue(getCell(20, 16)), // P20
-    scoring_app150roughSG_alt: cleanMetricValue(getCell(20, 16)), // P20
+    scoring_app150roughSG_alt: cleanMetricValue(getCell(23, 13)), // M23
 
     scrambling: cleanMetricValue(getCell(24, 7)),         // G24
     greatShots: cleanMetricValue(getCell(24, 8)),         // H24

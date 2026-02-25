@@ -9,36 +9,72 @@
 
 | Severity | Count |
 |----------|-------|
-| 🔴 Critical (runtime crash) | 2 |
-| 🟠 High (incorrect behavior / broken pass-through) | 4 |
-| 🟡 Medium (maintenance / portability risk) | 5 |
-| 🔵 Low (style / consistency) | 4 |
+| 🔴 Critical (runtime crash) | 0 |
+| 🟠 High (incorrect behavior / broken pass-through) | 0 |
+| 🟡 Medium (maintenance / portability risk) | 0 |
+| 🔵 Low (style / consistency) | 2 |
+
+---
+
+## Priority Order (tracking)
+
+Use this checklist to track what to fix first as we work through the audit.
+
+### P0 — Must-fix (hard crash / blocks runs)
+
+- [x] **#1** `scripts/generate_delta_player_scores.js` — remove `gasTarget`; generate Node-only delta scores file
+- [x] **#2** `scripts/parity_modelcore.js` — fix import path for `metricConfigBuilder` (MODULE_NOT_FOUND)
+
+### P1 — Correctness (quietly wrong behavior / destructive side effects)
+
+- [x] **#5** `utilities/metricConfigBuilder.js` — rough-approach weights mapped to dedicated cells
+- [x] **#7** `scripts/analyze_early_season_ramp.js` — unified on shared historical-row extractor
+- [x] **#6** `scripts/summarizeSeedResults.js` — moved out of `utilities/` (self-exec + deletes files)
+- [x] **#4** `utilities/collectRecords.js` — canonical same-folder import path
+
+### P2 — Portability + parity drift risk
+
+- [x] **#12** `utilities/deltaPlayerScores.js` — generator always emits and verifies `module.exports`
+- [x] **#8 / #15** `utilities/course_context.json` + `scripts/build_course_context.js` — removed machine-absolute `sourcePath`; treat as metadata only
+- [x] **#10** `utilities/logging.js` — added teardown/restore for overridden stdio streams
+- [x] **#9** `utilities/courseHistoryRegression.js` — regression map no longer stale; loads JSON artifact when available
+
+### P3 — Polish / developer experience
+
+- [ ] **#13** `scripts/analyze_course_history_impact.js` — remove/guard DEBUG logs
+- [x] **#14** `scripts/compare_parity_outputs.js` — remove hardcoded tournament defaults (require explicit paths)
+- [ ] **#16** `utilities/configParser.js` — blank cell fallback to `0` hides missing config
+
+### New files for review (not blocking)
+
+- [ ] `utilities/top20TemplateBlend.js` — review when/if we wire it into optimizer flow
+- [ ] `data/<season>/<tournament-slug>/pre_event/analysis/top20_template_blend_example.json` — example artifact generated during analysis runs; keep in sync with utility if used
 
 ---
 
 ## New Files For Review (2026-02-25)
 
-- `utilities/rankingFormattingSchema.js` — captures Player Ranking Model sheet schema + formatting metadata.
-- `scripts/generate_ranking_formatting_output.js` — emits JSON/CSV schema files for Google Sheets macros.
 - `utilities/top20TemplateBlend.js` — standalone top-20 correlation/logistic blending utility (not wired).
-- `output/top20_template_blend_example.json` — example output shape for the blending utility.
+- `data/<season>/<tournament-slug>/pre_event/analysis/top20_template_blend_example.json` — example output shape for the blending utility (generated during analysis runs).
 
 ---
 
 ## 🔴 Critical Issues (will crash at runtime)
 
 ### 1. `scripts/generate_delta_player_scores.js` — Undefined variable `gasTarget`
-**Line:** 130  
-**Code:** `const targets = [nodeTarget, gasTarget];`  
-**Problem:** `gasTarget` is never declared anywhere in the file. `nodeTarget` is defined on line 129, but no corresponding `gasTarget` definition exists. This throws a `ReferenceError` at runtime before any writes occur.  
-**Expected fix:** Define `gasTarget` as the path to `apps-scripts/Golf_Algorithm_Library/utilities/deltaPlayerScores.js`, mirroring the pattern used in `analyze_course_history_impact.js` (line 677):
-```js
-const gasTarget = path.resolve(ROOT_DIR, '..', 'Golf_Algorithm_Library', 'utilities', 'deltaPlayerScores.js');
-```
+
+**Status:** ✅ Resolved (Node-only output)
+
+**Problem:** The script referenced `gasTarget` in `targets` but never declared it, causing a `ReferenceError` at runtime.
+
+**Fix:** Remove the GAS target and write only the Node target (`apps-scripts/modelOptimizer/utilities/deltaPlayerScores.js`).
 
 ---
 
 ### 2. `scripts/parity_modelcore.js` — Broken import path for `metricConfigBuilder`
+
+**Status:** ✅ Resolved
+
 **Line:** 7  
 **Code:** `const { buildMetricGroupsFromConfig } = require('../core/metricConfigBuilder');`  
 **Problem:** `metricConfigBuilder.js` lives in `utilities/`, not `core/`. There is no `metricConfigBuilder.js` in `core/`. This causes a `MODULE_NOT_FOUND` error at startup. The correct path is used in `core/optimizer.js` (line 23): `require('../utilities/metricConfigBuilder')`.  
@@ -61,6 +97,8 @@ This script was removed from the repo (approach delta generation now lives in th
 
 ### 4. `utilities/collectRecords.js` — Incorrect relative import path
 
+**Status:** ✅ Resolved
+
 **Line:** 4  
 **Code:** `const { loadCsv } = require('../utilities/csvLoader');`  
 **Problem:** `collectRecords.js` is itself in `utilities/`. The `'../utilities/csvLoader'` path resolves to `modelOptimizer/utilities/csvLoader` only if Node resolves the parent correctly — in practice it walks up one level then back into `utilities/`, which happens to be correct on most Node.js setups. However, the canonical and correct relative path should be `'./csvLoader'` since both files are in the same directory. The current path is fragile if the file is ever relocated and creates confusion about module structure.  
@@ -72,19 +110,21 @@ const { loadCsv } = require('./csvLoader');
 ---
 
 ### 5. `utilities/metricConfigBuilder.js` — Duplicate cell references for rough approach metrics
+
+**Status:** ✅ Resolved
 **Lines:** 28–38  
 **Problem:** Six rough-approach metric weights incorrectly read from the same spreadsheet cells as their fairway counterparts:
 
 | Metric key | Cell read | Should read |
 |---|---|---|
-| `app150roughGIR` | G18 (same as `app150fwGIR`) | separate cell |
-| `app150roughSG` | H18 (same as `app150fwSG`) | separate cell |
-| `app150roughProx` | I18 (same as `app150fwProx`) | separate cell |
-| `app200roughGIR` | G19 (same as `app200GIR`) | separate cell |
-| `app200roughSG` | H19 (same as `app200SG`) | separate cell |
-| `app200roughProx` | I19 (same as `app200Prox`) | separate cell |
+| `app150roughGIR` | G18 (same as `app150fwGIR`) | J18 |
+| `app150roughSG` | H18 (same as `app150fwSG`) | K18 |
+| `app150roughProx` | I18 (same as `app150fwProx`) | L18 |
+| `app200roughGIR` | G19 (same as `app200GIR`) | J19 |
+| `app200roughSG` | H19 (same as `app200SG`) | K19 |
+| `app200roughProx` | I19 (same as `app200Prox`) | L19 |
 
-Additionally, `scoring_app150roughSG` (line 50) reads P18 — the same cell as `scoring_app150fwSG` — and `scoring_app150roughSG_alt` (line 54) reads P20, the same as `scoring_app200plusSG`.
+Additionally, `scoring_app150roughSG` now reads L23 and `scoring_app150roughSG_alt` reads M23 (independent from fairway scoring weights).
 
 **Impact:** Rough and fairway weights for 150–200 yard approach shots are always identical, preventing independent tuning of these two groups. Any optimizer run that discovers optimal weights for rough vs. fairway at this distance range cannot be encoded back into the config.  
 **Resolution needed:** Confirm correct cell assignments with the configuration sheet layout and update cell references for rough metrics to their dedicated rows/columns.
@@ -92,80 +132,69 @@ Additionally, `scoring_app150roughSG` (line 50) reads P18 — the same cell as `
 ---
 
 ### 6. `utilities/summarizeSeedResults.js` — Script behavior in `utilities/` folder
+
+**Status:** ✅ Resolved
+
 **Problem:** This file is a fully self-executing CLI script (parses `process.argv`, calls `process.exit`, reads and **deletes** files). It belongs in `scripts/` alongside other runnable scripts, but lives in `utilities/`. Any tool or loader that auto-imports all files from `utilities/` as modules (e.g., a future module bundler or test runner) would execute destructive file deletions upon import.
 
 **Impact:** Misclassified file location; side-effect risk on import.  
-**Resolution:** Move to `scripts/` and update any references in documentation or `package.json` scripts.
+**Resolution:** Moved to `scripts/summarizeSeedResults.js` and updated docs.
 
 ---
 
 ### 7. `scripts/analyze_early_season_ramp.js` — Local reimplementation of shared utility diverges from `utilities/extractHistoricalRows.js`
+
+**Status:** ✅ Resolved
 **Lines:** 132–182  
 **Problem:** The script contains its own local copy of `extractHistoricalRowsFromSnapshotPayload` that handles the `scores` array structure of a single-event payload differently from the shared version in `utilities/extractHistoricalRows.js`. Key differences:
 - The local version checks `payload.scores` first (single-event path) and expands round sub-objects inline.
 - The shared version's top-level branch is a flat pass-through (`if (Array.isArray(payload)) return payload`); it handles the multi-event nested object structure differently.
 
 When `getDataGolfHistoricalRounds` returns a single-event-shaped JSON (with a top-level `scores` array), the two implementations return different row shapes, which could produce divergent metric or ranking results.  
-**Resolution:** Import from `utilities/extractHistoricalRows.js` and extend the shared function if needed, rather than maintaining a local copy.
+**Resolution:** `analyze_early_season_ramp.js` now imports the shared extractor. The shared extractor was extended to correctly expand single-event payloads with top-level `payload.scores`.
 
 ---
 
 ## 🟡 Medium Issues (portability / maintenance risk)
 
 ### 8. `utilities/course_context.json` — Hardcoded machine-specific absolute paths in `sourcePath`
+**Status:** ✅ Resolved (paths stripped; Node runs are API-first)
+
 **Problem:** Every event entry contains a `sourcePath` field with an absolute path anchored to `/workspaces/GoogleAppScripts/...` — the original development codespace. Example (note: `modelOptemizer` is the misspelled legacy directory name as it appears in the actual JSON):
 ```json
 "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/..."
 ```
 These paths will be wrong on any other machine, container, or CI runner. Code that uses `sourcePath` to re-read configuration data will silently fail or error.
 
-**Resolution:** Either strip `sourcePath` from the JSON (it is metadata only), replace it with a repo-relative path, or document that the file must be regenerated locally via `build_course_context.js` before use.
+**Resolution:** Stripped all machine-absolute paths from `utilities/course_context.json` (set `sourcePath: null` where present) and made `sourceDir` repo-relative. The optimizer treats `sourcePath` as metadata unless explicitly enabled.
 
 ---
 
 ### 9. `utilities/courseHistoryRegression.js` — Mostly zeroed regression data
-**Problem:** The current regression output still has nearly all entries with `slope: 0` and `pValue: ~1`, indicating no statistically significant course-history effect for most courses. Only course `"928"` now has a non-zero slope (p-value is still high).
+**Status:** ✅ Resolved (staleness fixed; data still often near-zero)
 
-**Impact:** Past-performance weighting via `getCourseHistoryRegression()` remains effectively inactive for most events. Any optimizer run that relies on course-history regression for template writeback will apply near-zero adjustments for the majority of courses.
+**Problem:** The committed `utilities/courseHistoryRegression.js` map was effectively stale and could drift from the per-run regression artifacts written by `scripts/analyze_course_history_impact.js` (for example, the Genesis regression JSON includes a strong negative slope for course `"500"`, but the embedded utility map did not).
 
-**Resolution:** Re-run `scripts/analyze_course_history_impact.js` with adequate historical data and confirm whether meaningful non-zero slopes emerge. If most courses remain zeroed, document that course-history weighting is largely inactive by design.
+**Impact:** When the embedded map is stale, model runs can use incorrect past-performance weighting even if up-to-date regression artifacts exist on disk.
+
+**Resolution:** The regression utility now supports loading an on-disk `course_history_regression.json` via `COURSE_HISTORY_REGRESSION_JSON` or `PRE_TOURNAMENT_OUTPUT_DIR`, with the embedded map as a fallback. This removes staleness and ensures the optimizer/model can use the most recent regression artifacts when present.
 
 ---
 
 ### 10. `utilities/logging.js` — No cleanup / restore for overridden stdio streams
+**Status:** ✅ Resolved
 **Lines:** 17–26  
-**Problem:** `setupLogging` replaces `process.stdout.write` and `process.stderr.write` permanently for the lifetime of the process, with no teardown or restore callback. If the log file stream (`logStream`) encounters a write error, the original stdio streams are gone. There is also no way to call `logStream.end()` on clean shutdown, which may truncate the log file when the process exits.
+**Problem:** `setupLogging` replaced `process.stdout.write` and `process.stderr.write` with no restore path. This can leak overridden stdio into later phases of a long-running process (or subsequent runs in the same Node process), and makes failure-handling more brittle.
 
-**Resolution:** Expose a `teardown()` or `restoreLogging()` function, or use the `'exit'` process event to flush and close the stream.
-
----
-
-### 11. `utilities/weightTemplates.js` vs `Golf_Algorithm_Library/utilities/templateLoader.js` — Template set mismatch
-**Problem:** The two files are supposed to stay in sync (per `MODEL_VALIDATION_STATUS.md`), but their template sets diverge:
-
-| Template | `weightTemplates.js` | `templateLoader.js` |
-|---|:---:|:---:|
-| POWER | ✅ | ✅ |
-| TECHNICAL | ✅ | ✅ |
-| BALANCED | ✅ | ✅ |
-| BALANCED_PGA_WEST | ❌ missing | ✅ |
-| PEBBLE_BEACH_GOLF_LINKS | ✅ | ✅ |
-| WAIALAE_COUNTRY_CLUB | ✅ | ✅ |
-| THE_RIVIERA_COUNTRY_CLUB | ✅ | ✅ |
-| PGA_NATIONAL_RESORT_CHAMPION_COURSE | ✅ | ❌ missing |
-| ROYAL_PORTRUSH | ✅ | ❌ missing |
-| TPC_LOUISIANA | ✅ | ❌ missing |
-
-`BALANCED_PGA_WEST` is only in `templateLoader.js`; three course-specific templates are only in `weightTemplates.js`. Any GAS writeback using templates not in `templateLoader.js` will silently fall back to a default, and lookups for `BALANCED_PGA_WEST` from the Node side will return `undefined`.
-
-**Resolution:** Synchronize both files. Per `MODEL_VALIDATION_STATUS.md`, `results.js`/`templateLoader.js` is the source of truth, so migrate the three missing templates to `templateLoader.js` and add `BALANCED_PGA_WEST` to `weightTemplates.js`.
+**Resolution:** `setupLogging()` now returns a handle with `teardown()` that restores the original stdio writers, and `utilities/logging.js` also exposes `teardownLogging()` for global cleanup. The optimizer wires an exit hook so teardown happens even on early exits.
 
 ---
 
 ### 12. `utilities/deltaPlayerScores.js` — Exports only `DELTA_PLAYER_SCORES` data; no loader function
+**Status:** ✅ Resolved
 **Problem:** The `utilities/deltaPlayerScores.js` Node file includes `module.exports` with `DELTA_PLAYER_SCORES`, `getDeltaPlayerScoresForEvent`, and `getDeltaPlayerScores`. However, `parity_modelcore.js` imports only `getDeltaPlayerScoresForEvent` (line 9), which works. But `generate_delta_player_scores.js` generates this file with the full function set only when `includeModuleExports = true`, which is gated on whether `filePath === nodeTarget`. If the target logic or `DRY_RUN` mode produces the wrong suffix, the generated file may lack `module.exports`, breaking all downstream consumers.
 
-**Resolution:** Add an integration test or assertion that the generated Node file always includes `module.exports`. Also ensure `DRY_RUN` mode produces a `.node.js` preview file separate from the live target.
+**Resolution:** The generator now always emits `module.exports` for the Node-only workflow and (by default) verifies the generated file can be `require()`’d and exposes the expected exports. `--no-verify` can disable the verification step if needed.
 
 ---
 
@@ -181,23 +210,20 @@ These paths will be wrong on any other machine, container, or CI runner. Code th
 ---
 
 ### 14. `scripts/compare_parity_outputs.js` — Hardcoded tournament-specific default paths
-**Lines:** 5–6  
-**Code:**
-```js
-const DEFAULT_NODE_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'parity_modelcore.json');
-const DEFAULT_GAS_PATH = path.resolve(__dirname, '..', 'output', 'genesis', 'Genesis Invitational (2026) - Player Ranking Model.csv');
-```
-**Problem:** Defaults are hardcoded to a specific 2026 Genesis Invitational output. The script requires explicit `--node` and `--gas` flags for any other event, but will error with a confusing path-not-found message if run without flags for any other tournament.
+**Status:** ✅ Resolved (defaults removed; explicit paths required)
 
-**Resolution:** Use environment variables or a generic default (e.g., requiring the flags explicitly), and document the expected usage in the script's help output.
+**Problem (previous behavior):** Defaults were hardcoded to a specific 2026 Genesis Invitational output under the legacy `output/` folder.
+
+**Resolution (current behavior):** The script now requires explicit `--node` and `--gas` paths (no tournament-specific defaults). This prevents accidental comparisons against stale or irrelevant artifacts.
 
 ---
 
 ### 15. `scripts/build_course_context.js` — Output `sourcePath` captures machine-absolute paths
+**Status:** ✅ Resolved (defaults to `sourcePath: null`; opt-in flag available)
 **Lines:** 62–74  
 **Problem:** When building `course_context.json`, the `sourcePath` field is written as the absolute filesystem path of the config CSV at build time. This creates a portability problem (see Issue #8 above). The `build_course_context.js` script itself is correct in logic, but should normalize the path to be repo-relative or strip it entirely.
 
-**Resolution:** Convert `sourcePath` to a repo-relative path before writing:
+**Resolution:** Default `sourcePath` to `null` for portability; optionally include a repo-relative `sourcePath` via `--includeSourcePath` or `INCLUDE_COURSE_CONTEXT_SOURCEPATH=1`.
 ```js
 const repoRoot = path.resolve(__dirname, '..', '..', '..');
 entry.sourcePath = path.relative(repoRoot, filePath);
@@ -222,21 +248,20 @@ entry.sourcePath = path.relative(repoRoot, filePath);
 |---|---|---|
 | `approachDelta.js` | ✅ OK | Well-structured; exports `loadApproachCsv`, `computeApproachDeltas`, `METRIC_DEFS` |
 | `buildRecentYears.js` | ✅ OK | Simple utility; no issues |
-| `collectRecords.js` | 🟠 See #4 | Wrong relative import path (`../utilities/csvLoader` → `./csvLoader`) |
+| `collectRecords.js` | ✅ OK | Canonical same-folder import path (`./csvLoader`) |
 | `configParser.js` | 🔵 See #16 | `cleanNumber` fallback silently returns `0` |
-| `courseHistoryRegression.js` | 🟡 See #9 | Nearly all entries are placeholder zeroes; data likely stale |
-| `course_context.json` | 🟡 See #8 | Hardcoded machine-specific absolute `sourcePath` values |
+| `courseHistoryRegression.js` | ✅ OK | Loads regression JSON artifact when configured; embedded map remains fallback |
+| `course_context.json` | ✅ OK | `sourcePath` stripped (metadata-only); API-first runs |
 | `csvLoader.js` | ✅ OK | Robust CSV loader with header auto-detection |
 | `dataGolfClient.js` | ✅ OK | Retry + cache logic is clean; exports all needed API functions |
 | `dataPrep.js` | ✅ OK | Imports `cleanMetricValue` from `core/modelCore` correctly |
-| `deltaPlayerScores.js` | 🟡 See #12 | Generated file; correctness depends on generator script |
+| `deltaPlayerScores.js` | ✅ OK | Generated file; generator always emits + verifies expected exports |
 | `extractHistoricalRows.js` | ✅ OK | Handles most payload shapes; used as shared utility |
-| `logging.js` | 🟡 See #10 | No stdio restore or stream cleanup on process exit |
-| `metricConfigBuilder.js` | 🟠 See #5 | Duplicate cell refs for rough approach metrics; imports from `core/modelCore` correctly |
-| `summarizeSeedResults.js` | 🟠 See #6 | CLI script placed in `utilities/`; performs file deletions |
+| `logging.js` | ✅ OK | Restores overridden stdio via `teardown()` / `teardownLogging()`; best-effort exit hook |
+| `metricConfigBuilder.js` | ✅ OK | Rough approach weights mapped to dedicated cells; imports from `core/modelCore` correctly |
 | `tournamentConfig.js` | ✅ OK | Stub/utility; clean pass-through helpers |
-| `weightTemplates.js` | 🟡 See #11 | Template set out-of-sync with `templateLoader.js` |
-| `rankingFormattingSchema.js` | 🆕 Review | Formatting schema for Player Ranking Model sheet |
+| `weightTemplates.js` | ✅ OK | Template definitions used by Node optimizer (GAS parity no longer tracked) |
+| `rankingFormattingSchema.js` | ✅ OK | Formatting schema for Player Ranking Model sheet |
 | `top20TemplateBlend.js` | 🆕 Review | Top-20 metric correlation/logistic blending utility (not wired) |
 
 ### `scripts/`
@@ -244,14 +269,15 @@ entry.sourcePath = path.relative(repoRoot, filePath);
 | File | Status | Notes |
 |---|---|---|
 | `analyze_course_history_impact.js` | 🔵 See #13 | Debug `console.log` left in production path |
-| `analyze_early_season_ramp.js` | 🟠 See #7 | Local reimplementation of `extractHistoricalRowsFromSnapshotPayload` diverges from shared utility |
-| `build_course_context.js` | 🔵 See #15 | Writes machine-absolute `sourcePath` into output JSON |
-| `compare_parity_outputs.js` | 🔵 See #14 | Hardcoded default paths for a specific 2026 tournament |
+| `analyze_early_season_ramp.js` | ✅ OK | Uses shared `extractHistoricalRowsFromSnapshotPayload` (Issue #7 resolved) |
+| `build_course_context.js` | ✅ OK | Defaults `sourcePath` to null; optional repo-relative output |
+| `compare_parity_outputs.js` | ✅ OK | Requires explicit `--node` and `--gas` paths; defaults removed |
+| `summarizeSeedResults.js` | ✅ OK | CLI seed summary tool; moved out of `utilities/` (Issue #6 resolved) |
 | `compute_approach_deltas.js` | ✅ Removed | Script removed; approach deltas now generated in optimizer flow |
-| `generate_delta_player_scores.js` | 🔴 See #1 | `gasTarget` is undefined; ReferenceError at runtime |
-| `parity_modelcore.js` | 🔴 See #2 | Imports `metricConfigBuilder` from `core/` (wrong path; file is in `utilities/`) |
+| `generate_delta_player_scores.js` | ✅ OK | Node-only output; removed `gasTarget` target (Issue #1 resolved) |
+| `parity_modelcore.js` | ✅ OK | Fixed import path for `metricConfigBuilder` (Issue #2 resolved) |
 | `update_readme_last_updated.js` | ✅ OK | Simple date-stamp utility; no issues |
-| `generate_ranking_formatting_output.js` | 🆕 Review | Generates JSON/CSV formatting schema outputs |
+| `generate_ranking_formatting_output.js` | ✅ OK | Generates JSON/CSV formatting schema outputs |
 
 ---
 
@@ -267,6 +293,5 @@ entry.sourcePath = path.relative(repoRoot, filePath);
 ## Unanswered Questions / Follow-ups
 
 1. **MetricConfigBuilder rough-cell mapping**: confirm the correct rough approach cell locations in the Configuration Sheet so we can fix the duplicate references in `utilities/metricConfigBuilder.js`.
-2. **Template sync direction**: confirm whether `templateLoader.js` remains the sole source of truth or whether we should consolidate templates into a shared module (current mismatch persists).
-3. **Course context `sourcePath` policy**: decide whether to strip, make repo-relative, or regenerate on demand.
-4. **Course-history regression expectations**: decide whether near-zero slopes are acceptable or if the regression should be tuned to yield signal for more courses.
+2. **Course context `sourcePath` policy**: decide whether to strip, make repo-relative, or regenerate on demand.
+3. **Course-history regression expectations**: decide whether near-zero slopes are acceptable or if the regression should be tuned to yield signal for more courses.

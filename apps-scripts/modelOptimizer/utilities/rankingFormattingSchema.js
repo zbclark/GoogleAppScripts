@@ -121,11 +121,17 @@ const buildColumns = () => {
 const RANKING_FORMATTING_SCHEMA = {
   sheetName: 'Player Ranking Model',
   headerRow: 5,
-  dataStartRow: 6,
+  // Row immediately below headers contains a synthetic MEDIAN row in the exported rankings CSV.
+  medianRow: 6,
+  // Actual player data begins after the MEDIAN row.
+  dataStartRow: 7,
+  // When applying conditional formatting or computing distribution stats (e.g. z-scores),
+  // exclude the MEDIAN row and start at the first player row.
+  conditionalFormattingStartRow: 7,
   notesColumn: 1,
   notesColumnHeader: 'Expected Peformance Notes',
   tableStartColumn: 2,
-  notesColumnWidth: 250,
+  notesColumnWidth: 350,
   columnDefaults: {
     width: 110,
     format: DEFAULT_FORMAT

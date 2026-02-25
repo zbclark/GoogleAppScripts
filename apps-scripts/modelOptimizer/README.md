@@ -29,15 +29,17 @@ OPT_SEED=[seed] node core/optimizer.js --event [event id] --season [season] --to
 
 ```bash
 # Run a large dry-run in the background and write logs to a file.
-OPT_TESTS=[tests] OPT_SEED=[seed] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun > output/[tournament]_seed-[seed]_run.log 2>&1 &
+OPT_TESTS=[tests] OPT_SEED=[seed] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --post --outputDir data/[season]/[tournament-slug]/post_event/seed_runs --dryRun > data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log 2>&1 &
 ```
 
 ### Multiple background seeds
 
 ```bash
 # Launch multiple background seeds in parallel.
-for seed in [seed1] [seed2] [seed3]; do OPT_TESTS=[tests] OPT_SEED=$seed node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun > output/[tournament]_seed-${seed}_run.log 2>&1 & done
+for seed in [seed1] [seed2] [seed3]; do OPT_TESTS=[tests] OPT_SEED=$seed node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --post --outputDir data/[season]/[tournament-slug]/post_event/seed_runs --dryRun > data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-${seed}_run.log 2>&1 & done
 ```
+
+> Logs should be written under `data/<season>/<tournament-slug>/post_event/seed_runs/` (the legacy `output/` folder is deprecated).
 
 ## Tmux guide (long‑running runs)
 
@@ -46,10 +48,10 @@ Use tmux to keep runs alive after disconnecting, monitor progress, and manage mu
 ### Start a session and run jobs
 
 - **Create a new session:**
-	- `tmux new -s [session_name]` — start a new tmux session for long-running jobs.
+  - `tmux new -s [session_name]` — start a new tmux session for long-running jobs.
 - **Run the 5‑seed, 10,000‑test batch:**
-	- `cd apps-scripts/modelOptimizer`
-	- `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done` — sequentially run five seeds in one session.
+  - `cd apps-scripts/modelOptimizer`
+  - `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done` — sequentially run five seeds in one session.
 
 ### Detach / attach / list
 
@@ -106,12 +108,12 @@ To close a single pane:
 
 ### Check progress & logs
 
-- **Follow a seed log (recommended):** `tail -F output/[tournament]_seed-[seed]_run.log`
-- **List output files:** `ls -lh output/ | grep [tournament]`
+- **Follow a seed log (recommended):** `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
+- **List output files:** `ls -lh data/[season]/[tournament-slug]/post_event/seed_runs/`
 
 Example (generic):
 
-- `tail -F output/[tournament]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
 
 ### 5‑pane log monitor (a–e)
 
@@ -119,27 +121,27 @@ If you want a tiled view for all five seeds, add two panes and retile:
 
 - **Add panes + tile:** `Ctrl+b` then `%` (twice), then `Ctrl+b` then `Space` until **tiled**
 - **Start tails in each pane (use `-F` so it follows when files appear):**
-	- `tail -F output/[tournament]_seed-[seed]_run.log`
-	- `tail -F output/[tournament]_seed-[seed]_run.log`
-	- `tail -F output/[tournament]_seed-[seed]_run.log`
-	- `tail -F output/[tournament]_seed-[seed]_run.log`
-	- `tail -F output/[tournament]_seed-[seed]_run.log`
+  - `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
+  - `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
+  - `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
+  - `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
+  - `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
 
 Example (generic):
 
-- `tail -F output/[tournament]_seed-[seed]_run.log`
-- `tail -F output/[tournament]_seed-[seed]_run.log`
-- `tail -F output/[tournament]_seed-[seed]_run.log`
-- `tail -F output/[tournament]_seed-[seed]_run.log`
-- `tail -F output/[tournament]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
 
 Optional: pre‑create the log files so `tail` never exits.
 
-- `touch output/[tournament]_seed-[seed]_run.log`
+- `touch data/[season]/[tournament-slug]/post_event/seed_runs/[tournament]_seed-[seed]_run.log`
 
 Example (generic):
 
-- `touch output/[tournament]_seed-[seed]_run.log`
+- `touch data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log`
 
 > Note: seeds run **sequentially**, so logs for b–e appear after earlier seeds finish.
 
@@ -147,7 +149,7 @@ Example (generic):
 
 ```bash
 # Compare all seed results and print a summary.
-node core/summarizeSeedResults.js --tournament "[tournament name]"
+node scripts/summarizeSeedResults.js --tournament "[tournament name]"
 ```
 
 ## End-to-end workflow (seed runs → monitor → compare → dry-run → writeback)
@@ -157,19 +159,19 @@ node core/summarizeSeedResults.js --tournament "[tournament name]"
 - `cd apps-scripts/modelOptimizer`
 - `for seed in a b c d e; do LOGGING_ENABLED=1 OPT_TESTS=10000 OPT_SEED=$seed node core/optimizer.js --event 7 --season 2026 --name "Genesis Invitational" --post --outputDir data/2026/genesis-invitational/post_event/seed_runs > data/2026/genesis-invitational/post_event/seed_runs/genesis_seed-${seed}_LOEO_run.log 2>&1; done`
 
-2) Monitor logs (recommended):
+1) Monitor logs (recommended):
 
-- `tail -F output/[tournament]_seed-[seed]_run.log` — follow live output as each seed runs.
+- `tail -F data/[season]/[tournament-slug]/post_event/seed_runs/[tournament-slug]_seed-[seed]_run.log` — follow live output as each seed runs.
 
-3) Summarize and compare seed results:
+1) Summarize and compare seed results:
 
-- `node core/summarizeSeedResults.js --tournament "[tournament name]"` — compare seeds and pick the best.
+- `node scripts/summarizeSeedResults.js --tournament "[tournament name]"` — compare seeds and pick the best.
 
-4) Dry-run the winning seed (same seed + same tests):
+1) Dry-run the winning seed (same seed + same tests):
 
 - `OPT_TESTS=[tests] OPT_SEED=[winning-seed] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --dryRun --writeTemplates` — generate dry-run template outputs.
 
-5) Write back (only after verifying dry-run outputs):
+1) Write back (only after verifying dry-run outputs):
 
 - `OPT_TESTS=[tests] OPT_SEED=[winning-seed] node core/optimizer.js --event [event id] --season [season] --tournament "[tournament name]" --writeTemplates` — write the templates to the loaders.
 
@@ -193,7 +195,7 @@ Optional (standard templates):
 - `--template <NAME>`: Restrict to a specific template (e.g., `POWER`, `BALANCED`, `TECHNICAL`, or event‑id template).
 - `--tests <N>`: Override number of optimization tests (same effect as `OPT_TESTS`).
 - `--log` / `--verbose`: Enable console logging (default is quiet).
-- `--dir <name>`: Use `data/<name>` and `output/<name>` (folders are created if missing). Preferred for subfolder runs (e.g., `--dir pebble_beach`).
+- `--dir <name>`: Legacy helper to run in a custom `data/<name>` root. (The old `output/<name>` pairing is deprecated.)
 - `--dataDir <path>`: Override input data directory (advanced usage).
 - `--outputDir <path>`: Override output directory (advanced usage).
 - `--writeTemplates`: Writes optimized template back to loaders (see “Paths” below). Default is **dry‑run**.
@@ -227,73 +229,57 @@ Files are resolved via the tournament name + season (fallbacks included):
 
 ### Output paths
 
-All outputs are written to:
+Outputs are written under the per-tournament data directory:
 
-`apps-scripts/modelOptimizer/output/`
+`apps-scripts/modelOptimizer/data/<season>/<tournament>/(pre_event|post_event)/`
+
+> Note: the legacy `apps-scripts/modelOptimizer/output/` folder should not be used.
 
 **Full optimization run (current results exist):**
 
-- `optimizer_<tournament>_post_tournament_results.json`
-- `optimizer_<tournament>_post_tournament_results.txt`
+- `<tournament-slug>_post_event_results.json`
+- `<tournament-slug>_post_event_results.txt`
 
 **Seeded run (reproducible):**
 
-- `optimizer_<tournament>_seed-<OPT_SEED>_post_tournament_results.json`
-- `optimizer_<tournament>_seed-<OPT_SEED>_post_tournament_results.txt`
+- `<tournament-slug>_seed-<OPT_SEED>_post_event_results.json`
+- `<tournament-slug>_seed-<OPT_SEED>_post_event_results.txt`
 
 **Pre‑event mode (no results file):**
 
-- `optimizer_<tournament>_pre_event_results.json`
-- `optimizer_<tournament>_pre_event_results.txt`
+- `<tournament-slug>_pre_event_results.json`
+- `<tournament-slug>_pre_event_results.txt`
 
 **Dry‑run template previews (only when `--writeTemplates` is used in dry‑run mode):**
 
-- `output/dryrun_weightTemplates.js`
+- `data/<season>/<tournament>/<mode>/dryrun/dryrun_weightTemplates.js`
 
 **Dry‑run validation template previews (only when `--writeValidationTemplates` is used in dry‑run mode):**
 
-- `output/dryrun_POWER_weightTemplates.js`
-- `output/dryrun_BALANCED_weightTemplates.js`
-- `output/dryrun_TECHNICAL_weightTemplates.js`
+- `data/<season>/<tournament>/<mode>/dryrun/dryrun_POWER_weightTemplates.js`
+- `data/<season>/<tournament>/<mode>/dryrun/dryrun_BALANCED_weightTemplates.js`
+- `data/<season>/<tournament>/<mode>/dryrun/dryrun_TECHNICAL_weightTemplates.js`
 
 ## Weekly approach delta pipeline
 
-Use this to compute week‑over‑week deltas from consecutive **Approach Skill** CSVs (e.g., Pebble → Genesis). The output can be fed into validation/optimization experiments as additional features or stability checks.
+Approach deltas are now generated **inside `core/optimizer.js`** (Node-only flow) and written to:
 
-**Inputs:**
+- `data/approach_deltas/approach_deltas_<tournament-slug>_YYYY_MM_DD.json`
 
-- Previous week: `* - Approach Skill.csv`
-- Current week: `* - Approach Skill.csv`
+Auto-generation runs in **pre-tournament mode** when no delta JSON is available. It uses either:
 
-**Output:**
+- weekly approach snapshots from `data/approach_snapshot/` (preferred), or
+- the most recent pair of `* - Approach Skill.csv` files (fallback).
 
-- `output/approach_deltas.csv` (default)
-- Optional JSON file for programmatic use
+You can override the delta sources (advanced):
 
-**Run:**
-
-```bash
-node scripts/compute_approach_deltas.js --previous "data/AT&T - Pebble Beach (2026) - Approach Skill.csv" --current "data/Genesis Invitational (2026) - Approach Skill.csv" --out "output/approach_deltas_genesis_vs_pebble.csv" --outJson "output/approach_deltas_genesis_vs_pebble.json"
-```
-
-**Field filtering (optional):**
-
-- If a single `* - Tournament Field.csv` exists in `data/`, it is auto‑detected.
-- You can override with `--field "data/<Tournament> - Tournament Field.csv"`.
-- Each output row includes `tournament_field: true|false|null`.
-
-**Delta output details:**
-
-- **Raw deltas are emitted.** Lower‑is‑better metrics (e.g., `*_proximity_per_shot`, `*_poor_shot_count`) should be inverted downstream using the same normalization logic as other metrics.
-- **Low‑data filtering (Option C):** if `low_data_indicator = 1` for a bucket, deltas are only kept when `shot_count >= 20` for either week; otherwise delta values are set to `null` for that bucket.
-- **Volume‑weighted deltas:** for good/poor shot rates, weighted deltas are written using $\sqrt{n_{prev}+n_{curr}}$ as the volume weight.
-- **Good/Poor shot counts:** derived counts are computed as `shot_count × rate`, with deltas emitted (subject to low‑data filtering).
-- **JSON meta:** JSON output includes a `meta` block with generation details and guidance.
-- **Snapshot naming convention:** Approach Skill files are named for the *next* event because they reflect data available after the prior week completes. For post‑tournament analysis, use **before = prior snapshot (e.g., Pebble)** and **after = next snapshot (e.g., Genesis)** to reflect changes leading into the next event.
+- `--approachDeltaPrevious <path|snapshot:previous>`
+- `--approachDeltaCurrent <path|snapshot:current>`
+- `--approachDeltaIgnoreLag` (skip the “snapshots must be X days apart” guard)
 
 ### Pre‑tournament approach delta baseline (rolling)
 
-When no current results exist, the optimizer now builds a **rolling average** approach‑delta prior from the most recent `approach_deltas*.json` files found in `output/` or `data/`.
+When no current results exist, the optimizer builds a **rolling average** approach‑delta prior from the most recent `approach_deltas*.json` files found in `data/approach_deltas/`.
 
 - Default window: **last 4 files** (newest by `meta.generatedAt`, falling back to file mtime).
 - Filtered to the current tournament field.
