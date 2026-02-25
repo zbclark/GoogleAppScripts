@@ -43,12 +43,20 @@ Use this checklist to track what to fix first as we work through the audit.
 
 - [x] **#13** `scripts/analyze_course_history_impact.js` — remove/guard DEBUG logs
 - [x] **#14** `scripts/compare_parity_outputs.js` — remove hardcoded tournament defaults (require explicit paths)
-- [ ] **#16** `utilities/configParser.js` — blank cell fallback to `0` hides missing config
+- [x] **#16** `utilities/configParser.js` — blank cell fallback to `0` hides missing config
 
 ### New files for review (not blocking)
 
 - [ ] `utilities/top20TemplateBlend.js` — review when/if we wire it into optimizer flow
 - [ ] `data/<season>/<tournament-slug>/pre_event/analysis/top20_template_blend_example.json` — example artifact generated during analysis runs; keep in sync with utility if used
+
+---
+
+## Pending Review / Diagnostics
+
+- [ ] **Review optimizer pre_event results and rankings for some identified, but unconfirmed issues.**
+	- "I want to ensure that the data is being processed correctly because I am seeing some 0s in the calculated metrics in the rankings sheet."
+	- Add a review/diagnostics step to confirm whether those zeros are data gaps or a processing bug.
 
 ---
 
@@ -239,7 +247,12 @@ entry.sourcePath = path.relative(repoRoot, filePath);
 **Code:** `const cleanNumber = (value, fallback = 0) => { ... return Number.isFinite(parsed) ? parsed : fallback; }`  
 **Problem:** Unpopulated or blank cells in the configuration sheet return `0` silently. For weight fields (e.g., `pastPerformanceWeight`), a weight of `0` is valid and indistinguishable from an unset/missing cell. This makes debugging weight configuration errors harder.
 
-**Resolution:** Consider a distinct sentinel value (`null`) as the default fallback for weight cells and let callers decide how to handle missing values; or at minimum log a warning when a weight cell parses to `0`.
+**Status:** ✅ Resolved (warnings added; default behavior unchanged)
+
+**Resolution:** `cleanNumber` now supports env-gated warnings when a numeric cell is blank/invalid and the parser falls back to a default value.
+Enable with `CONFIG_PARSER_WARN_BLANKS=true`.
+
+**Note:** We intentionally did *not* change the default fallback behavior (still returns `0` by default) to avoid changing model outputs unexpectedly.
 
 ---
 
@@ -252,7 +265,7 @@ entry.sourcePath = path.relative(repoRoot, filePath);
 | `approachDelta.js` | ✅ OK | Well-structured; exports `loadApproachCsv`, `computeApproachDeltas`, `METRIC_DEFS` |
 | `buildRecentYears.js` | ✅ OK | Simple utility; no issues |
 | `collectRecords.js` | ✅ OK | Canonical same-folder import path (`./csvLoader`) |
-| `configParser.js` | 🔵 See #16 | `cleanNumber` fallback silently returns `0` |
+| `configParser.js` | ✅ OK | Optional warnings for blank/invalid numeric cells (see `CONFIG_PARSER_WARN_BLANKS`) |
 | `courseHistoryRegression.js` | ✅ OK | Loads regression JSON artifact when configured; embedded map remains fallback |
 | `course_context.json` | ✅ OK | `sourcePath` stripped (metadata-only); API-first runs |
 | `csvLoader.js` | ✅ OK | Robust CSV loader with header auto-detection |
