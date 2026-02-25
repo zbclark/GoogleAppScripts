@@ -283,12 +283,15 @@ const normalizeHistoricalRow = (row) => {
   const dgId = row.dg_id || row.dgId || row.player_id || row.playerId || row.id;
   const eventId = row.event_id || row.eventId || row.tournament_id || row.tournamentId;
   if (!dgId || !eventId) return null;
+  const normalizedCourseNum = row.course_num || row.courseNum || row.course || row.course_id || row.courseId || null;
   return {
     ...row,
     dg_id: String(dgId).trim(),
     player_name: row.player_name || row.playerName || row.name || null,
     event_id: String(eventId).trim(),
-    course_num: row.course_num || row.courseNum || row.course || row.course_id || row.courseId || null,
+    course_num: normalizedCourseNum !== null && normalizedCourseNum !== undefined
+      ? String(normalizedCourseNum).trim()
+      : null,
     fin_text: row.fin_text ?? row.finish ?? row.finishPosition ?? row.fin ?? row.position ?? null,
     event_completed: row.event_completed ?? row.eventCompleted ?? row.end_date ?? row.completed ?? row.date ?? null,
     year: row.year ?? row.season ?? row.season_year ?? row.seasonYear ?? null,
@@ -566,9 +569,44 @@ const run = async () => {
     datagolfApiKey: DATAGOLF_API_KEY,
     datagolfCacheDir: DATAGOLF_CACHE_DIR,
     datagolfHistoricalTtlMs: DATAGOLF_HISTORICAL_TTL_MS,
-    getDataGolfHistoricalRounds
+    getDataGolfHistoricalRounds,
+    preferApi: true
   });
   let rawRows = extractHistoricalRowsFromSnapshotPayload(apiPayload);
+  const targetCourseNums = new Set(courseNumList.map(value => String(value).trim()));
+  const hasTargetEventRows = rawRows.some(row => {
+    const rowEventId = String(row?.event_id || row?.eventId || '').trim();
+    if (!rowEventId || rowEventId !== eventId) return false;
+    const rowCourse = row?.course_num || row?.courseNum || null;
+    const courseKey = rowCourse !== null && rowCourse !== undefined ? String(rowCourse).trim() : '';
+    return targetCourseNums.size > 0 ? targetCourseNums.has(courseKey) : true;
+  });
+  if (!hasTargetEventRows) {
+    const fallbackRows = [];
+    for (const tour of tours) {
+      for (const year of yearsToFetch) {
+        try {
+          const snapshot = await getDataGolfHistoricalRounds({
+            apiKey: DATAGOLF_API_KEY,
+            cacheDir: DATAGOLF_CACHE_DIR,
+            ttlMs: DATAGOLF_HISTORICAL_TTL_MS,
+            allowStale: true,
+            tour,
+            eventId: 'all',
+            year,
+            fileFormat: 'json'
+          });
+          const extracted = extractHistoricalRowsFromSnapshotPayload(snapshot?.payload);
+          if (extracted.length > 0) fallbackRows.push(...extracted);
+        } catch (error) {
+          // Ignore
+        }
+      }
+    }
+    if (fallbackRows.length > 0) {
+      rawRows = rawRows.concat(fallbackRows);
+    }
+  }
   if (rawRows.length === 0) {
     console.error('No historical data found in JSON, CSV, or API.');
     process.exit(1);
@@ -613,7 +651,6 @@ const run = async () => {
   }
 
   const eventMaxFinish = buildEventStats(filteredRows);
-  const eventIdToCourse = buildEventIdCourseMap(filteredRows);
   const playerEventRecords = buildPlayerEventRecords(filteredRows);
   const courseMap = buildCourseHistory(playerEventRecords, eventMaxFinish);
 
@@ -674,7 +711,6 @@ const run = async () => {
   const detailSimilarPath = path.resolve(OUTPUT_DIR, 'course_history_regression_details_similar.csv');
   const regressionJsonPath = path.resolve(OUTPUT_DIR, 'course_history_regression.json');
   const regressionNodePath = path.resolve(__dirname, '..', 'utilities', 'courseHistoryRegression.js');
-  const regressionGasPath = path.resolve(__dirname, '..', '..', 'Golf_Algorithm_Library', 'utilities', 'courseHistoryRegression.js');
 
   const summaryLines = [
     'course_num,n,slope,intercept,r,t_stat,p_value'
@@ -768,7 +804,7 @@ const run = async () => {
     const regressionNodeExport = `module.exports = { COURSE_HISTORY_REGRESSION, getCourseHistoryRegression };\n`;
 
     fs.writeFileSync(regressionNodePath, regressionHeader + regressionFn + regressionNodeExport);
-    fs.writeFileSync(regressionGasPath, regressionHeader + regressionFn);
+    console.log(`✅ Wrote Node utility to ${regressionNodePath}`);
   }
 
   console.log(`✅ Wrote ${summary.length} course summaries to ${summaryPath}`);
@@ -779,10 +815,7 @@ const run = async () => {
   console.log(`ℹ️  Tours used: ${tours.join(', ')}`);
   console.log(`ℹ️  Event scope: ${eventId || 'n/a'} + similar (${similarEventIds.length}) + putting (${puttingEventIds.length})`);
   console.log(`ℹ️  Year scope: last5=[${lastFiveYears.join(', ')}], recentMonths=[${Array.from(recentMonthSet).join(', ')}]`);
-  if (SHOULD_WRITE_TEMPLATES) {
-    console.log(`✅ Wrote Node utility to ${regressionNodePath}`);
-    console.log(`✅ Wrote GAS utility to ${regressionGasPath}`);
-  } else {
+  if (!SHOULD_WRITE_TEMPLATES) {
     console.log('ℹ️  Skipped regression utility output (WRITE_TEMPLATES not enabled).');
   }
 };

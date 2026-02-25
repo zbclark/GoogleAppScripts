@@ -11,17 +11,33 @@ const path = require('path');
  * @param {string} context - Context string (e.g., pre, post, run)
  */
 function setupLogging(outputDir, eventName, context) {
+  if (!outputDir) return;
+  if (!fs.existsSync(outputDir)) {
+    fs.mkdirSync(outputDir, { recursive: true });
+  }
   const safeEvent = String(eventName || 'event').toLowerCase().replace(/[^a-z0-9]+/g, '_');
   const logFile = path.join(outputDir, `${safeEvent}_${context}_log.txt`);
-  const logStream = fs.createWriteStream(logFile, { flags: 'a' });
+  try {
+    fs.writeFileSync(logFile, '');
+  } catch (error) {
+    // Ignore
+  }
   const origStdoutWrite = process.stdout.write.bind(process.stdout);
   const origStderrWrite = process.stderr.write.bind(process.stderr);
   process.stdout.write = (chunk, ...args) => {
-    logStream.write(chunk);
+    try {
+      fs.appendFileSync(logFile, chunk);
+    } catch (error) {
+      // Ignore
+    }
     origStdoutWrite(chunk, ...args);
   };
   process.stderr.write = (chunk, ...args) => {
-    logStream.write(chunk);
+    try {
+      fs.appendFileSync(logFile, chunk);
+    } catch (error) {
+      // Ignore
+    }
     origStderrWrite(chunk, ...args);
   };
   console.log(`Logging to ${logFile}`);

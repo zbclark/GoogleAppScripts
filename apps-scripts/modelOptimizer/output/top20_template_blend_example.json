@@ -1,0 +1,41 @@
+{
+  "createdAt": "2026-02-25T00:00:00.000Z",
+  "note": "Example output shape for top20TemplateBlend.js. Replace with real run output when integrating.",
+  "options": {
+    "signalBlend": {
+      "correlation": 0.55,
+      "logistic": 0.45
+    },
+    "templateBlend": {
+      "baseline": 0.7,
+      "model": 0.3
+    },
+    "guardrails": {
+      "minGroupWeight": 0.03,
+      "maxGroupWeight": 0.35,
+      "maxGroupShift": 0.08,
+      "maxMetricShift": 0.2
+    }
+  },
+  "signalMap": {
+    "sg total": 0.12,
+    "driving distance": 0.08,
+    "driving accuracy": 0.05
+  },
+  "suggestedGroups": {
+    "Driving Performance": 0.18,
+    "Approach - Mid (100-150)": 0.26
+  },
+  "suggestedMetrics": {
+    "Driving Performance::Driving Distance": 0.35,
+    "Driving Performance::Driving Accuracy": 0.25
+  },
+  "blendedGroups": {
+    "Driving Performance": 0.14,
+    "Approach - Mid (100-150)": 0.22
+  },
+  "blendedMetrics": {
+    "Driving Performance::Driving Distance": 0.32,
+    "Driving Performance::Driving Accuracy": 0.28
+  }
+}

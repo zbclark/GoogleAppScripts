@@ -1,5 +1,5 @@
 {
-  "updatedAt": "2026-02-23T21:15:39.833Z",
+  "updatedAt": "2026-02-25T02:46:26.705Z",
   "sourceDir": "/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data",
   "defaultTours": [
     "pga"
@@ -179,7 +179,7 @@
         "from150to200": 0.388,
         "over200": 0.331
       },
-      "pastPerformanceWeight": 0.4
+      "pastPerformanceWeight": 0.1
     },
     "9": {
       "sourcePath": null,
@@ -215,7 +215,7 @@
       "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
       "courseType": "BALANCED",
       "pastPerformance": true,
-      "pastPerformanceWeight": 0.3,
+      "pastPerformanceWeight": 0.1,
       "similarCourseIds": [
         "475",
         "12",
@@ -249,11 +249,11 @@
         "27": [
           "513"
         ],
-        "533": [
-          "513"
-        ],
         "475": [
           "665"
+        ],
+        "533": [
+          "513"
         ]
       },
       "puttingCourseCourseNums": {
@@ -279,9 +279,9 @@
           "872"
         ]
       },
-      "similarCoursesWeight": null,
-      "puttingCoursesWeight": null,
-      "shotDistribution": { 
+      "similarCoursesWeight": 0.45,
+      "puttingCoursesWeight": 0.65,
+      "shotDistribution": {
         "under100": 0.066,
         "from100to150": 0.286,
         "from150to200": 0.409,
@@ -1196,7 +1196,7 @@
         "from150to200": 0.388,
         "over200": 0.331
       },
-      "pastPerformanceWeight": 0.4
+      "pastPerformanceWeight": 0.1
     },
     "510": {
       "sourcePath": "/workspaces/GoogleAppScripts/apps-scripts/modelOptemizer/data/2026/wm-phoenix-open/inputs/WM Phoenix Open (2026) - Configuration Sheet.csv",
@@ -1548,7 +1548,7 @@
       "courseNameKey": "PGA_NATIONAL_RESORT_CHAMPION_COURSE",
       "courseType": "BALANCED",
       "pastPerformance": true,
-      "pastPerformanceWeight": 0.35,
+      "pastPerformanceWeight": 0.1,
       "similarCourseIds": [
         "475",
         "12",
@@ -1582,11 +1582,11 @@
         "27": [
           "513"
         ],
-        "533": [
-          "513"
-        ],
         "475": [
           "665"
+        ],
+        "533": [
+          "513"
         ]
       },
       "puttingCourseCourseNums": {

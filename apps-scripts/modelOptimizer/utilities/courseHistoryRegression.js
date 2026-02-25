@@ -15,10 +15,6 @@ const COURSE_HISTORY_REGRESSION = {
     "slope": 0,
     "pValue": 0.9999999989999999
   },
-  "114": {
-    "slope": 0,
-    "pValue": 0.9999999989999999
-  },
   "202": {
     "slope": 0,
     "pValue": 1
@@ -32,14 +28,10 @@ const COURSE_HISTORY_REGRESSION = {
     "pValue": 1
   },
   "500": {
-    "slope": -9.047449161612507,
-    "pValue": 9.42855470587034e-7
-  },
-  "510": {
     "slope": 0,
     "pValue": 0.9999999989999999
   },
-  "659": {
+  "510": {
     "slope": 0,
     "pValue": 0.9999999989999999
   },
@@ -52,10 +44,6 @@ const COURSE_HISTORY_REGRESSION = {
     "pValue": 0.9999999989999999
   },
   "776": {
-    "slope": 0,
-    "pValue": 0.9999999989999999
-  },
-  "800": {
     "slope": 0,
     "pValue": 0.9999999989999999
   },
@@ -75,9 +63,9 @@ const COURSE_HISTORY_REGRESSION = {
     "slope": 0,
     "pValue": 0.9999999989999999
   },
-  "939": {
-    "slope": 0,
-    "pValue": 0.9999999989999999
+  "928": {
+    "slope": -0.5343137254901987,
+    "pValue": 0.8565280126019332
   }
 };
 

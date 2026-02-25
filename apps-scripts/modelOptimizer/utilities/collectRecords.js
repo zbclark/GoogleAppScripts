@@ -2,6 +2,7 @@
 const fs = require('fs');
 const path = require('path');
 const { loadCsv } = require('../utilities/csvLoader');
+const { extractHistoricalRowsFromSnapshotPayload } = require('./extractHistoricalRows');
 
 // Helper functions (minimal, for shared use)
 const isHistoricalFile = (filePath) => filePath.toLowerCase().includes('historical data') && filePath.toLowerCase().endsWith('.csv');
@@ -20,10 +21,48 @@ const walkDir = (dir) => {
   return entries;
 };
 
-const collectRecords = async ({ years = [], tours = [], dataDir, datagolfApiKey, datagolfCacheDir, datagolfHistoricalTtlMs, getDataGolfHistoricalRounds }) => {
+const collectRecords = async ({
+  years = [],
+  tours = [],
+  dataDir,
+  datagolfApiKey,
+  datagolfCacheDir,
+  datagolfHistoricalTtlMs,
+  getDataGolfHistoricalRounds,
+  includeApi = false,
+  preferApi = false
+}) => {
   const allRows = [];
-  // 1. Try CSVs in data dir
-  if (dataDir && fs.existsSync(dataDir)) {
+  const shouldFetchApi = years.length && tours.length && getDataGolfHistoricalRounds;
+
+  const fetchApiRows = async () => {
+    for (const tour of tours) {
+      for (const year of years) {
+        try {
+          const apiSnapshot = await getDataGolfHistoricalRounds({
+            apiKey: datagolfApiKey,
+            cacheDir: datagolfCacheDir,
+            ttlMs: datagolfHistoricalTtlMs,
+            allowStale: true,
+            tour,
+            eventId: 'all',
+            year,
+            fileFormat: 'json'
+          });
+          const apiRows = extractHistoricalRowsFromSnapshotPayload(apiSnapshot?.payload);
+          if (apiRows.length > 0) allRows.push(...apiRows);
+        } catch (error) {
+          // Ignore
+        }
+      }
+    }
+  };
+
+  if (shouldFetchApi && preferApi) {
+    await fetchApiRows();
+  }
+
+  if (!preferApi && dataDir && fs.existsSync(dataDir)) {
     const files = walkDir(dataDir).filter(isHistoricalFile);
     for (const filePath of files) {
       try {
@@ -35,28 +74,24 @@ const collectRecords = async ({ years = [], tours = [], dataDir, datagolfApiKey,
       }
     }
   }
-  // 2. Optionally, try API if nothing found and key/years/tours provided
-  if (allRows.length === 0 && datagolfApiKey && years.length && tours.length && getDataGolfHistoricalRounds) {
-    for (const tour of tours) {
-      for (const year of years) {
-        try {
-          const apiRows = await getDataGolfHistoricalRounds({
-            apiKey: datagolfApiKey,
-            cacheDir: datagolfCacheDir,
-            ttlMs: datagolfHistoricalTtlMs,
-            allowStale: true,
-            tour,
-            eventId: 'all',
-            year,
-            fileFormat: 'json'
-          });
-          if (Array.isArray(apiRows)) allRows.push(...apiRows);
-        } catch (error) {
-          // Ignore
-        }
+
+  if ((allRows.length === 0 || includeApi) && shouldFetchApi && !preferApi) {
+    await fetchApiRows();
+  }
+
+  if (preferApi && allRows.length === 0 && dataDir && fs.existsSync(dataDir)) {
+    const files = walkDir(dataDir).filter(isHistoricalFile);
+    for (const filePath of files) {
+      try {
+        const rows = loadCsv(filePath, { skipFirstColumn: true })
+          .filter(Boolean);
+        allRows.push(...rows);
+      } catch (err) {
+        // Ignore
       }
     }
   }
+
   return allRows;
 };
 

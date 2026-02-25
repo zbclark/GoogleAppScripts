@@ -223,6 +223,30 @@ const computeApproachDeltas = ({ previousRows, currentRows }) => {
 const APPROACH_SNAPSHOT_DIR = path.resolve(__dirname, '..', 'data', 'approach_snapshot');
 const SNAPSHOT_PREFIX = 'snapshot:';
 
+const resolveWildcardPath = (inputPath) => {
+  if (!inputPath || !/[\*?]/.test(String(inputPath))) return inputPath;
+  const absolutePath = path.isAbsolute(inputPath)
+    ? inputPath
+    : path.resolve(inputPath);
+  const dirName = path.dirname(absolutePath);
+  if (!fs.existsSync(dirName)) return inputPath;
+
+  const pattern = path.basename(absolutePath);
+  const escaped = pattern.replace(/[.+^${}()|[\]\\]/g, '\\$&');
+  const regex = new RegExp(`^${escaped.replace(/\*/g, '.*').replace(/\?/g, '.')}$`, 'i');
+  const matches = fs.readdirSync(dirName)
+    .filter(name => regex.test(name))
+    .map(name => path.join(dirName, name));
+
+  if (matches.length === 0) return inputPath;
+  matches.sort((a, b) => {
+    const statA = fs.statSync(a);
+    const statB = fs.statSync(b);
+    return statB.mtimeMs - statA.mtimeMs;
+  });
+  return matches[0];
+};
+
 const listYtdArchives = () => {
   if (!fs.existsSync(APPROACH_SNAPSHOT_DIR)) return [];
   return fs.readdirSync(APPROACH_SNAPSHOT_DIR)
@@ -294,9 +318,21 @@ const loadApproachCsv = (filePath) => {
     if (resolved) targetPath = resolved;
   }
 
-  const resolvedPath = path.isAbsolute(targetPath)
+  targetPath = resolveWildcardPath(targetPath);
+
+  let resolvedPath = path.isAbsolute(targetPath)
     ? targetPath
     : path.resolve(targetPath);
+
+  if (!fs.existsSync(resolvedPath)) {
+    const baseName = path.basename(String(targetPath));
+    if (baseName && baseName === String(targetPath)) {
+      const snapshotCandidate = path.resolve(APPROACH_SNAPSHOT_DIR, baseName);
+      if (fs.existsSync(snapshotCandidate)) {
+        resolvedPath = snapshotCandidate;
+      }
+    }
+  }
 
   if (!fs.existsSync(resolvedPath)) return [];
 
@@ -318,5 +354,6 @@ const loadApproachCsv = (filePath) => {
 module.exports = {
   METRIC_DEFS,
   loadApproachCsv,
-  computeApproachDeltas
+  computeApproachDeltas,
+  extractApproachRowsFromJson
 };
