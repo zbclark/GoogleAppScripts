@@ -1,0 +1,108 @@
+Logging to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/cognizant_classic_pre_event_log.txt
+✓ Loaded player ramp summary (341 players, maxEvents=6)
+🔄 Generating course history regression inputs...
+✓ Course history regression inputs generated.
+ℹ️  Course history regression loaded; no course_context updates needed.
+
+🔄 Loading configuration...
+ℹ️  Configuration sheet missing; using course_context.json defaults.
+✓ Configuration loaded
+✓ Applied course context overrides (eventId)
+ℹ️  Current-event rounds policy: default
+   Defaults: metrics=include, baseline=exclude, optimization=exclude, historical=exclude
+🔄 Building metric config...
+✓ Metric config built
+
+--- LOADING ALL AVAILABLE TEMPLATES ---
+✓ Loaded POWER template
+✓ Loaded PGA_NATIONAL_RESORT_CHAMPION_COURSE template
+✓ Loaded TECHNICAL template
+✓ Loaded BALANCED template
+✓ Loaded ROYAL_PORTRUSH template
+✓ Loaded TPC_LOUISIANA template
+✓ Loaded PEBBLE_BEACH_GOLF_LINKS template
+✓ Loaded WAIALAE_COUNTRY_CLUB template
+✓ Loaded THE_RIVIERA_COUNTRY_CLUB template
+✓ Loaded event-specific weights (eventId: 10) from course_context defaults
+✓ Validation course type selected from summaries: TECHNICAL
+✓ DataGolf rankings loaded (cache, updated 2026-02-23 13:11:50 UTC)
+DEBUG: courseNum 704 has 100 entries
+DEBUG: courseNum 202 has 24 entries
+DEBUG: courseNum 233 has 28 entries
+DEBUG: courseNum 510 has 122 entries
+DEBUG: courseNum 4 has 104 entries
+DEBUG: courseNum 104 has 42 entries
+DEBUG: courseNum 5 has 80 entries
+DEBUG: courseNum 6 has 119 entries
+DEBUG: courseNum 500 has 72 entries
+DEBUG: courseNum 928 has 287 entries
+DEBUG: courseNum 922 has 84 entries
+DEBUG: courseNum 927 has 80 entries
+DEBUG: courseNum 919 has 119 entries
+DEBUG: courseNum 232 has 20 entries
+DEBUG: courseNum 776 has 118 entries
+DEBUG: courseNum 889 has 38 entries
+DEBUG: courseNum 765 has 119 entries
+✅ Wrote 17 course summaries to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression_summary.csv
+✅ Wrote 1556 detail rows to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression_details.csv
+✅ Wrote 18 similar-course summaries to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression_summary_similar.csv
+✅ Wrote 1987 similar-course detail rows to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression_details_similar.csv
+✅ Wrote course history regression JSON to /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/course_history_regression/course_history_regression.json
+ℹ️  Tours used: pga
+ℹ️  Event scope: 10 + similar (7) + putting (6)
+ℹ️  Year scope: last5=[2026, 2025, 2024, 2023, 2022], recentMonths=[2026-2, 2026-1, 2025-12, 2025-11]
+ℹ️  Skipped regression utility output (WRITE_TEMPLATES not enabled).
+✓ DataGolf approach skill loaded (api, last 24 months, updated 2026-02-23 14:52:29 UTC)
+✓ Approach snapshot l24 ready (snapshot, updated 2026-02-23 14:52:29 UTC)
+✓ Approach snapshot l12 ready (snapshot, updated 2026-02-23 14:52:29 UTC)
+✓ Approach snapshot ytd ready (api, updated 2026-02-23 14:52:29 UTC)
+✓ DataGolf field updates loaded (cache, Cognizant Classic)
+✓ DataGolf player decompositions loaded (cache, updated 2026-02-23 18:47:04 UTC)
+✓ DataGolf skill ratings loaded (cache, display value, updated 2026-02-23 18:08:33 UTC)
+✓ DataGolf skill ratings loaded (cache, display rank, updated 2026-02-23 18:08:33 UTC)
+✓ DataGolf historical rounds loaded (cache, pga 2026)
+ℹ️  Validation outputs loaded for reporting only (no template/constraint influence).
+
+🔄 Loading data...
+✓ Loaded field (API fallback): 123 players
+✓ Loaded history (robust merged-source): 76649 rounds
+ℹ️  History rows for event 10: 1727 (season 2026: 0)
+✓ Loaded approach: 330 rows (source: DataGolf approach skill (api, last 24 months))
+✓ Using YTD approach snapshot for current season (176 rows, file: approach_ytd_latest.json, field overlap 107/123)
+ℹ️  Derived 0 results from historical data.
+ℹ️  Pre-tournament override active: ignoring results for mode selection.
+
+⚠️  No results found for the current season/event.
+   Falling back to historical + similar-course outcomes for supervised metric training.
+ℹ️  No approach delta JSON found; attempting auto-generation (pre-tournament).
+✓ Refreshed YTD approach snapshot for delta generation.
+ℹ️  Approach delta sources resolved: current=/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_snapshot/approach_ytd_latest.json (176 rows), previous=/workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/genesis-invitational/inputs/* - Approach Skill.csv (325 rows)
+✓ Approach delta JSON generated: /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/approach_deltas/approach_deltas_cognizant-classic_2026_02_25.json
+✓ Built rolling approach delta baseline (4 files).
+✓ Loaded 2026 field: 123 players
+
+---
+STEP 1: HISTORICAL METRIC CORRELATIONS
+Analyze past-year metrics vs finish position
+---
+
+✓ Years available for evaluation: 2022, 2023, 2024, 2025 (event_history)
+✓ Validation years (last 5 from latest available (2025)): 2022, 2023, 2024, 2025
+✓ Total historical rounds for event 10 (all players): 1727
+✓ Total historical rounds for event 10 (current field only): 641
+
+---
+STEP 1b: CURRENT-SEASON (EVENT + SIMILAR + PUTTING) METRIC CORRELATIONS
+Correlate generatePlayerRankings metrics for current season using event + similar/putting courses
+---
+Training metrics included (15): Driving Distance, Driving Accuracy, SG T2G, SG Approach, SG Around Green, SG OTT, SG Putting, Greens in Regulation, Scrambling, Great Shots, Poor Shots, Scoring Average, Birdies or Better, Fairway Proximity, Rough Proximity
+Training metrics excluded: Birdie Chances Created, SG Total
+Derived metrics: Birdies or Better = birdies + eagles (from historical rounds when available)
+✓ Computed 15 historical metric correlations (no current results).
+✅ Pre-event training output saved (rankings generated).
+✅ JSON results saved to: /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/cognizant_classic_pre_event_results.json
+✅ Text results saved to: /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/cognizant_classic_pre_event_results.txt
+
+🧪 Dry-run enabled: generating preview outputs without writing templates.
+🧪 Dry-run template output saved to: /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/dryrun/dryrun_weightTemplates.js
+🧪 Dry-run delta scores saved to: /workspaces/GoogleAppScripts/apps-scripts/modelOptimizer/data/2026/congnizant-classic/pre_event/dryrun/dryrun_deltaPlayerScores.node.js

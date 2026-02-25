@@ -1,0 +1,449 @@
+====================================================================================================
+MODEL OPTIMIZER - PRE-EVENT TRAINING
+====================================================================================================
+DRY RUN: ON (template files not modified)
+
+MODE: Historical + Similar-Course Training (no current-year results)
+Event: 10 | Tournament: Cognizant Classic
+
+PAST PERFORMANCE WEIGHTING (course history regression):
+  Enabled: yes
+  Course Num: 928
+  Regression: n/a
+  Computed Weight: n/a
+  Used Weight (config): 0.10
+  Regression Source: json (course_history_regression.json)
+  Course Context Updates: no (0 entries)
+
+STEP 1: HISTORICAL METRIC CORRELATIONS
+  Scoring Average: Corr=0.3716, Samples=1156
+  Eagles or Better: Corr=0.0045, Samples=104
+  Birdies: Corr=0.2200, Samples=1140
+  Birdies or Better: Corr=0.2442, Samples=1156
+  SG Total: Corr=0.3763, Samples=1156
+  Driving Distance: Corr=0.0669, Samples=1156
+  Driving Accuracy: Corr=0.1307, Samples=1156
+  SG T2G: Corr=0.3251, Samples=1156
+  SG Approach: Corr=0.2332, Samples=1156
+  SG Around Green: Corr=0.0804, Samples=1155
+  SG OTT: Corr=0.2081, Samples=1155
+  SG Putting: Corr=0.1887, Samples=1156
+  GIR: Corr=0.2306, Samples=1156
+  Scrambling: Corr=0.1307, Samples=1150
+  Great Shots: Corr=0.1567, Samples=1156
+  Poor Shots: Corr=0.2491, Samples=1156
+  Fairway Proximity: Corr=0.0910, Samples=1156
+  Rough Proximity: Corr=0.1004, Samples=1131
+
+TRAINING METRIC CORRELATIONS (historical outcomes):
+  1. Driving Distance: Corr=0.3663, Samples=345
+  2. Driving Accuracy: Corr=0.2245, Samples=345
+  3. SG T2G: Corr=0.4082, Samples=345
+  4. SG Approach: Corr=0.3583, Samples=345
+  5. SG Around Green: Corr=0.1143, Samples=345
+  6. SG OTT: Corr=0.1901, Samples=345
+  7. SG Putting: Corr=0.1757, Samples=345
+  8. Greens in Regulation: Corr=0.1564, Samples=345
+  9. Scrambling: Corr=0.3794, Samples=345
+  10. Great Shots: Corr=0.1609, Samples=345
+  11. Poor Shots: Corr=0.2613, Samples=345
+  12. Scoring Average: Corr=0.5108, Samples=345
+  13. Birdies or Better: Corr=0.4046, Samples=345
+  15. Fairway Proximity: Corr=0.3568, Samples=345
+  16. Rough Proximity: Corr=-0.1171, Samples=345
+
+TRAINING METRICS USED:
+  Included: Driving Distance, Driving Accuracy, SG T2G, SG Approach, SG Around Green, SG OTT, SG Putting, Greens in Regulation, Scrambling, Great Shots, Poor Shots, Scoring Average, Birdies or Better, Fairway Proximity, Rough Proximity
+  Excluded: Birdie Chances Created, SG Total
+  Derived: Birdies or Better = birdies + eagles (from historical rounds when available)
+
+APPROACH DELTA PRIOR (approachDeltaPrior):
+  Mode: rolling_average (files=4, max=4)
+  Rows used: 121/121
+  Approach >200 FW Prox: Score=-1.0000
+  Approach <150 Rough Prox: Score=0.7637
+  Approach <200 FW Prox: Score=-0.4325
+  Approach >150 Rough Prox: Score=0.3202
+  Approach <150 FW Prox: Score=0.1415
+  Approach <100 Prox: Score=0.1328
+  Approach <150 Rough GIR: Score=0.0086
+  Approach >200 FW GIR: Score=-0.0079
+  Approach <150 FW SG: Score=0.0063
+  Approach >150 Rough SG: Score=-0.0052
+  Player delta movers (trend-weighted, top 10):
+    1. Saddier, Adrien: Score=2.8441
+    2. Todd, Brendon: Score=2.2392
+    3. Nyholm, Pontus: Score=1.3584
+    4. VanDerLaan, John: Score=1.3227
+    5. Streelman, Kevin: Score=1.0099
+    6. Kizzire, Patton: Score=0.9360
+    7. Simpson, Webb: Score=0.9326
+    8. Svensson, Adam: Score=0.9015
+    9. Yellamaraju, Sudarshan: Score=0.7398
+    10. Valimaki, Sami: Score=0.6478
+  Player delta movers (trend-weighted, bottom 10):
+    1. Riley, Davis: Score=-2.4916
+    2. Lamprecht, Christo: Score=-1.7701
+    3. Hodges, Lee: Score=-1.7503
+    4. Whaley, Vince: Score=-1.7114
+    5. Cole, Eric: Score=-1.6491
+    6. Castillo, Ricky: Score=-1.3788
+    7. Shipley, Neal: Score=-1.2908
+    8. Schmid, Matti: Score=-1.2638
+    9. Reitan, Kristoffer: Score=-1.0732
+    10. Phillips, Chandler: Score=-0.9827
+  Player delta movers (predictive-weighted, top 10):
+    1. Todd, Brendon: Score=2.7213
+    2. Nyholm, Pontus: Score=0.6858
+    3. Saddier, Adrien: Score=0.4830
+    4. Kizzire, Patton: Score=0.4359
+    5. Simpson, Webb: Score=0.3517
+    6. Yellamaraju, Sudarshan: Score=0.3447
+    7. Streelman, Kevin: Score=0.3313
+    8. Hughes, Mackenzie: Score=0.3293
+    9. Gerard, Ryan: Score=0.3158
+    10. Koepka, Brooks: Score=0.3106
+  Player delta movers (predictive-weighted, bottom 10):
+    1. Lamprecht, Christo: Score=-1.1418
+    2. Shipley, Neal: Score=-0.8639
+    3. Lebioda, Hank: Score=-0.7346
+    4. Riley, Davis: Score=-0.6639
+    5. Kang, Jeffrey: Score=-0.5901
+    6. Schmid, Matti: Score=-0.5337
+    7. Hodges, Lee: Score=-0.5154
+    8. Reitan, Kristoffer: Score=-0.4197
+    9. Blanchet, Chandler: Score=-0.3684
+    10. Woodland, Gary: Score=-0.3447
+
+TRAINING TOP-20 SIGNAL (historical outcomes):
+  1. Driving Distance: Corr=0.1107, Samples=345
+  2. Driving Accuracy: Corr=0.1746, Samples=345
+  3. SG T2G: Corr=0.3266, Samples=345
+  4. SG Approach: Corr=0.2242, Samples=345
+  5. SG Around Green: Corr=0.1350, Samples=345
+  6. SG OTT: Corr=0.1628, Samples=345
+  7. SG Putting: Corr=0.2473, Samples=345
+  8. Greens in Regulation: Corr=0.1296, Samples=345
+  9. Scrambling: Corr=0.3342, Samples=345
+  10. Great Shots: Corr=0.1261, Samples=345
+  11. Poor Shots: Corr=0.2343, Samples=345
+  12. Scoring Average: Corr=0.4507, Samples=345
+  13. Birdies or Better: Corr=0.2996, Samples=345
+  15. Fairway Proximity: Corr=0.2994, Samples=345
+  16. Rough Proximity: Corr=-0.0611, Samples=345
+
+SUGGESTED METRIC WEIGHTS (TOP-20) - SOURCE: top20-logistic
+  1. SG Putting: weight=0.1754, top20Corr=0.2473, logisticWeight=0.6050
+  2. SG T2G: weight=0.1563, top20Corr=0.3266, logisticWeight=0.5391
+  3. SG Approach: weight=0.1319, top20Corr=0.2242, logisticWeight=0.4547
+  4. SG Around Green: weight=0.0835, top20Corr=0.1350, logisticWeight=0.2879
+  5. Birdies or Better: weight=0.0804, top20Corr=0.2996, logisticWeight=0.2774
+  6. Driving Distance: weight=0.0779, top20Corr=0.1107, logisticWeight=0.2685
+  7. Scrambling: weight=0.0680, top20Corr=0.3342, logisticWeight=0.2344
+  8. Driving Accuracy: weight=0.0558, top20Corr=0.1746, logisticWeight=0.1925
+  9. Poor Shots: weight=0.0366, top20Corr=0.2343, logisticWeight=0.1263
+  10. SG OTT: weight=0.0360, top20Corr=0.1628, logisticWeight=0.1242
+  11. Greens in Regulation: weight=-0.0323, top20Corr=0.1296, logisticWeight=-0.1115
+  12. Scoring Average: weight=-0.0321, top20Corr=0.4507, logisticWeight=-0.1107
+  13. Fairway Proximity: weight=0.0269, top20Corr=0.2994, logisticWeight=0.0926
+  14. Rough Proximity: weight=-0.0043, top20Corr=-0.0611, logisticWeight=-0.0147
+  15. Great Shots: weight=0.0026, top20Corr=0.1261, logisticWeight=0.0089
+
+SUGGESTED GROUP WEIGHTS (TOP-20) - SOURCE: top20-logistic
+  1. Scoring: weight=0.2602
+  2. Putting: weight=0.2422
+  3. Driving Performance: weight=0.2343
+  4. Course Management: weight=0.1480
+  5. Around the Green: weight=0.1153
+
+CV RELIABILITY (event-based): 41.7%
+CONSERVATIVE GROUP WEIGHTS (CV-adjusted, model share 14.6%):
+  1. Scoring: weight=0.2602
+  2. Putting: weight=0.2422
+  3. Driving Performance: weight=0.2343
+  4. Course Management: weight=0.1480
+  5. Around the Green: weight=0.1153
+  6. Approach - Short (<100): weight=0.0000
+  7. Approach - Mid (100-150): weight=0.0000
+  8. Approach - Long (150-200): weight=0.0000
+  9. Approach - Very Long (>200): weight=0.0000
+
+FILLED GROUP WEIGHTS (normalized with fallback template):
+  Driving Performance: 0.2343
+  Approach - Short (<100): 0.0000
+  Approach - Mid (100-150): 0.0000
+  Approach - Long (150-200): 0.0000
+  Approach - Very Long (>200): 0.0000
+  Putting: 0.2422
+  Around the Green: 0.1153
+  Scoring: 0.2602
+  Course Management: 0.1480
+
+FILLED METRIC WEIGHTS (group-level normalization applied):
+  Driving Performance::Driving Distance: 0.4588
+  Driving Performance::Driving Accuracy: 0.3289
+  Driving Performance::SG OTT: 0.2122
+  Approach - Short (<100)::Approach <100 GIR: 0.0000
+  Approach - Short (<100)::Approach <100 SG: 0.0000
+  Approach - Short (<100)::Approach <100 Prox: 0.0000
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.0000
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.0000
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.0000
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.0000
+  Approach - Long (150-200)::Approach <200 FW SG: 0.0000
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.0000
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0000
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.0000
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.0000
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 1.2584
+  Scoring::Scoring Average: -0.2584
+  Scoring::Birdie Chances Created: 0.0000
+  Scoring::Scoring: Approach <100 SG: 0.0000
+  Scoring::Scoring: Approach <150 FW SG: 0.0000
+  Scoring::Scoring: Approach <150 Rough SG: 0.0000
+  Scoring::Scoring: Approach <200 FW SG: 0.0000
+  Scoring::Scoring: Approach >200 FW SG: 0.0000
+  Scoring::Scoring: Approach >150 Rough SG: 0.0000
+  Course Management::Scrambling: 0.6342
+  Course Management::Great Shots: 0.0242
+  Course Management::Poor Shots: 0.3416
+  Course Management::Course Management: Approach <100 Prox: 0.0000
+  Course Management::Course Management: Approach <150 FW Prox: 0.0000
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0000
+  Course Management::Course Management: Approach >150 Rough Prox: 0.0000
+  Course Management::Course Management: Approach <200 FW Prox: 0.0000
+  Course Management::Course Management: Approach >200 FW Prox: 0.0000
+
+BLENDED GROUP WEIGHTS (prior 60% / model 40%):
+  Driving Performance: 0.1306
+  Approach - Short (<100): 0.0397
+  Approach - Mid (100-150): 0.0962
+  Approach - Long (150-200): 0.1013
+  Approach - Very Long (>200): 0.0521
+  Putting: 0.1122
+  Around the Green: 0.0488
+  Scoring: 0.2096
+  Course Management: 0.2096
+
+BLENDED METRIC WEIGHTS (prior/model blend, normalized per group):
+  Driving Performance::Driving Distance: 0.2524
+  Driving Performance::Driving Accuracy: 0.3040
+  Driving Performance::SG OTT: 0.4436
+  Approach - Short (<100)::Approach <100 GIR: 0.1289
+  Approach - Short (<100)::Approach <100 SG: 0.0935
+  Approach - Short (<100)::Approach <100 Prox: 0.7776
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.1173
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.1934
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.6893
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.0000
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.1044
+  Approach - Long (150-200)::Approach <200 FW SG: 0.3277
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.5679
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.0000
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0939
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.1509
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.7552
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 0.7450
+  Scoring::Scoring Average: 0.0079
+  Scoring::Birdie Chances Created: 0.1102
+  Scoring::Scoring: Approach <100 SG: 0.0399
+  Scoring::Scoring: Approach <150 FW SG: 0.0870
+  Scoring::Scoring: Approach <150 Rough SG: 0.0099
+  Scoring::Scoring: Approach <200 FW SG: 0.0000
+  Scoring::Scoring: Approach >200 FW SG: 0.0000
+  Scoring::Scoring: Approach >150 Rough SG: 0.0000
+  Course Management::Scrambling: 0.3290
+  Course Management::Great Shots: 0.0734
+  Course Management::Poor Shots: 0.1356
+  Course Management::Course Management: Approach <100 Prox: 0.0612
+  Course Management::Course Management: Approach <150 FW Prox: 0.0740
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0887
+  Course Management::Course Management: Approach >150 Rough Prox: 0.1509
+  Course Management::Course Management: Approach <200 FW Prox: 0.0531
+  Course Management::Course Management: Approach >200 FW Prox: 0.0340
+
+ADJUSTED METRIC WEIGHTS (course setup applied):
+  Driving Performance::Driving Distance: 0.2524
+  Driving Performance::Driving Accuracy: 0.3040
+  Driving Performance::SG OTT: 0.4436
+  Approach - Short (<100)::Approach <100 GIR: 0.1289
+  Approach - Short (<100)::Approach <100 SG: 0.0935
+  Approach - Short (<100)::Approach <100 Prox: 0.7776
+  Approach - Mid (100-150)::Approach <150 FW GIR: 0.1173
+  Approach - Mid (100-150)::Approach <150 FW SG: 0.1934
+  Approach - Mid (100-150)::Approach <150 FW Prox: 0.6893
+  Approach - Mid (100-150)::Approach <150 Rough GIR: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough SG: 0.0000
+  Approach - Mid (100-150)::Approach <150 Rough Prox: 0.0000
+  Approach - Long (150-200)::Approach <200 FW GIR: 0.1044
+  Approach - Long (150-200)::Approach <200 FW SG: 0.3277
+  Approach - Long (150-200)::Approach <200 FW Prox: 0.5679
+  Approach - Long (150-200)::Approach >150 Rough GIR: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough SG: 0.0000
+  Approach - Long (150-200)::Approach >150 Rough Prox: 0.0000
+  Approach - Very Long (>200)::Approach >200 FW GIR: 0.0939
+  Approach - Very Long (>200)::Approach >200 FW SG: 0.1509
+  Approach - Very Long (>200)::Approach >200 FW Prox: 0.7552
+  Putting::SG Putting: 1.0000
+  Around the Green::SG Around Green: 1.0000
+  Scoring::SG T2G: 0.7450
+  Scoring::Scoring Average: 0.0079
+  Scoring::Birdie Chances Created: 0.1102
+  Scoring::Scoring: Approach <100 SG: 0.0090
+  Scoring::Scoring: Approach <150 FW SG: 0.0196
+  Scoring::Scoring: Approach <150 Rough SG: 0.0196
+  Scoring::Scoring: Approach <200 FW SG: 0.0560
+  Scoring::Scoring: Approach >200 FW SG: 0.0163
+  Scoring::Scoring: Approach >150 Rough SG: 0.0163
+  Course Management::Scrambling: 0.3290
+  Course Management::Great Shots: 0.0734
+  Course Management::Poor Shots: 0.1356
+  Course Management::Course Management: Approach <100 Prox: 0.0305
+  Course Management::Course Management: Approach <150 FW Prox: 0.0661
+  Course Management::Course Management: Approach <150 Rough Prox: 0.0661
+  Course Management::Course Management: Approach >150 Rough Prox: 0.0552
+  Course Management::Course Management: Approach <200 FW Prox: 0.1890
+  Course Management::Course Management: Approach >200 FW Prox: 0.0552
+
+PRE-EVENT RANKINGS: cognizant_classic_pre_event_rankings.json
+  CSV: cognizant_classic_pre_event_rankings.csv
+  Players ranked: 123
+
+PRE-EVENT RANKINGS LIST (rank | player | WAR | notes):
+1 | Li, Haotong | WAR: 0.46 | 💪 SG Around Green, SG T2G | ✅ Strong course fit | ↓ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.46 (0.162) [S↑ M↑ L↑ VL↓]
+2 | Meissner, Mac | WAR: 0.44 | 💪 SG Putting, SG T2G | ✅ Strong course fit | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.32 (0.106) [S↑ M↓ L↑ VL↓]
+3 | Hojgaard, Nicolai | WAR: 0.42 | 💪 Approach <100 Prox, SG T2G | ✅ Strong course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.42 (0.146) [S↓ M↓ L↑ VL↓]
+4 | Hossler, Beau | WAR: 0.33 | 💪 SG Putting, Approach <100 Prox | ✅ Strong course fit | ↓ Putting | ⚠️ Limited data (71%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.31 (0.100) [S↑ M↑ L↓ VL↓]
+5 | Dou, Zecheng | WAR: 0.29 | 💪 SG Around Green, Approach <100 Prox | ✅ Strong course fit | ↓ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.74 (0.279) [S→ M↑ L↑ VL↓]
+6 | Ryder, Sam | WAR: 0.32 | 💪 Approach <100 Prox, SG Putting | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↑ Total game | ⚠️ Limited data (71%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.13 (-0.082) [S↑ M↑ L↓ VL↓]
+7 | Horschel, Billy | WAR: 0.19 | 💪 SG Around Green, SG T2G | 👍 Good course fit | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.31 (0.102) [S↓ M↑ L↓ VL↑]
+8 | Thompson, Davis | WAR: 0.24 | 💪 SG T2G, Approach <100 Prox | 👍 Good course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.01 (-0.033) [S↓ M↓ L↑ VL↓]
+9 | Ford, David | WAR: 0.14 | 💪 SG T2G | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Approach | For Course Setup - ΔPred↑ ΔTrend→ | BucketSig ↑ z=0.71 (0.264) [S↓ M↑ L↑ VL↓]
+10 | Lower, Justin | WAR: 0.28 | 💪 Approach <100 Prox | ↑ Approach | ⚠️ Limited data (59%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.46 (0.160) [S↓ M↑ L↑ VL↓]
+11 | Koepka, Brooks | WAR: 0.24 | 💪 SG T2G, SG Around Green | 👍 Good course fit | ↓ Total game | ⚠️ Limited data (63%) | For Course Setup - ΔPred↑ ΔTrend→ | BucketSig ↑ z=1.05 (0.407) [S→ M↑ L↑ VL↓]
+12 | Lipsky, David | WAR: 0.24 | 💪 Approach <100 Prox, SG Around Green | ✅ Strong course fit | ↑ Around green | ⚠️ Limited data (71%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.07 (0.001) [S↑ M↑ L↑ VL↓]
+13 | Gerard, Ryan | WAR: 0.14 | 💪 SG T2G, Approach >200 FW Prox | ✅ Strong course fit | ↓ Putting | For Course Setup - ΔPred↑ ΔTrend→ | BucketSig ↑ z=1.11 (0.430) [S↓ M↑ L↑ VL↓]
+14 | Power, Seamus | WAR: 0.17 | 💪 SG Around Green, SG Putting | ✅ Strong course fit | ↓ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.05 (-0.009) [S↑ M↓ L↓ VL↑]
+15 | Smalley, Alex | WAR: 0.08 | 💪 SG T2G, Approach >200 FW Prox | ✅ Strong course fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.52 (0.187) [S↓ M↑ L↑ VL↑]
+16 | Griffin, Lanto | WAR: 0.44 | 💪 SG Putting, SG Around Green | 👍 Good course fit | ↑ Tee-to-green | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.32 (0.106) [S↑ M↑ L↑ VL↓]
+17 | Kuchar, Matt | WAR: 0.38 | ↑ Approach | ⚠️ Limited data (34%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.34 (0.112) [S↓ M↑ L↑ VL↓]
+18 | Echavarria, Nico | WAR: 0.13 | 💪 Approach <100 Prox | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.18 (0.045) [S↓ M↑ L↓ VL↓]
+19 | Mitchell, Keith | WAR: 0.09 | 💪 Approach <100 Prox, SG T2G | 👍 Good course fit | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.51 (0.182) [S↑ M↑ L↑ VL↓]
+20 | Simpson, Webb | WAR: 0.11 | 💪 Approach <100 Prox | ↓ Off tee | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.46 (0.576) [S↑ M↑ L↑ VL↓]
+21 | Fishburn, Patrick | WAR: 0.33 | 💪 SG Putting | ↓ Off tee | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.44 (0.154) [S↑ M→ L↑ VL↑]
+22 | Kim, Chan | WAR: 0.34 | 💪 SG T2G | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Off tee | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.37 (0.123) [S↑ M↑ L↑ VL↑]
+23 | Svensson, Jesper | WAR: 0.40 | 💪 SG T2G | ↓ Total game | ⚠️ Limited data (39%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.12 (0.020) [S↓ M↓ L↑ VL↓]
+24 | Wallace, Matt | WAR: 0.24 | 💪 Approach <100 Prox | ↑ Total game | ⚠️ Limited data (34%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.31 (0.101) [S↑ M↑ L↑ VL↓]
+25 | Ewart, A.J. | WAR: 0.18 | 💪 Approach <100 Prox, SG T2G | 👍 Good course fit | ↑ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.73 (-0.330) [S↓ M↓ L↓ VL↑]
+26 | Olesen, Thorbjorn | WAR: 0.42 | 💪 SG Around Green | ↑ Around green | ⚠️ Limited data (39%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.01 (-0.033) [S↑ M↓ L↑ VL↓]
+27 | Clanton, Luke | WAR: 0.27 | 💪 SG T2G | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Approach | ⚠️ Limited data (39%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.13 (0.024) [S↑ M↑ L↑ VL↓]
+28 | Ventura, Kris | WAR: 0.31 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↑ Around green | ⚠️ Limited data (59%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.77 (-0.348) [S↑ M↑ L↓ VL↓]
+29 | Sargent, Gordon | WAR: 0.12 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↓ Around green | ⚠️ Limited data (59%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.50 (0.177) [S↓ M↑ L↑ VL↓]
+30 | Dahmen, Joel | WAR: 0.14 | 💪 Approach <100 Prox, SG T2G | 👍 Good course fit | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.01 (-0.022) [S↑ M↑ L↑ VL↓]
+31 | Wise, Aaron | WAR: 0.16 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Around green | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.50 (0.179) [S↑ M↑ L↑ VL↑]
+32 | Moore, Taylor | WAR: 0.13 | 💪 SG Around Green | ↓ Off tee | ⚠️ Limited data (59%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.27 (0.082) [S↓ M↓ L↑ VL↓]
+33 | Keefer, Johnny | WAR: 0.13 | 💪 Approach <100 Prox, SG T2G | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.78 (-0.349) [S↑ M↓ L↓ VL↓]
+34 | Hodges, Lee | WAR: 0.09 | 💪 Approach <100 Prox | ↑ Around green | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-2.16 (-0.920) [S↑ M↑ L↓ VL↓]
+35 | Hojgaard, Rasmus | WAR: 0.04 | 💪 Approach <100 Prox, SG Putting | ✅ Strong course fit | ↓ Off tee | For Course Setup - ΔPred→ ΔTrend↑ | BucketSig ↑ z=0.78 (0.293) [S↑ M↑ L↑ VL↑]
+36 | Saddier, Adrien | WAR: 0.04 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Off tee | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=2.48 (0.998) [S↑ M↑ L↓ VL↑]
+37 | Snedeker, Brandt | WAR: 0.40 | 💪 SG Putting, SG Around Green | 👍 Good course fit | ↓ Putting | ⚠️ Limited data (39%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.77 (-0.346) [S↑ M↑ L↓ VL↓]
+38 | Hadwin, Adam | WAR: 0.24 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Putting | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.20 (0.053) [S↓ M↑ L↓ VL↓]
+39 | Higgs, Harry | WAR: 0.09 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Putting | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.31 (0.099) [S↓ M↑ L↑ VL↑]
+40 | Vilips, Karl | WAR: 0.07 | 💪 SG Putting, SG Around Green | ✅ Strong course fit | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.19 (0.052) [S↓ M↑ L↓ VL↑]
+41 | Lee, K.H. | WAR: 0.05 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Around green | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.72 (0.271) [S→ M↑ L↓ VL↓]
+42 | Lowry, Shane | WAR: 0.14 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.77 (-0.347) [S↑ M↓ L↓ VL↑]
+43 | Roy, Kevin | WAR: 0.03 | 💪 SG Around Green, Approach <100 Prox | 👍 Good course fit | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.72 (0.270) [S↑ M↑ L↑ VL↓]
+44 | Hughes, Mackenzie | WAR: 0.02 | 💪 Approach <100 Prox, SG Around Green | 👍 Good course fit | ↓ Off tee | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.21 (0.474) [S↑ M↑ L↑ VL↓]
+45 | Zalatoris, Will | WAR: 0.33 | 💪 SG T2G | ⚠️ Poor course fit | ↑ Tee-to-green | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.08 (-0.061) [S↓ M↑ L↑ VL↓]
+46 | Waring, Paul | WAR: 0.18 | 💪 SG Putting | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Putting | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.14 (0.028) [S↑ M↓ L↑ VL↓]
+47 | Smith, Jordan | WAR: 0.13 | 💪 SG T2G, Approach <100 Prox | 👍 Good course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.20 (-0.110) [S↑ M↓ L↑ VL↓]
+48 | Valimaki, Sami | WAR: 0.02 | 💪 Approach <100 Prox, Approach >200 FW Prox | ✅ Strong course fit | ↑ Approach | For Course Setup - ΔPred→ ΔTrend↑ | BucketSig ↑ z=0.91 (0.350) [S↑ M↑ L↑ VL↑]
+49 | Hirata, Kensei | WAR: 0.02 | 💪 Approach >200 FW Prox | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.31 (0.099) [S→ M↑ L↑ VL↓]
+50 | Willett, Danny | WAR: 0.08 | 💪 SG Putting | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Putting | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.12 (0.021) [S↑ M↑ L↑ VL↓]
+51 | Hoffman, Charley | WAR: -0.04 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Off tee | ⚠️ Limited data (46%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.64 (0.236) [S↓ M↑ L↑ VL↑]
+52 | Putnam, Andrew | WAR: 0.20 | 💪 SG Around Green | ↑ Putting | ⚠️ Limited data (51%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.53 (-0.249) [S↓ M↑ L↓ VL↓]
+53 | Streelman, Kevin | WAR: -0.04 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Approach | ⚠️ Limited data (27%) | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.44 (0.567) [S→ M↑ L↑ VL↑]
+54 | Kim, Tom | WAR: -0.02 | 💪 SG Around Green, Approach <100 Prox | 👍 Good course fit | ↓ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.54 (0.196) [S↑ M↑ L↑ VL↓]
+55 | Young, Carson | WAR: 0.26 | ⚠️ Poor course fit | ↑ Total game | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.30 (-0.152) [S↓ M↓ L↓ VL↓]
+56 | Castillo, Ricky | WAR: 0.11 | 💪 SG Putting | ↓ Putting | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-1.17 (-0.514) [S↓ M↓ L→ VL↓]
+57 | Rai, Aaron | WAR: 0.06 | 💪 SG T2G, Approach >200 FW Prox | 👍 Good course fit | ↓ Around green | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.93 (-0.413) [S↓ M↑ L↓ VL↑]
+58 | Villegas, Camilo | WAR: 0.09 | ↑ Total game | ⚠️ Limited data (27%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.07 (0.002) [S↓ M↑ L↓ VL↓]
+59 | Todd, Brendon | WAR: -0.00 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↓ Putting | ⚠️ Limited data (27%) | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=6.47 (2.649) [S→ M↓ L↑ VL→]
+60 | Smotherman, Austin | WAR: 0.02 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.02 (-0.036) [S→ M→ L↓ VL→]
+61 | McGreevy, Max | WAR: 0.08 | 💪 Approach <100 Prox | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.59 (-0.271) [S↑ M↓ L↓ VL↓]
+62 | Yellamaraju, Sudarshan | WAR: -0.06 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↑ Tee-to-green | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.09 (0.423) [S→ M↑ L↑ VL↓]
+63 | Kirk, Chris | WAR: 0.12 | 💪 Approach <100 Prox, SG T2G | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.27 (-0.141) [S↑ M↓ L↓ VL↑]
+64 | Brown, Blades | WAR: 0.08 | ⚠️ Poor course fit | ↑ Total game | ⚠️ Limited data (34%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.32 (-0.162) [S↓ M↓ L↓ VL↓]
+65 | Grillo, Emiliano | WAR: -0.09 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.35 (0.117) [S↓ M↑ L↑ VL↓]
+66 | Stanger, Jimmy | WAR: -0.04 | ⚠️ Poor course fit | ↑ Tee-to-green | ⚠️ Limited data (27%) | For Course Setup - ΔPred∅ ΔTrend∅
+67 | Ghim, Doug | WAR: 0.04 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.79 (-0.354) [S↑ M↑ L↓ VL↓]
+68 | Bezuidenhout, Christiaan | WAR: 0.03 | 💪 SG Around Green, Approach <100 Prox | 👍 Good course fit | ↓ Approach | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-0.40 (-0.196) [S↑ M↑ L↑ VL↓]
+69 | Wu, Dylan | WAR: -0.01 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.06 (-0.054) [S↑ M↑ L↓ VL↑]
+70 | Hubbard, Mark | WAR: 0.02 | 💪 Approach >200 FW Prox | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.63 (-0.287) [S↓ M↓ L↓ VL↑]
+71 | Neergaard-Petersen, Rasmus | WAR: -0.01 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Around green | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.97 (-0.430) [S↑ M↓ L↓ VL↓]
+72 | Brennan, Michael | WAR: -0.08 | 💪 Approach <100 Prox, SG T2G | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↑ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.06 (-0.053) [S↓ M↑ L↑ VL↓]
+73 | Capan III, Frankie | WAR: 0.01 | 💪 SG Around Green | ⚠️ Poor course fit | ↑ Total game | ⚠️ Limited data (39%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.31 (-0.156) [S↑ M↑ L↓ VL↓]
+74 | Svensson, Adam | WAR: -0.14 | 💪 Approach >200 FW Prox | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend↑ | BucketSig ↑ z=0.58 (0.210) [S↓ M↑ L↓ VL↑]
+75 | Dunlap, Nick | WAR: -0.13 | 💪 Approach <100 Prox, SG Around Green | 👍 Good course fit | ↑ Total game | ⚠️ Limited data (71%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.45 (0.157) [S↑ M↑ L↓ VL↓]
+76 | Garnett, Brice | WAR: -0.02 | 💪 Approach <100 Prox | ↓ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.22 (-0.121) [S↑ M↑ L↓ VL↓]
+77 | Bauchou, Zach | WAR: -0.02 | 💪 Approach <100 Prox | ↓ Putting | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-0.59 (-0.273) [S↑ M↓ L↓ VL↓]
+78 | Yu, Kevin | WAR: -0.03 | ↓ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.96 (-0.426) [S↓ M↓ L↓ VL↓]
+79 | Kizzire, Patton | WAR: -0.15 | 💪 SG Around Green | ↓ Total game | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=1.67 (0.660) [S↓ M↑ L↑ VL↓]
+80 | VanDerLaan, John | WAR: -0.19 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Total game | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=0.98 (0.377) [S↑ M↑ L↑ VL→]
+81 | Jaeger, Stephan | WAR: -0.04 | 💪 SG Around Green, Approach <100 Prox | 👍 Good course fit | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.40 (-0.193) [S→ M↑ L↑ VL↓]
+82 | Reitan, Kristoffer | WAR: -0.10 | 💪 Approach >200 FW Prox, SG T2G | 👍 Good course fit | ↑ Total game | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-1.53 (-0.662) [S↓ M↓ L↓ VL↓]
+83 | Hoey, Rico | WAR: -0.11 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↑ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.18 (0.045) [S↑ M↑ L↓ VL↓]
+84 | Salinda, Isaiah | WAR: -0.13 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↓ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.03 (-0.041) [S↑ M↓ L↑ VL↓]
+85 | Parry, John | WAR: -0.11 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.69 (-0.316) [S↓ M↑ L↓ VL↓]
+86 | Rozo, Marcelo | WAR: -0.19 | 💪 SG Around Green, Approach <100 Prox | ✅ Strong course fit | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.25 (0.074) [S→ M→ L↑ VL→]
+87 | Brown, Dan | WAR: -0.13 | 💪 SG Putting, Approach <100 Prox | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↓ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.32 (-0.161) [S↑ M↓ L↓ VL↑]
+88 | Dumont De Chassart, Adrien | WAR: -0.12 | 💪 SG Putting, Approach <100 Prox | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↑ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.28 (-0.144) [S↓ M↓ L↓ VL↑]
+89 | Berger, Daniel | WAR: -0.15 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.09 (-0.066) [S↑ M↑ L↓ VL↑]
+90 | Fisk, Steven | WAR: -0.13 | 💪 Approach <100 Prox, SG Around Green | 👍 Good course fit | ↑ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.21 (-0.114) [S↓ M↓ L↑ VL↓]
+91 | Woodland, Gary | WAR: -0.16 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↑ Tee-to-green | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-1.17 (-0.513) [S↓ M↑ L↓ VL↓]
+92 | Davis, Cam | WAR: -0.27 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.55 (0.197) [S↑ M↑ L↑ VL↓]
+93 | Kanaya, Takumi | WAR: -0.17 | 💪 Approach <100 Prox | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.30 (-0.154) [S↓ M↑ L↑ VL↓]
+94 | Riley, Davis | WAR: -0.20 | 💪 SG Putting, SG Around Green | ✅ Strong course fit | ℹ️ Recent bucket trend weak (short-term) despite baseline fit | ↓ Around green | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-2.88 (-1.220) [S↓ M↓ L↓ VL↓]
+95 | Hicks, Justin | WAR: -0.45 | ⚠️ Poor course fit | ↑ Total game | ⚠️ Limited data (27%) | For Course Setup - ΔPred∅ ΔTrend∅
+96 | Thorbjornsen, Michael | WAR: -0.18 | 💪 Approach <100 Prox | ↓ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.26 (-0.137) [S↑ M↓ L↑ VL↓]
+97 | Phillips, Chandler | WAR: -0.22 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↓ Total game | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-0.96 (-0.425) [S↓ M↓ L↓ VL↓]
+98 | Nakajima, Keita | WAR: -0.26 | 💪 SG Putting | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.09 (0.010) [S→ M↑ L↓ VL↓]
+99 | Kang, Jeffrey | WAR: -0.23 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↓ Approach | ⚠️ Limited data (71%) | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.56 (-0.261) [S→ M→ L↓ VL→]
+100 | Homa, Max | WAR: -0.26 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↓ Tee-to-green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.02 (-0.035) [S↑ M↑ L↓ VL↑]
+101 | Shipley, Neal | WAR: -0.25 | 💪 Approach >200 FW Prox | ⚠️ Poor course fit | ↓ Approach | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-2.75 (-1.166) [S→ M↑ L↓ VL↑]
+102 | Campos, Rafael | WAR: -0.33 | 💪 Approach <100 Prox | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.33 (0.108) [S↑ M↑ L↑ VL↓]
+103 | Walker, Danny | WAR: -0.33 | 💪 SG Around Green, Approach <100 Prox | 👍 Good course fit | ↓ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.22 (0.062) [S↑ M↑ L↑ VL↓]
+104 | Nyholm, Pontus | WAR: -0.44 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ⚠️ Limited data (63%) | For Course Setup - ΔPred↑ ΔTrend↑ | BucketSig ↑ z=0.75 (0.281) [S→ M↑ L↓ VL→]
+105 | Van Rooyen, Erik | WAR: -0.26 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↓ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.26 (-0.137) [S↑ M↓ L↑ VL↓]
+106 | Ramey, Chad | WAR: -0.27 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↑ Off tee | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.58 (-0.269) [S↓ M↓ L↑ VL↓]
+107 | Lebioda, Hank | WAR: -0.31 | 💪 Approach <100 Prox | ↑ Approach | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-0.72 (-0.325) [S→ M→ L↓ VL→]
+108 | Malnati, Peter | WAR: -0.29 | 💪 SG Around Green | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.09 (-0.067) [S↓ M↑ L↓ VL↑]
+109 | Whaley, Vince | WAR: -0.29 | 💪 Approach <100 Prox | ↓ Around green | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-1.49 (-0.646) [S↓ M↑ L↓ VL↓]
+110 | Suber, Jackson | WAR: -0.31 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Tee-to-green | ⚠️ Limited data (71%) | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.70 (0.260) [S↓ M↑ L↑ VL↓]
+111 | Chatfield, Davis | WAR: -0.31 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↑ Total game | For Course Setup - ΔPred∅ ΔTrend∅
+112 | Kim, S.H. | WAR: -0.27 | 💪 SG Putting | ⚠️ Poor course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.37 (-0.183) [S↓ M↑ L↓ VL↓]
+113 | Blanchet, Chandler | WAR: -0.31 | 💪 Approach <100 Prox, Approach >200 FW Prox | 👍 Good course fit | ↑ Approach | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.21 (-0.114) [S→ M↓ L→ VL→]
+114 | Schmid, Matti | WAR: -0.31 | 💪 SG Putting | ↓ Putting | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-1.87 (-0.802) [S↓ M↓ L↓ VL↓]
+115 | Lamprecht, Christo | WAR: -0.35 | 💪 SG Putting, Approach <100 Prox | 👍 Good course fit | ↓ Putting | For Course Setup - ΔPred↓ ΔTrend↓ | BucketSig ↓ z=-1.63 (-0.701) [S→ M↓ L↓ VL→]
+116 | Pavon, Matthieu | WAR: -0.38 | ⚠️ Poor course fit | ↑ Total game | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.59 (-0.271) [S↓ M↓ L↓ VL↓]
+117 | Mouw, William | WAR: -0.48 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.90 (0.344) [S↓ M↑ L↑ VL↓]
+118 | Highsmith, Joe | WAR: -0.41 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↑ Approach | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.44 (-0.211) [S↓ M↓ L↓ VL↓]
+119 | Cole, Eric | WAR: -0.48 | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↓ Around green | For Course Setup - ΔPred→ ΔTrend↓ | BucketSig ↓ z=-1.26 (-0.548) [S↓ M↓ L↑ VL↓]
+120 | Higgo, Garrick | WAR: -0.55 | ↓ Below field average | 💪 Approach >200 FW Prox, Approach <100 Prox | 👍 Good course fit | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.16 (-0.093) [S↓ M↓ L↑ VL↓]
+121 | Schenk, Adam | WAR: -0.56 | ↓ Below field average | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↑ Around green | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↓ z=-0.38 (-0.186) [S↑ M↑ L↓ VL↓]
+122 | Tosti, Alejandro | WAR: -0.55 | ↓ Below field average | 💪 Approach <100 Prox | ⚠️ Poor course fit | ↑ Off tee | For Course Setup - ΔPred↓ ΔTrend→ | BucketSig ↓ z=-0.72 (-0.326) [S↑ M↑ L↓ VL↓]
+123 | Eckroat, Austin | WAR: -0.36 | ⚠️ Poor course fit | ℹ️ Recent bucket trend strong (short-term) despite baseline fit | ↑ Putting | For Course Setup - ΔPred→ ΔTrend→ | BucketSig ↑ z=0.47 (0.165) [S↓ M↓ L↑ VL↓]
