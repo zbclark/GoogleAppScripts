@@ -26,6 +26,14 @@ const PRE_TOURNAMENT_SEASON = (() => {
   return Number.isNaN(raw) ? null : raw;
 })();
 
+const DEBUG = (() => {
+  const debugFlags = [
+    process.env.COURSE_HISTORY_DEBUG,
+    process.env.DATAGOLF_DEBUG
+  ].map(value => String(value || '').trim().toLowerCase());
+  return debugFlags.some(value => value === 'true' || value === '1' || value === 'yes');
+})();
+
 const WALK_IGNORE = new Set(['output', 'node_modules', '.git']);
 
 const walkDir = (dir) => {
@@ -664,13 +672,13 @@ const run = async () => {
   const detailedRowsSimilar = [];
 
   courseMap.forEach((entries, courseNum) => {
-    console.log(`DEBUG: courseNum ${courseNum} has ${entries.length} entries`);
+    if (DEBUG) console.log(`DEBUG: courseNum ${courseNum} has ${entries.length} entries`);
     const withPrior = assignPriorStarts(entries);
     withPrior.forEach(entry => detailedRows.push(entry));
 
     const regression = computeRegression(withPrior);
     if (!regression) {
-      console.log(`DEBUG: No regression computed for courseNum ${courseNum} (not enough data)`);
+      if (DEBUG) console.log(`DEBUG: No regression computed for courseNum ${courseNum} (not enough data)`);
       return;
     }
 

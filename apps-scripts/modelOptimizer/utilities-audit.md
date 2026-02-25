@@ -41,7 +41,7 @@ Use this checklist to track what to fix first as we work through the audit.
 
 ### P3 — Polish / developer experience
 
-- [ ] **#13** `scripts/analyze_course_history_impact.js` — remove/guard DEBUG logs
+- [x] **#13** `scripts/analyze_course_history_impact.js` — remove/guard DEBUG logs
 - [x] **#14** `scripts/compare_parity_outputs.js` — remove hardcoded tournament defaults (require explicit paths)
 - [ ] **#16** `utilities/configParser.js` — blank cell fallback to `0` hides missing config
 
@@ -205,7 +205,10 @@ These paths will be wrong on any other machine, container, or CI runner. Code th
 **Code:** `console.log(`DEBUG: courseNum ${courseNum} has ${entries.length} entries`);`  
 **Problem:** A prefixed `DEBUG:` log statement was left in the main `run()` function and will appear in all output logs. A similar pattern appears at line 637: `console.log(`DEBUG: No regression computed...`)`.
 
-**Resolution:** Remove or convert to a conditional debug mode (e.g., guarded by `OVERRIDE_DEBUG_API`).
+**Status:** ✅ Resolved
+
+**Resolution:** Debug logs are now guarded behind an explicit debug flag and no longer appear in normal runs.
+Enable by setting `COURSE_HISTORY_DEBUG=true` (or `DATAGOLF_DEBUG=true`).
 
 ---
 
